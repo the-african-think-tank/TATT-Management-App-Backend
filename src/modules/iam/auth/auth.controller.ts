@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import {
     ApiTags, ApiOperation, ApiBearerAuth, ApiBody,
-    ApiResponse,
+    ApiResponse, ApiExtraModels,
 } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, Length, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -13,6 +13,11 @@ import {
     SignInDto, AddOrgMemberDto, CompleteOrgMemberDto,
     CommunitySignupDto, ForgotPasswordDto, ResetPasswordDto,
 } from './dto/auth.dto';
+import {
+    SignInMultiFactorResponseSchema,
+    AuthTokenResponseSchema,
+    GenericAuthMessageResponseSchema,
+} from './dto/auth.schemas';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { SystemRole } from '../enums/roles.enum';
@@ -46,6 +51,7 @@ class RotatePasswordDto {
 }
 
 @ApiTags('Authentication')
+@ApiExtraModels(SignInMultiFactorResponseSchema, AuthTokenResponseSchema, GenericAuthMessageResponseSchema)
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
@@ -62,7 +68,11 @@ export class AuthController {
             '4. **`requiresPasswordRotation: true`** — password has expired; use `rotationToken` at `POST /auth/password/rotate`.',
     })
     @ApiBody({ type: SignInDto })
-    @ApiResponse({ status: 200, description: 'Sign-in result (see description for possible shapes).' })
+    @ApiResponse({
+        status: 200,
+        description: 'Sign-in result. Check the response flags to determine the next step.',
+        type: SignInMultiFactorResponseSchema,
+    })
     @ApiResponse({ status: 401, description: 'Invalid credentials or inactive account.' })
     @Post('signin')
     @HttpCode(HttpStatus.OK)
@@ -77,7 +87,7 @@ export class AuthController {
             'Returns a full JWT on success.',
     })
     @ApiBody({ type: CompleteTwoFactorDto })
-    @ApiResponse({ status: 200, description: 'Full JWT returned — login complete.' })
+    @ApiResponse({ status: 200, description: 'Full JWT returned — login complete.', type: AuthTokenResponseSchema })
     @ApiResponse({ status: 401, description: 'Invalid or expired OTP / partial token.' })
     @ApiResponse({ status: 403, description: 'OTP locked due to too many failed attempts.' })
     @Post('2fa/complete')
@@ -91,7 +101,7 @@ export class AuthController {
         description: 'Request a new email OTP if the previous one expired. Requires the `partialToken` from sign-in.',
     })
     @ApiBody({ type: ResendEmailOtpDto })
-    @ApiResponse({ status: 200, description: 'New OTP dispatched.' })
+    @ApiResponse({ status: 200, description: 'New OTP dispatched.', type: GenericAuthMessageResponseSchema })
     @ApiResponse({ status: 400, description: 'Only valid for Email OTP method.' })
     @ApiResponse({ status: 401, description: 'Partial token invalid or expired.' })
     @Post('2fa/resend-otp')
@@ -109,7 +119,7 @@ export class AuthController {
             'Returns a full JWT on success.',
     })
     @ApiBody({ type: RotatePasswordDto })
-    @ApiResponse({ status: 200, description: 'Password updated, full JWT returned.' })
+    @ApiResponse({ status: 200, description: 'Password updated, full JWT returned.', type: AuthTokenResponseSchema })
     @ApiResponse({ status: 400, description: 'Password does not meet policy requirements or was recently used.' })
     @ApiResponse({ status: 401, description: 'Rotation token invalid or expired.' })
     @Post('password/rotate')
@@ -122,7 +132,11 @@ export class AuthController {
 
     @ApiOperation({ summary: 'Request a password reset email' })
     @ApiBody({ type: ForgotPasswordDto })
-    @ApiResponse({ status: 200, description: 'Email dispatched if address is registered (always 200 to prevent user enumeration).' })
+    @ApiResponse({
+        status: 200,
+        description: 'Email dispatched if address is registered (always 200 to prevent user enumeration).',
+        type: GenericAuthMessageResponseSchema,
+    })
     @Post('password/forgot')
     @HttpCode(HttpStatus.OK)
     async forgotPassword(@Body() forgotDto: ForgotPasswordDto) {
@@ -131,7 +145,7 @@ export class AuthController {
 
     @ApiOperation({ summary: 'Reset password with token from email link' })
     @ApiBody({ type: ResetPasswordDto })
-    @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+    @ApiResponse({ status: 200, description: 'Password reset successfully.', type: GenericAuthMessageResponseSchema })
     @ApiResponse({ status: 400, description: 'Password does not meet policy or was recently used.' })
     @ApiResponse({ status: 401, description: 'Token invalid or expired.' })
     @Post('password/reset')
@@ -144,7 +158,7 @@ export class AuthController {
 
     @ApiOperation({ summary: 'Sign up a new community member' })
     @ApiBody({ type: CommunitySignupDto })
-    @ApiResponse({ status: 201, description: 'Account created and JWT returned.' })
+    @ApiResponse({ status: 201, description: 'Account created and JWT returned.', type: AuthTokenResponseSchema })
     @Post('signup/community')
     @HttpCode(HttpStatus.CREATED)
     async communitySignup(@Body() signupDto: CommunitySignupDto) {
@@ -156,7 +170,7 @@ export class AuthController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Add a new organisational member (Admin only)' })
     @ApiBody({ type: AddOrgMemberDto })
-    @ApiResponse({ status: 201, description: 'Org member created and invitation email sent.' })
+    @ApiResponse({ status: 201, description: 'Org member created and invitation email sent.', type: GenericAuthMessageResponseSchema })
     @ApiResponse({ status: 403, description: 'Insufficient role.' })
     @ApiResponse({ status: 409, description: 'Email already in use.' })
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -169,7 +183,7 @@ export class AuthController {
 
     @ApiOperation({ summary: 'Complete organisational member registration via invite link' })
     @ApiBody({ type: CompleteOrgMemberDto })
-    @ApiResponse({ status: 200, description: 'Registration complete, JWT returned.' })
+    @ApiResponse({ status: 200, description: 'Registration complete, JWT returned.', type: AuthTokenResponseSchema })
     @ApiResponse({ status: 401, description: 'Invalid or expired token.' })
     @Post('org-member/complete-registration')
     @HttpCode(HttpStatus.OK)

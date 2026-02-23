@@ -1,19 +1,26 @@
 import { Controller, Post, Get, Patch, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
 import { CreateChapterDto } from './dto/chapters.dto';
+import { ChapterSchema } from './dto/chapters.schemas';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SystemRole } from '../iam/enums/roles.enum';
 
 @ApiTags('Chapters')
+@ApiExtraModels(ChapterSchema)
 @Controller('chapters')
 export class ChaptersController {
     constructor(private readonly chaptersService: ChaptersService) { }
 
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create a new chapter' })
+    @ApiOperation({
+        summary: 'Create a new chapter',
+        description: 'Requires ADMIN or SUPERADMIN role. Chapters organize members by regional geographic area.'
+    })
+    @ApiResponse({ status: 201, description: 'Chapter created successfully.', type: ChapterSchema })
+    @ApiResponse({ status: 403, description: 'Insufficient role.' })
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
     @Post()
@@ -22,8 +29,11 @@ export class ChaptersController {
         return this.chaptersService.createChapter(createChapterDto);
     }
 
-    // Public or auth guard if needed
-    @ApiOperation({ summary: 'Get all chapters' })
+    @ApiOperation({
+        summary: 'Get all chapters',
+        description: 'Returns a list of all active TATT chapters and their regional managers.'
+    })
+    @ApiResponse({ status: 200, description: 'List of chapters.', type: [ChapterSchema] })
     @Get()
     @HttpCode(HttpStatus.OK)
     async findAll() {
@@ -31,7 +41,12 @@ export class ChaptersController {
     }
 
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Update regional manager for a chapter' })
+    @ApiOperation({
+        summary: 'Update regional manager for a chapter',
+        description: 'Assigns a user (by UUID) as the regional manager for a specific chapter.'
+    })
+    @ApiResponse({ status: 200, description: 'Manager assigned.' })
+    @ApiResponse({ status: 404, description: 'Chapter or User not found.' })
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
     @Patch(':id/manager')
