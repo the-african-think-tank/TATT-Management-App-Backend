@@ -1,0 +1,22 @@
+export enum SystemRole {
+    SUPERADMIN = 'SUPERADMIN',
+    ADMIN = 'ADMIN',
+    REGIONAL_ADMIN = 'REGIONAL_ADMIN',
+    MODERATOR = 'MODERATOR',
+    CONTENT_ADMIN = 'CONTENT_ADMIN',
+    SALES = 'SALES',
+    COMMUNITY_MEMBER = 'COMMUNITY_MEMBER',
+}
+
+export enum CommunityTier {
+    FREE = 'FREE',
+    UBUNTU = 'UBUNTU',
+    IMANI = 'IMANI',
+    KIONGOZI = 'KIONGOZI',
+}
+
+export enum AccountFlags {
+    VOLUNTEER = 'VOLUNTEER',
+    VOLUNTEER_MANAGER = 'VOLUNTEER_MANAGER',
+    CITY_SCOPE = 'CITY_SCOPE'
+}
