@@ -95,7 +95,7 @@ async function bootstrap() {
                 description: 'Enter your JWT token (obtained from POST /auth/signin)',
                 in: 'header',
             },
-            'BearerAuth',
+            'bearer',
         )
         .addTag('Authentication', 'Sign-in, sign-up, password management, and 2FA completion flow')
         .addTag('Security & Settings', 'Admin 2FA policy management and user self-service 2FA setup')
@@ -104,12 +104,12 @@ async function bootstrap() {
         .addTag('Media Uploads', 'File uploads for post attachments and chat messages (images, video, audio, documents)')
         .addTag('Connections', 'Member networking — connection requests, network view, and TATT Connect Recommender')
         .addTag('Chapters', 'TATT regional chapters management')
-        .addTag('Interests', 'Professional interests and skills taxonomy')
-        .addTag('Billing', 'Subscription management, Stripe webhooks, and revenue metrics')
+        .addTag('Professional Interests', 'Professional interests and skills taxonomy')
+        .addTag('Billing & Subscriptions', 'Subscription management, Stripe webhooks, and revenue metrics')
         .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document, {
+    SwaggerModule.setup('api-docs', app, document, {
         customSiteTitle: 'TATT API Docs',
         swaggerOptions: {
             docExpansion: 'none',
@@ -124,7 +124,7 @@ async function bootstrap() {
     const port = process.env.PORT || 3000;
     await app.listen(port);
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
-    console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api/docs`);
+    console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api-docs`);
     console.log(`[TATT-Management-App] Upload dir  → ${uploadDir}`);
 }
 
