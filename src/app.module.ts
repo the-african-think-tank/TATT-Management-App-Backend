@@ -8,6 +8,7 @@ import { InterestsModule } from './modules/interests/interests.module';
 import { ConnectionsModule } from './modules/connections/connections.module';
 import { SecurityModule } from './modules/security/security.module';
 import { FeedModule } from './modules/feed/feed.module';
+import { ResourcesModule } from './modules/resources/resources.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { MailModule } from './common/mail/mail.module';
@@ -32,6 +33,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         ConnectionsModule,  // Member Networking & Connections Domain
         SecurityModule,     // 2FA, Password Policy & Rotation Domain
         FeedModule,         // Community Feed, Posts, Likes & Comments Domain
+        ResourcesModule,    // Knowledge & Resource Hub (guides, documents, partnerships)
         UploadsModule,      // File/Media Upload handling (images, video, audio, docs)
         MessagesModule,     // Real-time Direct Messaging Domain
         MailModule,         // Transactional Email Domain (Global)
