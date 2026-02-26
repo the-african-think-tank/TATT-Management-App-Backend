@@ -104,6 +104,7 @@ async function bootstrap() {
         .addTag('Media Uploads', 'File uploads for post attachments and chat messages (images, video, audio, documents)')
         .addTag('Connections', 'Member networking — connection requests, network view, and TATT Connect Recommender')
         .addTag('Chapters', 'TATT regional chapters management')
+        .addTag('Knowledge & Resource Hub', 'Educational content, guides, documents, and partnership deals — visibility and access gated by tier and chapter')
         .addTag('Professional Interests', 'Professional interests and skills taxonomy')
         .addTag('Billing & Subscriptions', 'Subscription management, Stripe webhooks, and revenue metrics')
         .build();

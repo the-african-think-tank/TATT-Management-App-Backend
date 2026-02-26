@@ -13,7 +13,7 @@ import * as crypto from 'crypto';
 import { Op } from 'sequelize';
 import Stripe from 'stripe';
 import { User } from '../entities/user.entity';
-import { AddOrgMemberDto, CompleteOrgMemberDto, CommunitySignupDto, SignInDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import { AddOrgMemberDto, BootstrapAdminDto, CompleteOrgMemberDto, CommunitySignupDto, SignInDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { SystemRole, CommunityTier } from '../enums/roles.enum';
 import { MailService } from '../../../common/mail/mail.service';
 import { SecurityPolicyService } from '../../security/security-policy.service';
@@ -163,6 +163,71 @@ export class AuthService {
         await user.save();
 
         return this.generateAuthResponse(user);
+    }
+
+    // ─── BOOTSTRAP FIRST ADMIN (no JWT required) ──────────────────────────────
+    /**
+     * Creates the first admin account. Only allowed when zero users with ADMIN or SUPERADMIN exist.
+     * Use this once to create an account you can use to sign in and then add other org members.
+     */
+    async bootstrapFirstAdmin(dto: BootstrapAdminDto) {
+        const existingAdmin = await this.userRepository.findOne({
+            where: { systemRole: { [Op.in]: [SystemRole.ADMIN, SystemRole.SUPERADMIN] } },
+        });
+        if (existingAdmin) {
+            throw new ForbiddenException(
+                'Bootstrap is only allowed when no admin exists. An admin account already exists.',
+            );
+        }
+
+        const existingEmail = await this.userRepository.findOne({ where: { email: dto.email } });
+        if (existingEmail) {
+            throw new ConflictException('A user with this email already exists.');
+        }
+
+        let policy = null;
+        try {
+            policy = await this.securityPolicyService.getPolicy();
+        } catch {
+            // No policy row yet (e.g. fresh DB)
+        }
+        if (policy) {
+            try {
+                await this.securityPolicyService.validatePasswordStrength(dto.password, policy);
+            } catch (err: any) {
+                throw new BadRequestException(err?.message || 'Password does not meet policy requirements.');
+            }
+        } else {
+            if (dto.password.length < 8) {
+                throw new BadRequestException('Password must be at least 8 characters long.');
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(dto.password, 12);
+        const user = await this.userRepository.create({
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            email: dto.email,
+            password: hashedPassword,
+            systemRole: SystemRole.SUPERADMIN,
+            communityTier: CommunityTier.FREE,
+            isActive: true,
+            isApproved: true,
+            passwordChangedAt: new Date(),
+        });
+
+        if (policy) {
+            try {
+                await this.securityPolicyService.recordPasswordChange(user.id, hashedPassword, policy);
+            } catch {
+                // Non-fatal
+            }
+        }
+
+        return {
+            message: 'First admin created successfully. Sign in at POST /auth/signin with your email and password.',
+            email: user.email,
+        };
     }
 
     // ─── ADD ORG MEMBER ────────────────────────────────────────────────────────

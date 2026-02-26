@@ -10,7 +10,7 @@ import { IsString, IsNotEmpty, Length, MinLength, MaxLength } from 'class-valida
 import { ApiProperty } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
-    SignInDto, AddOrgMemberDto, CompleteOrgMemberDto,
+    SignInDto, BootstrapAdminDto, AddOrgMemberDto, CompleteOrgMemberDto,
     CommunitySignupDto, ForgotPasswordDto, ResetPasswordDto,
 } from './dto/auth.dto';
 import {
@@ -152,6 +152,25 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async resetPassword(@Body() resetDto: ResetPasswordDto) {
         return this.authService.resetPassword(resetDto);
+    }
+
+    // ─── BOOTSTRAP FIRST ADMIN ───────────────────────────────────────────────
+
+    @ApiOperation({
+        summary: 'Create the first admin account (one-time)',
+        description:
+            '**No JWT required.** Only works when there is no existing user with role ADMIN or SUPERADMIN. ' +
+            'Use this once to create your first admin account, then sign in at POST /auth/signin. ' +
+            'After that, use POST /auth/org-member/add to add more org members (with JWT).',
+    })
+    @ApiBody({ type: BootstrapAdminDto })
+    @ApiResponse({ status: 201, description: 'First admin created. Sign in with the same email and password.' })
+    @ApiResponse({ status: 403, description: 'An admin already exists; bootstrap not allowed.' })
+    @ApiResponse({ status: 409, description: 'Email already in use.' })
+    @Post('bootstrap-admin')
+    @HttpCode(HttpStatus.CREATED)
+    async bootstrapAdmin(@Body() dto: BootstrapAdminDto) {
+        return this.authService.bootstrapFirstAdmin(dto);
     }
 
     // ─── COMMUNITY SIGNUP ─────────────────────────────────────────────────────
