@@ -62,11 +62,10 @@ async function bootstrap() {
             `### File Uploads\n` +
             `Upload files via \`POST /uploads/media\` (multipart/form-data, field: \`files\`). ` +
             `The response includes public URLs — pass them into \`mediaUrls[]\` when creating or editing a post.\n\n` +
-            `### Membership Tiers\n` +
             `| Tier | Access |\n` +
             `|---|---|\n` +
-            `| \`FREE\` | Read-only feed (locked premium content), no connection requests |\n` +
-            `| \`UBUNTU\` | Full feed, connection requests, premium content |\n` +
+            `| \`FREE\` | Browse full feed, create regular posts, locked premium content, no connection requests |\n` +
+            `| \`UBUNTU\` | Full feed, connection requests, premium content access/creation |\n` +
             `| \`IMANI\` | All Ubuntu features |\n` +
             `| \`KIONGOZI\` | All features, leadership access |\n\n` +
             `### Real-time Messaging & WebSockets\n` +
@@ -101,6 +100,7 @@ async function bootstrap() {
         .addTag('Security & Settings', 'Admin 2FA policy management and user self-service 2FA setup')
         .addTag('TATT Feed', 'Community feed — posts, rich text, likes, and comments')
         .addTag('Direct Messaging', 'Private real-time communication between connected members')
+        .addTag('Volunteers & Impact', 'Recruitment, role management, volunteer activities, and impact tracking')
         .addTag('Media Uploads', 'File uploads for post attachments and chat messages (images, video, audio, documents)')
         .addTag('Connections', 'Member networking — connection requests, network view, and TATT Connect Recommender')
         .addTag('Chapters', 'TATT regional chapters management')

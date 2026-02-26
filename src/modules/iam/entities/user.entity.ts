@@ -120,7 +120,7 @@ export class User extends Model<User> {
     communityTier: CommunityTier;
 
     @Column({
-        type: DataType.ARRAY(DataType.ENUM(...Object.values(AccountFlags))),
+        type: DataType.ARRAY(DataType.STRING),
         defaultValue: [],
     })
     flags: AccountFlags[];

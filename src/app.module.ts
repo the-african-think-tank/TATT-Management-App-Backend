@@ -10,6 +10,7 @@ import { SecurityModule } from './modules/security/security.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { VolunteersModule } from './modules/volunteers/volunteers.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -34,6 +35,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         FeedModule,         // Community Feed, Posts, Likes & Comments Domain
         UploadsModule,      // File/Media Upload handling (images, video, audio, docs)
         MessagesModule,     // Real-time Direct Messaging Domain
+        VolunteersModule,   // Volunteer Management Domain
         MailModule,         // Transactional Email Domain (Global)
     ],
     controllers: [],
