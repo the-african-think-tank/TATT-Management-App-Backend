@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     async validate(payload: any) {
         // For advanced security, we load full partial state dynamically to feed Guards (SuspensionGuard & RolesGuard)
         const user = await this.userRepository.findByPk(payload.sub, {
-            attributes: ['id', 'email', 'systemRole', 'communityTier', 'suspensionStrikes', 'jailUntil', 'jailReason', 'isActive'],
+            attributes: ['id', 'email', 'systemRole', 'communityTier', 'flags', 'chapterId', 'suspensionStrikes', 'jailUntil', 'jailReason', 'isActive'],
         });
 
         if (!user) {

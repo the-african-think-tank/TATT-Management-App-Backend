@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { User } from '../iam/entities/user.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { MailService } from '../../common/mail/mail.service';
+import { EventRegistration } from '../events/entities/event-registration.entity';
 
 @Injectable()
 export class BillingService {
@@ -13,6 +14,7 @@ export class BillingService {
 
     constructor(
         @InjectModel(User) private userRepository: typeof User,
+        @InjectModel(EventRegistration) private eventRegistrationRepo: typeof EventRegistration,
         private mailService: MailService,
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
@@ -48,9 +50,33 @@ export class BillingService {
                 await this.handleSubscriptionRenewalSuccess(invoice);
                 break;
             }
+            case 'checkout.session.completed': {
+                const session = event.data.object as Stripe.Checkout.Session;
+                if (session.metadata?.type === 'EVENT_REGISTRATION') {
+                    await this.handleEventRegistrationPayment(session);
+                }
+                break;
+            }
             default:
                 this.logger.log(`Unhandled Stripe event type: ${event.type}`);
         }
+    }
+
+    private async handleEventRegistrationPayment(session: Stripe.Checkout.Session) {
+        const registrationId = session.metadata?.registrationId;
+        if (!registrationId) return;
+
+        const registration = await this.eventRegistrationRepo.findByPk(registrationId);
+        if (!registration) {
+            this.logger.error(`Event registration not found for ID: ${registrationId}`);
+            return;
+        }
+
+        registration.status = 'COMPLETED';
+        registration.stripePaymentIntentId = session.payment_intent as string;
+        await registration.save();
+
+        this.logger.log(`Event registration ${registrationId} payment confirmed and status updated to COMPLETED.`);
     }
 
     private async handleSubscriptionExpiredOrFailed(subscription: Stripe.Subscription) {

@@ -196,7 +196,36 @@ export class MailService {
             this.logger.log(`Password expiry warning (${timeframe}) sent to ${email}`);
         } catch (error: any) {
             this.logger.error(`Failed to send password expiry warning to ${email}`, error.stack);
-            throw error;
+        }
+    }
+
+    async sendEventNotification(email: string, firstName: string, eventTitle: string, eventDate: string, eventType: string, eventId: string) {
+        const eventLink = `${this.frontendUrl}/events/${eventId}`;
+
+        try {
+            await this.mailerService.sendMail({
+                to: email,
+                subject: `New ${eventType} Announced: ${eventTitle}`,
+                html: `
+                    <h2>Hi ${firstName},</h2>
+                    <p>A new <strong>${eventType}</strong> has been scheduled for the TATT community!</p>
+                    <div style="background-color: #f4f4f4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="margin-top: 0; color: #0044cc;">${eventTitle}</h3>
+                        <p><strong>Date:</strong> ${eventDate}</p>
+                        <p>Join us for this special gathering! Click the button below to view details and register:</p>
+                        <p>
+                            <a href="${eventLink}" style="padding: 10px 20px; background-color: #0044cc; color: #fff; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                View Event Details
+                            </a>
+                        </p>
+                    </div>
+                    <p>We look forward to seeing you there!</p>
+                    <p>Thank you,<br/>The TATT Team</p>
+                `,
+            });
+            this.logger.log(`Event notification email sent to ${email} for event: ${eventTitle}`);
+        } catch (error: any) {
+            this.logger.error(`Failed to send event notification email to ${email}`, error.stack);
         }
     }
 }

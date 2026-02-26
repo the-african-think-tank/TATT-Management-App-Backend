@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType, Default, BelongsTo, BelongsToMany, ForeignKey, AfterCreate, HasMany } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, Default, BelongsTo, BelongsToMany, ForeignKey, AfterCreate, BeforeCreate, HasMany } from 'sequelize-typescript';
+import { QueryTypes } from 'sequelize';
 import { SystemRole, CommunityTier, AccountFlags } from '../enums/roles.enum';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { ProfessionalInterest } from '../../interests/entities/interest.entity';
@@ -21,6 +22,17 @@ export class User extends Model<User> {
         primaryKey: true,
     })
     id: string;
+
+    @BeforeCreate
+    static async assignSequenceNumber(instance: User) {
+        if (instance.sequenceNumber != null) return;
+        const rows = await User.sequelize!.query<{ max: number }>(
+            'SELECT COALESCE(MAX("sequenceNumber"), 0) + 1 AS max FROM users',
+            { type: QueryTypes.SELECT },
+        );
+        const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined;
+        instance.sequenceNumber = (row && (row as any).max) ? (row as any).max : 1;
+    }
 
     @AfterCreate
     static async generateMemberId(instance: User) {
@@ -70,9 +82,10 @@ export class User extends Model<User> {
     @Column(DataType.TEXT)
     professionalHighlight?: string;
 
+    // INTEGER + BeforeCreate (not SERIAL) so Sequelize sync never emits ALTER TYPE SERIAL (invalid in PostgreSQL)
     @Column({
         type: DataType.INTEGER,
-        autoIncrement: true,
+        allowNull: true, // set in BeforeCreate
         unique: true,
     })
     sequenceNumber: number;
@@ -120,7 +133,7 @@ export class User extends Model<User> {
     communityTier: CommunityTier;
 
     @Column({
-        type: DataType.ARRAY(DataType.ENUM(...Object.values(AccountFlags))),
+        type: DataType.ARRAY(DataType.STRING),
         defaultValue: [],
     })
     flags: AccountFlags[];

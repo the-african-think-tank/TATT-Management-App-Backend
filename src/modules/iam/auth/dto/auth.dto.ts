@@ -1,5 +1,6 @@
 import { IsEmail, IsString, IsNotEmpty, IsOptional, MinLength, MaxLength, IsEnum, ValidateIf, IsArray } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import { SystemRole, CommunityTier, AccountFlags } from '../../enums/roles.enum';
 
 export class SignInDto {
@@ -9,6 +10,30 @@ export class SignInDto {
 
     @IsString()
     @IsNotEmpty()
+    password: string;
+}
+
+/** Only allowed when no ADMIN/SUPERADMIN exists. Creates the first admin account. */
+export class BootstrapAdminDto {
+    @ApiProperty({ example: 'Admin' })
+    @IsString()
+    @IsNotEmpty()
+    firstName: string;
+
+    @ApiProperty({ example: 'User' })
+    @IsString()
+    @IsNotEmpty()
+    lastName: string;
+
+    @ApiProperty({ example: 'admin@example.com' })
+    @IsEmail()
+    @Transform(({ value }) => value.toLowerCase().trim())
+    email: string;
+
+    @ApiProperty({ example: 'SecurePass123!', minLength: 8, maxLength: 128 })
+    @IsString()
+    @MinLength(8, { message: 'Password must be at least 8 characters long' })
+    @MaxLength(128)
     password: string;
 }
 

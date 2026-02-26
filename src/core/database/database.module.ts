@@ -13,6 +13,8 @@ import { Post } from '../../modules/feed/entities/post.entity';
 import { PostLike } from '../../modules/feed/entities/post-like.entity';
 import { PostComment } from '../../modules/feed/entities/post-comment.entity';
 import { DirectMessage } from '../../modules/messages/entities/direct-message.entity';
+import { Resource } from '../../modules/resources/entities/resource.entity';
+import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
 
 @Module({
     imports: [
@@ -29,9 +31,10 @@ import { DirectMessage } from '../../modules/messages/entities/direct-message.en
                     User, Chapter, ProfessionalInterest, UserInterest, Connection,
                     SecurityPolicy, PasswordHistory, EmailOtp,
                     Post, PostLike, PostComment, DirectMessage,
+                    Resource, ResourceInteraction,
                 ],
                 autoLoadModels: true,
-                synchronize: false, // Changed from true to avoid Sequelize alter bugs with enums/arrays
+                synchronize: config.get<boolean>('DB_SYNC', false),
                 logging: config.get<string>('NODE_ENV') === 'development' ? console.log : false,
             }),
         }),
