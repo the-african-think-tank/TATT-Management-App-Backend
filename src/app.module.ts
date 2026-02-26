@@ -12,6 +12,7 @@ import { ResourcesModule } from './modules/resources/resources.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { VolunteersModule } from './modules/volunteers/volunteers.module';
+import { EventsModule } from './modules/events/events.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -38,6 +39,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         UploadsModule,      // File/Media Upload handling (images, video, audio, docs)
         MessagesModule,     // Real-time Direct Messaging Domain
         VolunteersModule,   // Volunteer Management Domain
+        EventsModule,       // Events & Workshops Domain
         MailModule,         // Transactional Email Domain (Global)
     ],
     controllers: [],
