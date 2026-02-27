@@ -46,7 +46,7 @@ export function Navbar() {
                     </button>
                 ) : (
                     <button
-                        onClick={() => router.push('/login')}
+                        onClick={() => router.push("/")}
                         className="bg-tatt-lime text-tatt-black px-6 py-2 rounded-lg text-xs font-black shadow-sm hover:brightness-110 transition-all uppercase tracking-widest"
                     >
                         Log In

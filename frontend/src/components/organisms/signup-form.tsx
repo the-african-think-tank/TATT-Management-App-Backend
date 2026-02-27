@@ -177,7 +177,7 @@ export function SignupForm() {
 
         <p className="text-center text-sm text-tatt-gray">
           Already have an account?{" "}
-          <a href="/login" className="font-bold text-tatt-black">
+          <a href="/" className="font-bold text-tatt-black">
             Log in here
           </a>
         </p>

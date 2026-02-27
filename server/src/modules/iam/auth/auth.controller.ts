@@ -1,6 +1,6 @@
 import {
     Controller, Post, Body, HttpCode, HttpStatus,
-    Request, UseGuards, Ip,
+    Request, UseGuards, Ip, Get,
 } from '@nestjs/common';
 import {
     ApiTags, ApiOperation, ApiBearerAuth, ApiBody,
@@ -78,6 +78,17 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async signIn(@Body() signInDto: SignInDto, @Ip() ip: string) {
         return this.authService.signIn(signInDto, ip);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get current authenticated user' })
+    @ApiResponse({ status: 200, description: 'Current user details returned.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized / Invalid token.' })
+    @UseGuards(JwtAuthGuard)
+    @Get('me')
+    @HttpCode(HttpStatus.OK)
+    async getMe(@Request() req) {
+        return this.authService.getMe(req.user.id);
     }
 
     @ApiOperation({

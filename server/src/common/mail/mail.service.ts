@@ -40,7 +40,7 @@ export class MailService {
     }
 
     async sendPasswordReset(email: string, token: string) {
-        const resetLink = `${this.frontendUrl}/auth/reset-password?token=${token}`;
+        const resetLink = `${this.frontendUrl}/reset-password?token=${token}`;
 
         try {
             await this.mailerService.sendMail({

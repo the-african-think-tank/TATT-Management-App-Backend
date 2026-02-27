@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Connection, ConnectionStatus } from './entities/connection.entity';
 import { User } from '../iam/entities/user.entity';
+import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { SendConnectionRequestDto, RespondToConnectionDto } from './dto/connection.dto';
 import { MailService } from '../../common/mail/mail.service';
@@ -261,5 +262,85 @@ export class ConnectionsService {
             connectionId: connection.id,
             initiatedBy: connection.requesterId === currentUser.id ? 'ME' : 'THEM',
         };
+    }
+
+    // ─── GET ALL MEMBERS (DIRECTORY) ─────────────────────────────────────────────
+    async getAllMembers(query: any, excludeUserId?: string) {
+        const { search, chapterId, industry, page = 1, limit = 10 } = query;
+        const offset = (page - 1) * limit;
+
+        const where: any = {
+            isActive: true,
+            // Exclude the requesting user from their own directory view
+            ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
+        };
+
+        if (chapterId) {
+            where.chapterId = chapterId;
+        }
+
+        if (industry) {
+            where.industry = industry;
+        }
+
+        if (search) {
+            where[Op.or] = [
+                { firstName: { [Op.iLike]: `%${search}%` } },
+                { lastName: { [Op.iLike]: `%${search}%` } },
+                { professionTitle: { [Op.iLike]: `%${search}%` } },
+                { companyName: { [Op.iLike]: `%${search}%` } },
+            ];
+        }
+
+        const { rows: members, count: total } = await this.userRepo.findAndCountAll({
+            where,
+            attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier', 'industry', 'chapterId'],
+            include: [
+                {
+                    model: Chapter,
+                    as: 'chapter',
+                    attributes: ['id', 'name', 'code'],
+                    required: false,
+                }
+            ],
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']],
+        });
+
+        return {
+            members,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
+    // ─── GET MEMBER PUBLIC PROFILE ────────────────────────────────────────────────
+    async getMemberProfile(memberId: string) {
+        const member = await this.userRepo.findByPk(memberId, {
+            attributes: [
+                'id', 'firstName', 'lastName', 'profilePicture', 'professionTitle',
+                'companyName', 'location', 'tattMemberId', 'communityTier', 'industry',
+                'chapterId', 'professionalHighlight',
+            ],
+            include: [
+                {
+                    model: Chapter,
+                    as: 'chapter',
+                    attributes: ['id', 'name', 'code'],
+                    required: false,
+                }
+            ],
+        });
+
+        if (!member || !member.isActive) {
+            throw new NotFoundException('Member not found.');
+        }
+
+        return member;
     }
 }

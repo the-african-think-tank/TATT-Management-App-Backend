@@ -392,7 +392,20 @@ export class AuthService {
         user.resetPasswordExpiresAt = expiresAt;
         await user.save();
 
-        await this.mailService.sendPasswordReset(user.email, resetTokenRaw);
+        if (process.env.NODE_ENV === 'development') {
+            this.logger.log(`[DEV] Password reset requested for ${user.email}. Raw token: ${resetTokenRaw}`);
+            this.logger.log(`[DEV] Reset link: ${process.env.FRONTEND_URL}/reset-password?token=${resetTokenRaw}`);
+        }
+
+        try {
+            await this.mailService.sendPasswordReset(user.email, resetTokenRaw);
+        } catch (mailError) {
+            this.logger.error(`Failed to send password reset email: ${mailError.message}`);
+            if (process.env.NODE_ENV !== 'development') {
+                throw mailError;
+            }
+        }
+
         return { message: 'If that email exists, a reset link has been sent.' };
     }
 
@@ -430,6 +443,25 @@ export class AuthService {
         await matchedUser.save();
 
         return { message: 'Password has been successfully reset.' };
+    }
+
+    async getMe(userId: string) {
+        const user = await this.userRepository.findByPk(userId);
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        return {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            systemRole: user.systemRole,
+            communityTier: user.communityTier,
+            isActive: user.isActive,
+            isTwoFactorEnabled: user.isTwoFactorEnabled,
+            twoFactorMethod: user.twoFactorMethod ?? null,
+        };
     }
 
     // ─── INTERNAL: GENERATE FULL AUTH RESPONSE ────────────────────────────────

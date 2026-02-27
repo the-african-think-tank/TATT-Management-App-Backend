@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
-                router.push('/login');
+                router.push('/');
             } else if (user && user.systemRole !== 'COMMUNITY_MEMBER') {
                 // If they are admin or superadmin etc., route them to the admin dashboard.
                 // You can add logic here to differentiate based on the actual roles if needed.

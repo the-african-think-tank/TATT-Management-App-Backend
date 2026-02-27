@@ -8,7 +8,7 @@ export function RememberForgotRow() {
         />
         Remember me
       </label>
-      <a href="#" className="text-sm font-semibold leading-6 text-tatt-black hover:underline">
+      <a href="/forgot-password" title="Forgot password" className="text-sm font-semibold leading-6 text-tatt-black hover:underline">
         Forgot password?
       </a>
     </div>
