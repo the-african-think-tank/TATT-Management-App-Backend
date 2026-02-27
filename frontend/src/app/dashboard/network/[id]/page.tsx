@@ -1,24 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import api from "@/services/api";
-import { useAuth } from "@/context/auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import {
-    ArrowLeft,
-    Briefcase,
     MapPin,
     Building2,
-    UserPlus,
-    Clock,
-    UserCheck,
+    Calendar,
+    Briefcase,
+    Lightbulb,
+    ArrowLeft,
+    CheckCircle2,
     Loader2,
-    Globe,
-    Award,
-    Users,
+    Mail,
+    UserPlus,
+    UserCheck,
+    Clock,
+    QrCode,
+    CreditCard,
+    X,
+    Send,
+    AlertCircle
 } from "lucide-react";
+import api from "@/services/api";
 
 interface MemberProfile {
     id: string;
@@ -31,231 +36,425 @@ interface MemberProfile {
     tattMemberId: string;
     communityTier: string;
     industry: string | null;
+    chapterId: string | null;
     professionalHighlight: string | null;
-    chapter: { id: string; name: string; code: string } | null;
+    chapter: {
+        id: string;
+        name: string;
+        code: string;
+    } | null;
+    createdAt?: string;
 }
 
-interface ConnectionStatus {
-    status: string;
-    connectionId: string | null;
-    initiatedBy?: string;
-}
+const TIER_BADGES: Record<string, { label: string; classes: string }> = {
+    KIONGOZI: { label: "Kiongozi", classes: "bg-tatt-lime text-tatt-black" },
+    IMANI: { label: "Imani", classes: "bg-slate-200 text-neutral-700" },
+    UBUNTU: { label: "Ubuntu", classes: "bg-neutral-100 border border-border text-tatt-gray" },
+    FREE: { label: "Free", classes: "bg-neutral-100 border border-border text-tatt-gray" },
+};
 
 export default function MemberProfilePage() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
-    const memberId = params.id as string;
+    const id = params.id as string;
 
     const [member, setMember] = useState<MemberProfile | null>(null);
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
     const [loading, setLoading] = useState(true);
-    const [connectLoading, setConnectLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [status, setStatus] = useState<any>(null);
+
+    const [modalOpen, setModalOpen] = useState(false);
+    const [connectMessage, setConnectMessage] = useState("");
+    const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
+
+    const openModal = () => {
+        setModalOpen(true);
+        setConnectMessage("");
+        setSendError(null);
+    };
+
+    const closeModal = () => {
+        setModalOpen(false);
+        setConnectMessage("");
+        setSendError(null);
+    };
+
+    const handleSendInvite = async () => {
+        if (!member) return;
+        if (connectMessage.trim().length < 20) {
+            setSendError("Please write at least 20 characters so the recipient knows why you want to connect.");
+            return;
+        }
+        setSending(true);
+        setSendError(null);
+        try {
+            await api.post("/connections/request", {
+                recipientId: member.id,
+                message: connectMessage.trim(),
+            });
+            setStatus({ status: "PENDING", initiatedBy: "ME" });
+            closeModal();
+        } catch (err: any) {
+            setSendError(err.response?.data?.message || "Failed to send connection request.");
+        } finally {
+            setSending(false);
+        }
+    };
 
     useEffect(() => {
-        if (!memberId) return;
-
         const fetchProfile = async () => {
-            setLoading(true);
             try {
                 const [profileRes, statusRes] = await Promise.all([
-                    api.get(`/members/${memberId}`),
-                    user?.id !== memberId
-                        ? api.get(`/connections/status/${memberId}`)
-                        : Promise.resolve({ data: null }),
+                    api.get(`/members/${id}`),
+                    api.get(`/connections/status/${id}`)
                 ]);
                 setMember(profileRes.data);
-                setConnectionStatus(statusRes.data);
-            } catch (err: any) {
-                setError(err.response?.data?.message || "Failed to load profile.");
+                setStatus(statusRes.data);
+            } catch (err) {
+                console.error("Failed to fetch profile", err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchProfile();
-    }, [memberId, user?.id]);
-
-    const handleConnect = async () => {
-        if (!member) return;
-        setConnectLoading(true);
-        try {
-            await api.post("/connections/request", {
-                recipientId: member.id,
-                message: `Hi ${member.firstName}! I'd love to connect with you on the TATT platform.`,
-            });
-            setConnectionStatus({ status: "PENDING", connectionId: null, initiatedBy: "ME" });
-        } catch (err: any) {
-            alert(err.response?.data?.message || "Failed to send connection request.");
-        } finally {
-            setConnectLoading(false);
+        if (id) {
+            fetchProfile();
         }
-    };
-
-    const tierColors: Record<string, string> = {
-        FREE: "bg-gray-100 text-gray-600",
-        UBUNTU: "bg-blue-100 text-blue-700",
-        IMANI: "bg-purple-100 text-purple-700",
-        KIONGOZI: "bg-tatt-lime/20 text-tatt-lime-dark",
-    };
+    }, [id]);
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-32 animate-pulse">
+            <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-background">
                 <Loader2 className="h-12 w-12 text-tatt-lime animate-spin mb-4" />
-                <p className="text-tatt-gray font-bold">Loading profile...</p>
+                <p className="text-tatt-gray font-bold">Loading member profile...</p>
             </div>
         );
     }
 
-    if (error || !member) {
+    if (!member) {
         return (
-            <div className="flex flex-col items-center justify-center py-32 text-center">
-                <p className="text-2xl font-black text-foreground mb-2">Member not found</p>
-                <p className="text-tatt-gray text-sm mb-6">{error ?? "This profile may no longer be available."}</p>
-                <Link href="/dashboard/network" className="bg-tatt-lime text-tatt-black font-black px-6 py-2.5 rounded-xl text-sm">
-                    Back to Network
-                </Link>
+            <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-background">
+                <h2 className="text-2xl font-black mb-2 text-foreground">Member Not Found</h2>
+                <p className="text-tatt-gray mb-6">This member could not be found or their profile is private.</p>
+                <button onClick={() => router.back()} className="px-6 py-2 bg-foreground text-background font-bold rounded-lg hover:brightness-110">
+                    Go Back
+                </button>
             </div>
         );
     }
 
-    const isMe = member.id === user?.id;
-    const tierName = member.communityTier.charAt(0) + member.communityTier.slice(1).toLowerCase();
+    const fallbackTier = { label: "Free", classes: "bg-neutral-100 border border-border text-tatt-gray" };
+    const tier = TIER_BADGES[member.communityTier] || fallbackTier;
 
     return (
-        <div className="p-4 lg:p-8 max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
-            {/* Back button */}
-            <Link
-                href="/dashboard/network"
-                className="inline-flex items-center gap-2 text-sm font-bold text-tatt-gray hover:text-foreground transition-colors"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Network
-            </Link>
+        <>
+            <div className="min-h-screen bg-surface dark:bg-black font-sans text-foreground">
+                {/* Hero Section */}
+                <div className="relative w-full h-48 lg:h-64 bg-tatt-gray">
+                    <div className="absolute inset-0 bg-cover bg-center opacity-30 dark:opacity-20" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80')" }}></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
 
-            {/* Profile Card */}
-            <div className="bg-surface dark:bg-black rounded-2xl border border-border overflow-hidden">
-                {/* Cover */}
-                <div className="h-32 bg-gradient-to-r from-tatt-black to-[#23230f] relative">
-                    <div className="absolute -bottom-14 left-8 p-1.5 bg-surface dark:bg-black rounded-2xl">
-                        <div className="size-28 bg-tatt-lime/10 rounded-xl overflow-hidden flex items-center justify-center border-4 border-surface dark:border-black relative">
-                            {member.profilePicture ? (
-                                <Image src={member.profilePicture} alt={member.firstName} fill className="object-cover" />
-                            ) : (
-                                <span className="text-4xl font-black text-tatt-lime-dark">
-                                    {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                                </span>
-                            )}
-                        </div>
+                    <div className="absolute top-6 left-6 z-10">
+                        <button onClick={() => router.back()} className="flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 px-4 py-2 rounded-full backdrop-blur-md transition-colors text-sm font-bold">
+                            <ArrowLeft className="h-4 w-4" /> Back to Network
+                        </button>
                     </div>
                 </div>
 
-                {/* Info */}
-                <div className="pt-18 p-8" style={{ paddingTop: "4.5rem" }}>
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-black text-foreground">
-                                {member.firstName} {member.lastName}
-                            </h1>
-                            <span className={`inline-block mt-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${tierColors[member.communityTier] ?? tierColors['FREE']}`}>
-                                {tierName} Member
-                            </span>
-                            {member.tattMemberId && (
-                                <p className="text-xs text-tatt-gray font-mono mt-1">{member.tattMemberId}</p>
-                            )}
-                        </div>
+                <div className="px-4 lg:px-12 -mt-20 relative z-10 pb-12 w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
 
-                        {/* Action buttons */}
-                        {!isMe && (
-                            <div className="flex gap-3 shrink-0">
-                                {connectionStatus?.status === "ACCEPTED" ? (
-                                    <button disabled className="flex items-center gap-2 bg-green-500/10 text-green-600 font-bold py-2.5 px-4 rounded-xl text-sm cursor-default">
-                                        <UserCheck className="h-4 w-4" /> Connected
-                                    </button>
-                                ) : connectionStatus?.status === "PENDING" ? (
-                                    <button disabled className="flex items-center gap-2 bg-tatt-lime/10 text-tatt-lime-dark font-bold py-2.5 px-4 rounded-xl text-sm cursor-default">
-                                        <Clock className="h-4 w-4" />
-                                        {connectionStatus.initiatedBy === "ME" ? "Request Sent" : "Pending Response"}
-                                    </button>
+                    {/* Left Column: Main Profile Info */}
+                    <div className="flex-grow w-full space-y-6">
+                        {/* Profile Header Card */}
+                        <div className="bg-background rounded-2xl shadow-sm border border-border p-6 lg:p-8">
+                            <div className="flex flex-col md:flex-row gap-6 md:items-end justify-between">
+                                <div className="flex flex-col md:flex-row gap-6 items-start md:items-end">
+                                    <div className="relative shrink-0">
+                                        <div className="size-32 lg:size-40 rounded-2xl border-4 border-background shadow-md bg-cover bg-center bg-surface flex items-center justify-center overflow-hidden">
+                                            {member.profilePicture ? (
+                                                <Image src={member.profilePicture} alt={`${member.firstName} ${member.lastName}`} fill className="object-cover" />
+                                            ) : (
+                                                <span className="text-4xl lg:text-6xl font-black text-tatt-lime-dark">
+                                                    {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="absolute -bottom-3 -right-3 bg-tatt-lime text-tatt-black text-[10px] font-black uppercase px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 border border-black/10">
+                                            <CheckCircle2 className="h-3 w-3" /> VERIFIED
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <h2 className="text-3xl font-black tracking-tight text-foreground">{member.firstName} {member.lastName}</h2>
+                                        <p className="text-tatt-gray font-medium">
+                                            {member.professionTitle ? member.professionTitle : "No professional title"}
+                                            {member.companyName && ` • ${member.companyName}`}
+                                        </p>
+                                        <div className="flex items-center gap-2 pt-2">
+                                            {member.chapter ? (
+                                                <div className="flex flex-wrap gap-2 text-sm font-bold text-foreground">
+                                                    <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 text-tatt-lime" /> {member.chapter.name}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                                                    <MapPin className="h-4 w-4 text-tatt-lime" /> {member.location || 'Location not specified'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 w-full md:w-auto mt-6 md:mt-0">
+                                    {status?.status === "ACCEPTED" ? (
+                                        <>
+                                            <button className="flex-1 md:flex-none px-6 py-2.5 bg-green-500/10 text-green-600 font-black rounded-xl text-sm justify-center gap-2 flex items-center cursor-default">
+                                                <UserCheck className="h-4 w-4" /> Connected
+                                            </button>
+                                            <button className="flex-1 md:flex-none px-6 py-2.5 bg-surface text-foreground font-black rounded-xl text-sm hover:brightness-95 transition-all justify-center border border-border gap-2 flex items-center">
+                                                <Mail className="h-4 w-4" /> Message
+                                            </button>
+                                        </>
+                                    ) : status?.status === "PENDING" ? (
+                                        <button disabled className="flex-1 md:flex-none px-6 py-2.5 bg-surface text-foreground font-black rounded-xl text-sm justify-center gap-2 flex items-center cursor-default border border-border opacity-50">
+                                            <Clock className="h-4 w-4" /> {status.initiatedBy === "ME" ? "Pending" : "Needs Response"}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={openModal}
+                                            className="flex-1 md:flex-none px-6 py-2.5 bg-tatt-lime text-tatt-black font-black uppercase tracking-widest rounded-xl text-sm hover:brightness-110 transition-all shadow-sm shadow-tatt-lime/20 justify-center gap-2 flex items-center hover:scale-[1.02] active:scale-95"
+                                        >
+                                            <UserPlus className="h-4 w-4" /> Connect
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Professional Background Summary */}
+                            <div className="mt-10 pt-8 border-t border-border">
+                                <h3 className="text-xl font-black mb-4 text-foreground">Professional Background & Impact</h3>
+                                {member.professionalHighlight ? (
+                                    <p className="text-tatt-gray leading-relaxed font-medium max-w-3xl">
+                                        {member.professionalHighlight}
+                                    </p>
                                 ) : (
-                                    <button
-                                        onClick={handleConnect}
-                                        disabled={connectLoading}
-                                        className="flex items-center gap-2 bg-tatt-lime text-tatt-black font-black py-2.5 px-5 rounded-xl text-sm hover:scale-[1.04] active:scale-95 transition-all shadow-md shadow-tatt-lime/20 disabled:opacity-60"
-                                    >
-                                        {connectLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                                        Connect
-                                    </button>
+                                    <p className="text-tatt-gray/50 italic leading-relaxed max-w-3xl">
+                                        This member has not provided a professional background summary yet.
+                                    </p>
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {member.professionTitle && (
-                            <div className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border">
-                                <Briefcase className="h-4 w-4 text-tatt-lime shrink-0" />
-                                <div>
-                                    <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-wide">Role</p>
-                                    <p className="text-sm font-bold text-foreground">{member.professionTitle}</p>
-                                </div>
-                            </div>
-                        )}
-                        {member.companyName && (
-                            <div className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border">
-                                <Building2 className="h-4 w-4 text-tatt-lime shrink-0" />
-                                <div>
-                                    <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-wide">Company</p>
-                                    <p className="text-sm font-bold text-foreground">{member.companyName}</p>
-                                </div>
-                            </div>
-                        )}
-                        {member.location && (
-                            <div className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border">
-                                <MapPin className="h-4 w-4 text-tatt-lime shrink-0" />
-                                <div>
-                                    <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-wide">Location</p>
-                                    <p className="text-sm font-bold text-foreground">{member.location}</p>
-                                </div>
-                            </div>
-                        )}
-                        {member.chapter && (
-                            <div className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border">
-                                <Users className="h-4 w-4 text-tatt-lime shrink-0" />
-                                <div>
-                                    <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-wide">Chapter</p>
-                                    <p className="text-sm font-bold text-foreground">{member.chapter.name}</p>
-                                </div>
-                            </div>
-                        )}
-                        {member.industry && (
-                            <div className="flex items-center gap-3 bg-background rounded-xl p-3 border border-border">
-                                <Globe className="h-4 w-4 text-tatt-lime shrink-0" />
-                                <div>
-                                    <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-wide">Industry</p>
-                                    <p className="text-sm font-bold text-foreground">{member.industry}</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Professional Highlight */}
-                    {member.professionalHighlight && (
-                        <div className="mt-6">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Award className="h-4 w-4 text-tatt-lime" />
-                                <h2 className="text-sm font-black uppercase tracking-widest text-tatt-gray">Professional Highlight</h2>
-                            </div>
-                            <p className="text-sm text-foreground leading-relaxed bg-background rounded-xl p-4 border border-border">
-                                {member.professionalHighlight}
-                            </p>
                         </div>
-                    )}
+
+                        {/* Key Information Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-background p-5 rounded-2xl border border-border flex items-center gap-4 hover:border-tatt-lime/50 transition-colors">
+                                <div className="size-12 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
+                                    <CreditCard className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-[11px] text-tatt-gray font-black uppercase tracking-widest">Member ID</p>
+                                    <p className="text-base font-black text-foreground truncate">{member.tattMemberId || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-background p-5 rounded-2xl border border-border flex items-center gap-4 hover:border-tatt-lime/50 transition-colors">
+                                <div className="size-12 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
+                                    <Calendar className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-[11px] text-tatt-gray font-black uppercase tracking-widest">Joined Date</p>
+                                    <p className="text-base font-black text-foreground truncate">
+                                        {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Unknown'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-background p-5 rounded-2xl border border-border flex items-center gap-4 hover:border-tatt-lime/50 transition-colors">
+                                <div className="size-12 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
+                                    <Briefcase className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-[11px] text-tatt-gray font-black uppercase tracking-widest">Industry</p>
+                                    <p className="text-base font-black text-foreground truncate">{member.industry || 'Not Provided'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Interests & Expertise */}
+                        <div className="bg-background rounded-2xl border border-border p-6 lg:p-8">
+                            <h3 className="text-xl font-black mb-6 flex items-center gap-2 text-foreground">
+                                <Lightbulb className="h-6 w-6 text-tatt-lime" /> Interests & Expertise
+                            </h3>
+                            <div className="flex flex-wrap gap-2.5">
+                                {/* In a real app, this would be an array from member data */}
+                                <span className="px-4 py-2 bg-surface text-foreground font-bold text-sm rounded-xl">Economic Policy</span>
+                                <span className="px-4 py-2 bg-surface text-foreground font-bold text-sm rounded-xl">Leadership</span>
+                                <span className="px-4 py-2 bg-surface text-foreground font-bold text-sm rounded-xl">{member.industry || 'Strategy'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Sidebar Widgets */}
+                    <div className="w-full lg:w-80 space-y-6 shrink-0">
+
+                        {/* Digital Identity Card Widget */}
+                        <div className="bg-background rounded-2xl border border-border p-6">
+                            <h3 className="text-xs font-black text-tatt-gray uppercase tracking-widest mb-4">Digital Identity Card</h3>
+                            <div className="relative w-full aspect-[1.6/1] bg-tatt-black rounded-2xl p-6 text-white overflow-hidden shadow-xl group">
+                                {/* Card Decoration */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-tatt-lime/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-tatt-lime/30 transition-all duration-500"></div>
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-5 -mb-5"></div>
+
+                                <div className="relative h-full flex flex-col justify-between z-10">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex gap-2 items-center">
+                                            <div className="size-8 rounded-full bg-tatt-lime flex items-center justify-center">
+                                                <Image src="/assets/tattlogoIcon.svg" alt="TATT" width={20} height={20} className="invert brightness-0" />
+                                            </div>
+                                            <span className="text-[12px] font-black tracking-widest uppercase">TATT PASS</span>
+                                        </div>
+                                        <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${tier.classes}`}>
+                                            {tier.label}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-bold text-white/50 uppercase tracking-widest">Member</p>
+                                        <p className="text-lg font-black leading-none tracking-tight uppercase truncate">{member.firstName} {member.lastName}</p>
+                                    </div>
+
+                                    <div className="flex justify-between items-end">
+                                        <div className="text-[10px] font-mono opacity-60">
+                                            ID: {member.tattMemberId || 'PENDING'}
+                                        </div>
+                                        <div className="size-8 bg-white/10 backdrop-blur-sm rounded overflow-hidden flex items-center justify-center border border-white/20">
+                                            <QrCode className="h-5 w-5 text-white/80" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="mt-4 text-[11px] text-tatt-gray text-center font-bold">Verified by TATT Global Compliance</p>
+                        </div>
+
+                        {/* Business/Enterprise Widget (Only for Kiongozi) */}
+                        {member.communityTier === "KIONGOZI" && (
+                            <div className="bg-white dark:bg-black rounded-2xl border-2 border-tatt-lime/30 p-6 shadow-sm relative overflow-hidden">
+                                <div className="absolute inset-0 bg-tatt-lime/[0.03] pointer-events-none"></div>
+                                <div className="flex items-center gap-3 mb-4 relative z-10">
+                                    <div className="size-12 rounded-xl bg-tatt-lime flex items-center justify-center text-tatt-black shrink-0">
+                                        <Briefcase className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-foreground">{member.companyName || "Member Enterprise"}</h3>
+                                        <p className="text-[10px] font-black text-tatt-lime-dark uppercase tracking-widest">Verified Enterprise</p>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-tatt-gray leading-relaxed mb-5 font-medium relative z-10">
+                                    As a Kiongozi member, this enterprise receives premium placement and priority partnership matchmaking within the network.
+                                </p>
+                                <button className="w-full py-3 bg-tatt-black text-white dark:bg-white dark:text-tatt-black rounded-xl text-sm font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all relative z-10">
+                                    View Business Profile
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* ── Connection Request Modal ───────────────────────────────── */}
+            {
+                modalOpen && member && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+                    >
+                        <div className="bg-white dark:bg-black w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+
+                            {/* Modal Header */}
+                            <div className="bg-[#1a1a15] pt-10 pb-8 px-8 text-center flex flex-col items-center relative">
+                                <button onClick={closeModal} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
+                                    <X className="h-6 w-6" />
+                                </button>
+
+                                <div className="relative mb-6">
+                                    <div className="size-24 rounded-full overflow-hidden border-4 border-[#1a1a15] ring-4 ring-tatt-lime bg-tatt-lime/10 flex items-center justify-center relative">
+                                        {member.profilePicture ? (
+                                            <Image src={member.profilePicture} alt={member.firstName} fill className="object-cover" />
+                                        ) : (
+                                            <span className="text-4xl font-black text-tatt-lime">
+                                                {member.firstName.charAt(0)}{member.lastName.charAt(0)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className={`absolute -bottom-3 right-1/2 translate-x-1/2 text-[11px] font-black uppercase tracking-tight px-3 py-0.5 rounded-full whitespace-nowrap ${tier.classes}`}>
+                                        {tier.label}
+                                    </span>
+                                </div>
+
+                                <h3 className="text-[22px] font-bold text-white mt-1">
+                                    Connect with {member.firstName} {member.lastName}
+                                </h3>
+                                <p className="text-[#a1a396] text-[15px] mt-1.5 font-medium">
+                                    {[member.professionTitle, member.chapter?.name].filter(Boolean).join(" • ")}
+                                </p>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-8 flex flex-col gap-6 bg-white dark:bg-black">
+                                <div className="flex flex-col gap-3">
+                                    <label className="text-[15px] font-bold text-black dark:text-white" htmlFor="connect-msg">
+                                        Add a personalized message
+                                    </label>
+                                    <textarea
+                                        id="connect-msg"
+                                        rows={4}
+                                        className="w-full p-5 bg-[#f9f9f9] dark:bg-white/5 border-none rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none"
+                                        placeholder={`Hi ${member.firstName}, I'd love to discuss your latest work on policy frameworks...`}
+                                        value={connectMessage}
+                                        onChange={(e) => { setConnectMessage(e.target.value); setSendError(null); }}
+                                        maxLength={500}
+                                    />
+                                </div>
+
+                                {/* Informational Box */}
+                                <div className="flex items-center gap-4 p-5 bg-[#fefce8] dark:bg-yellow-900/20 rounded-2xl border border-[#fef08a] dark:border-yellow-800">
+                                    <div className="size-6 rounded-full border-2 border-yellow-400 flex items-center justify-center shrink-0">
+                                        <span className="text-yellow-600 dark:text-yellow-500 text-sm font-bold leading-none select-none">i</span>
+                                    </div>
+                                    <p className="text-sm text-black dark:text-gray-300 font-medium">
+                                        You have 12 of 20 connection requests remaining this month.
+                                    </p>
+                                </div>
+
+                                {sendError && (
+                                    <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">
+                                        <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">{sendError}</p>
+                                    </div>
+                                )}
+
+                                {/* Modal Footer */}
+                                <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                                    <button
+                                        onClick={handleSendInvite}
+                                        disabled={sending || connectMessage.trim().length < 20}
+                                        className="flex-1 flex items-center justify-center py-4 bg-tatt-lime text-black text-[13px] font-black rounded-xl uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                        Send Invitation
+                                    </button>
+                                    <button
+                                        onClick={closeModal}
+                                        disabled={sending}
+                                        className="flex-1 py-4 bg-[#fcfcfc] dark:bg-white/5 text-black dark:text-white text-[13px] font-black rounded-xl uppercase tracking-widest border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/10 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </>
     );
 }
