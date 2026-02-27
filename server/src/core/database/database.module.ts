@@ -34,7 +34,7 @@ import { ResourceInteraction } from '../../modules/resources/entities/resource-i
                     Resource, ResourceInteraction,
                 ],
                 autoLoadModels: true,
-                synchronize: config.get<boolean>('DB_SYNC', false),
+                synchronize: false,
                 logging: config.get<string>('NODE_ENV') === 'development' ? console.log : false,
             }),
         }),
