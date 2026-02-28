@@ -118,7 +118,7 @@ export class TrainingResourceSchema {
     mediaUrls: string[];
 }
 
-export class MessageResponseSchema {
+export class VolunteerMessageResponseSchema {
     @ApiProperty({ example: 'Success' })
     message: string;
 }

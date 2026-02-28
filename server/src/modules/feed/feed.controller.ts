@@ -19,7 +19,7 @@ import {
     FeedResponseSchema, FeedMetaSchema,
     ToggleLikeResponseSchema,
     CommentSchema, CommentReplySchema, CommentAuthorSchema, CommentsResponseSchema,
-    CreatePostResponseSchema, CreateCommentResponseSchema, MessageResponseSchema,
+    CreatePostResponseSchema, CreateCommentResponseSchema, FeedMessageResponseSchema,
 } from './dto/feed.schemas';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
 
@@ -32,7 +32,7 @@ import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
     FeedResponseSchema, FeedMetaSchema,
     ToggleLikeResponseSchema,
     CommentSchema, CommentReplySchema, CommentAuthorSchema, CommentsResponseSchema,
-    CreatePostResponseSchema, CreateCommentResponseSchema, MessageResponseSchema,
+    CreatePostResponseSchema, CreateCommentResponseSchema, FeedMessageResponseSchema,
     CreatePostDto, UpdatePostDto, AddCommentDto,
 )
 @Controller('feed')
@@ -224,7 +224,7 @@ export class FeedController {
         example: 'c3d4e5f6-0001-4000-a000-000000000001',
     })
     @ApiBody({ type: UpdatePostDto })
-    @ApiResponse({ status: 200, description: 'Post updated.', type: MessageResponseSchema })
+    @ApiResponse({ status: 200, description: 'Post updated.', type: FeedMessageResponseSchema })
     @ApiResponse({
         status: 403,
         description: 'Caller is not the post author or an org moderator.',
@@ -262,7 +262,7 @@ export class FeedController {
         description: 'UUID of the post to delete',
         example: 'c3d4e5f6-0001-4000-a000-000000000001',
     })
-    @ApiResponse({ status: 200, description: 'Post removed from feed.', type: MessageResponseSchema })
+    @ApiResponse({ status: 200, description: 'Post removed from feed.', type: FeedMessageResponseSchema })
     @ApiResponse({ status: 403, description: 'Not the author or a moderator.', schema: { properties: { statusCode: { type: 'integer', example: 403 }, message: { type: 'string', example: 'You can only delete your own posts.' } } } })
     @ApiResponse({ status: 404, description: 'Post not found.' })
     @ApiResponse({ status: 401, description: 'Missing or invalid Bearer token.' })
@@ -424,7 +424,7 @@ export class FeedController {
         description: 'UUID of the comment to delete',
         example: 'r1s2t3u4-0001-4000-a000-000000000002',
     })
-    @ApiResponse({ status: 200, description: 'Comment removed.', type: MessageResponseSchema })
+    @ApiResponse({ status: 200, description: 'Comment removed.', type: FeedMessageResponseSchema })
     @ApiResponse({
         status: 403,
         description: 'Not the comment author, post owner, or a moderator.',

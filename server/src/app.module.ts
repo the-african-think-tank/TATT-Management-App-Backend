@@ -13,6 +13,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { VolunteersModule } from './modules/volunteers/volunteers.module';
 import { EventsModule } from './modules/events/events.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -40,6 +41,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         MessagesModule,     // Real-time Direct Messaging Domain
         VolunteersModule,   // Volunteer Management Domain
         EventsModule,       // Events & Workshops Domain
+        JobsModule,         // Job Board & Opportunities Domain
         MailModule,         // Transactional Email Domain (Global)
     ],
     controllers: [],
