@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #f8f8f5;
+  --foreground: #181811;
+  --surface: #ffffff;
+  --border: #e6e6db;
+  
+  /* TATT Official Palette */
+  --tatt-lime: #9fcc00;
+  --tatt-lime-light: #e8f9a0;
+  --tatt-lime-vibrant: #ccfc00;
+  --tatt-lime-dark: #647c00;
+  --tatt-green-deep: #183701;
+  --tatt-bronze: #997400;
+  --tatt-bronze-dark: #705500;
+  --tatt-yellow: #ffd13e;
+  --tatt-yellow-mustard: #eac039;
+  --tatt-gold-muted: #c6a847;
+  --tatt-black: #000000;
+  --tatt-gray: #606060;
+  --tatt-white: #ffffff;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #181811;
+  --border: #333333;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  
+  /* TATT Brand Colors */
+  --color-tatt-lime: var(--tatt-lime);
+  --color-tatt-lime-light: var(--tatt-lime-light);
+  --color-tatt-lime-vibrant: var(--tatt-lime-vibrant);
+  --color-tatt-lime-dark: var(--tatt-lime-dark);
+  --color-tatt-green-deep: var(--tatt-green-deep);
+  --color-tatt-bronze: var(--tatt-bronze);
+  --color-tatt-bronze-dark: var(--tatt-bronze-dark);
+  --color-tatt-yellow: var(--tatt-yellow);
+  --color-tatt-yellow-mustard: var(--tatt-yellow-mustard);
+  --color-tatt-gold-muted: var(--tatt-gold-muted);
+  --color-tatt-black: var(--tatt-black);
+  --color-tatt-gray: var(--tatt-gray);
+  --color-tatt-white: var(--tatt-white);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
