@@ -137,7 +137,7 @@ export class ConnectionStatusSchema {
     initiatedBy?: 'ME' | 'THEM';
 }
 
-export class MessageResponseSchema {
+export class ConnectionMessageResponseSchema {
     @ApiProperty({ example: 'Connection request sent successfully.' })
     message: string;
 

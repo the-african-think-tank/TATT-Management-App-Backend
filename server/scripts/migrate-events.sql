@@ -1,3 +1,7 @@
+-- Migration: Create events, event_chapters, event_guests, event_registrations tables
+-- Run once with a DB user that can create types and tables (e.g. postgres or your DB_USER).
+-- Example: psql -U postgres -d tatt_db -f server/scripts/migrate-events.sql
+-- Or from server folder: psql -U postgres -d tatt_db -f scripts/migrate-events.sql
 
 -- Create EventType enum if it doesn't exist
 DO $$
@@ -32,13 +36,11 @@ CREATE TABLE IF NOT EXISTS "event_chapters" (
     "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
--- Create EventGuests table
+-- Create EventGuests table (join table; no timestamps per entity)
 CREATE TABLE IF NOT EXISTS "event_guests" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "eventId" UUID NOT NULL REFERENCES "events"("id") ON DELETE CASCADE,
     "userId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-    "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL,
-    "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE("eventId", "userId")
 );
 
@@ -63,3 +65,20 @@ CREATE TABLE IF NOT EXISTS "event_registrations" (
     "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE("eventId", "userId")
 );
+
+-- Grant permissions to the app user. Run as postgres.
+-- If your app uses postgres (DB_USER=postgres), postgres already owns the tables.
+-- If your app uses tatt_user, run: psql -U postgres -d tatt_db -f server/scripts/grant-events-tables.sql
+-- Or run this block (grants to tatt_user if that role exists):
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tatt_user') THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.events TO tatt_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.event_chapters TO tatt_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.event_guests TO tatt_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.event_registrations TO tatt_user;
+    GRANT USAGE ON TYPE public.enum_events_type TO tatt_user;
+    GRANT USAGE ON TYPE public.enum_event_registrations_status TO tatt_user;
+  END IF;
+END;
+$$;

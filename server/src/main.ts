@@ -11,23 +11,31 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-        cors: false, // We will enable it explicitly below
+        cors: false, // we configure CORS explicitly below so one source of truth
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],
         rawBody: true,
     });
 
     const configService = app.get(ConfigService);
 
+    // ── CORS: single source of truth from env ────────────────────────────────────
+    // Browsers treat http://localhost and http://127.0.0.1 as different origins.
+    // Set CORS_ORIGINS in .env (comma-separated), e.g.:
+    //   CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.231:3000
+    const corsOriginsRaw = process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000';
+    const allowedOrigins = corsOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+    app.enableCors({
+        origin: allowedOrigins,
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    });
+
     // ── Security Edge Middleware ────────────────────────────────────────────────
     app.use(helmet({
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     }));
 
-    app.enableCors({
-        origin: configService.get<string>('CORS_ORIGINS')?.split(',') || true,
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        credentials: true,
-    });
 
     // ── Static file serving for uploaded media ──────────────────────────────────
     const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? './uploads');

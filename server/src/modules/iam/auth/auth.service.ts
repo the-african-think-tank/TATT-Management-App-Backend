@@ -445,23 +445,24 @@ export class AuthService {
         return { message: 'Password has been successfully reset.' };
     }
 
+    // ─── GET CURRENT USER PROFILE (for frontend /auth/me) ──────────────────────
     async getMe(userId: string) {
-        const user = await this.userRepository.findByPk(userId);
-        if (!user) {
-            throw new UnauthorizedException('User not found');
+        const user = await this.userRepository.findByPk(userId, {
+            attributes: [
+                'id', 'firstName', 'lastName', 'email', 'systemRole', 'communityTier',
+                'chapterId', 'profilePicture', 'professionTitle', 'companyName', 'tattMemberId',
+                'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod'
+            ],
+            include: ['chapter'],
+        });
+        if (!user) throw new UnauthorizedException('User not found');
+        const plain = user.get({ plain: true }) as any;
+        if (plain.chapter) {
+            plain.chapterName = plain.chapter.name;
+            plain.chapterCode = plain.chapter.code;
         }
-
-        return {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            systemRole: user.systemRole,
-            communityTier: user.communityTier,
-            isActive: user.isActive,
-            isTwoFactorEnabled: user.isTwoFactorEnabled,
-            twoFactorMethod: user.twoFactorMethod ?? null,
-        };
+        delete plain.chapter;
+        return plain;
     }
 
     // ─── INTERNAL: GENERATE FULL AUTH RESPONSE ────────────────────────────────

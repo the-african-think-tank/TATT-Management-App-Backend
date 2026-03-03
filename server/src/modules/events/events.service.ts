@@ -105,8 +105,8 @@ export class EventsService {
         // Let's allow everyone to see them for now, but restrict registration.
         return this.eventRepo.findAll({
             include: [
-                { model: EventChapter, include: [Chapter] },
-                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] },
+                { model: EventChapter, as: 'locations', include: [{ model: Chapter, as: 'chapter' }] },
+                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'], through: { attributes: [] } },
             ],
             order: [['dateTime', 'ASC']],
         });
@@ -115,8 +115,8 @@ export class EventsService {
     async getEvent(id: string) {
         const event = await this.eventRepo.findByPk(id, {
             include: [
-                { model: EventChapter, include: [Chapter] },
-                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] },
+                { model: EventChapter, as: 'locations', include: [{ model: Chapter, as: 'chapter' }] },
+                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'], through: { attributes: [] } },
             ],
         });
         if (!event) throw new NotFoundException('Event not found');

@@ -1,6 +1,6 @@
 import {
-    Controller, Post, Body, HttpCode, HttpStatus,
-    Request, UseGuards, Ip, Get,
+    Controller, Get, Post, Body, HttpCode, HttpStatus,
+    Request, UseGuards, Ip,
 } from '@nestjs/common';
 import {
     ApiTags, ApiOperation, ApiBearerAuth, ApiBody,
@@ -80,13 +80,12 @@ export class AuthController {
         return this.authService.signIn(signInDto, ip);
     }
 
+    @ApiOperation({ summary: 'Get current user profile', description: 'Returns the authenticated user\'s profile including chapter. Requires valid JWT.' })
+    @ApiResponse({ status: 200, description: 'Current user profile (id, name, email, systemRole, communityTier, chapterId, chapterName, etc.).' })
+    @ApiResponse({ status: 401, description: 'Unauthorized — JWT missing or invalid.' })
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get current authenticated user' })
-    @ApiResponse({ status: 200, description: 'Current user details returned.' })
-    @ApiResponse({ status: 401, description: 'Unauthorized / Invalid token.' })
     @UseGuards(JwtAuthGuard)
     @Get('me')
-    @HttpCode(HttpStatus.OK)
     async getMe(@Request() req) {
         return this.authService.getMe(req.user.id);
     }

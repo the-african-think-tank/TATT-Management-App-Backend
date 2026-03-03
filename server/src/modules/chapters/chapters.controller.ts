@@ -1,5 +1,5 @@
-import { Controller, Post, Get, Patch, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels, ApiParam } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
 import { CreateChapterDto } from './dto/chapters.dto';
 import { ChapterSchema } from './dto/chapters.schemas';
@@ -13,6 +13,45 @@ import { SystemRole } from '../iam/enums/roles.enum';
 @Controller('chapters')
 export class ChaptersController {
     constructor(private readonly chaptersService: ChaptersService) { }
+
+    @ApiOperation({
+        summary: 'Get all chapters',
+        description: 'Returns a list of all active TATT chapters and their regional managers.'
+    })
+    @ApiResponse({ status: 200, description: 'List of chapters.', type: [ChapterSchema] })
+    @Get()
+    @HttpCode(HttpStatus.OK)
+    async findAll() {
+        return this.chaptersService.getAllChapters();
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({
+        summary: 'Get chapter members',
+        description: 'Returns members of a chapter (for directory / My Chapter sidebar).'
+    })
+    @ApiParam({ name: 'id', format: 'uuid', description: 'Chapter UUID' })
+    @ApiResponse({ status: 200, description: 'List of members (id, firstName, lastName, profilePicture, professionTitle).' })
+    @ApiResponse({ status: 404, description: 'Chapter not found.' })
+    @UseGuards(JwtAuthGuard)
+    @Get(':id/members')
+    async getMembers(@Param('id') id: string, @Request() req) {
+        return this.chaptersService.getChapterMembers(id, req.user?.id);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({
+        summary: 'Get chapter by ID',
+        description: 'Returns a single chapter with regional manager details. Used for My Chapter dashboard.'
+    })
+    @ApiParam({ name: 'id', format: 'uuid', description: 'Chapter UUID' })
+    @ApiResponse({ status: 200, description: 'Chapter details.', type: ChapterSchema })
+    @ApiResponse({ status: 404, description: 'Chapter not found.' })
+    @UseGuards(JwtAuthGuard)
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return this.chaptersService.getChapterById(id);
+    }
 
     @ApiBearerAuth()
     @ApiOperation({
@@ -29,17 +68,6 @@ export class ChaptersController {
         return this.chaptersService.createChapter(createChapterDto);
     }
 
-    @ApiOperation({
-        summary: 'Get all chapters',
-        description: 'Returns a list of all active TATT chapters and their regional managers.'
-    })
-    @ApiResponse({ status: 200, description: 'List of chapters.', type: [ChapterSchema] })
-    @Get()
-    @HttpCode(HttpStatus.OK)
-    async findAll() {
-        return this.chaptersService.getAllChapters();
-    }
-
     @ApiBearerAuth()
     @ApiOperation({
         summary: 'Update regional manager for a chapter',
@@ -54,3 +82,4 @@ export class ChaptersController {
         return this.chaptersService.updateChapterManager(id, managerId);
     }
 }
+

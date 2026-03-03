@@ -252,7 +252,7 @@ export class CreateCommentResponseSchema {
     commentId: string;
 }
 
-export class MessageResponseSchema {
+export class FeedMessageResponseSchema {
     @ApiProperty({ example: 'Post updated successfully.' })
     message: string;
 }

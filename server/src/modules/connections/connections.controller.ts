@@ -33,7 +33,7 @@ import {
     IncomingRequestSchema,
     SentRequestSchema,
     ConnectionStatusSchema,
-    MessageResponseSchema,
+    ConnectionMessageResponseSchema,
 } from './dto/connection.dto';
 import {
     RecommendationsQueryDto,
@@ -49,7 +49,7 @@ import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
     IncomingRequestSchema,
     SentRequestSchema,
     ConnectionStatusSchema,
-    MessageResponseSchema,
+    ConnectionMessageResponseSchema,
     RecommendationSchema,
 )
 @Controller('connections')
@@ -73,7 +73,7 @@ export class ConnectionsController {
     @ApiResponse({
         status: 201,
         description: 'Connection request sent successfully.',
-        type: MessageResponseSchema,
+        type: ConnectionMessageResponseSchema,
     })
     @ApiResponse({
         status: 400,
@@ -120,7 +120,7 @@ export class ConnectionsController {
     @ApiResponse({
         status: 200,
         description: 'Request accepted or declined successfully.',
-        type: MessageResponseSchema,
+        type: ConnectionMessageResponseSchema,
     })
     @ApiResponse({ status: 400, description: 'Request is no longer in PENDING status and cannot be updated.' })
     @ApiResponse({ status: 401, description: 'Unauthorised — JWT token missing or invalid.' })
@@ -151,7 +151,7 @@ export class ConnectionsController {
         example: 'a1b2c3d4-eeee-ffff-0000-111122223333',
         format: 'uuid',
     })
-    @ApiResponse({ status: 200, description: 'Connection request withdrawn.', type: MessageResponseSchema })
+    @ApiResponse({ status: 200, description: 'Connection request withdrawn.', type: ConnectionMessageResponseSchema })
     @ApiResponse({ status: 400, description: 'Request is not in a PENDING state and cannot be withdrawn.' })
     @ApiResponse({ status: 401, description: 'Unauthorised — JWT token missing or invalid.' })
     @ApiResponse({ status: 403, description: 'Forbidden — you did not send this request.' })
@@ -177,7 +177,7 @@ export class ConnectionsController {
         example: 'c3d4e5f6-0001-4444-aaaa-bbbbccccdddd',
         format: 'uuid',
     })
-    @ApiResponse({ status: 200, description: 'Connection removed successfully.', type: MessageResponseSchema })
+    @ApiResponse({ status: 200, description: 'Connection removed successfully.', type: ConnectionMessageResponseSchema })
     @ApiResponse({ status: 400, description: 'Connection is not in ACCEPTED status.' })
     @ApiResponse({ status: 401, description: 'Unauthorised — JWT token missing or invalid.' })
     @ApiResponse({ status: 403, description: 'Forbidden — you are not part of this connection.' })
