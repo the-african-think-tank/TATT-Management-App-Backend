@@ -71,7 +71,13 @@ export function SignupForm() {
       }
     } catch (err: any) {
       console.error("Signup error:", err);
-      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      if (status === 409) {
+        setError(msg || "This email is already registered. Sign in or use a different email.");
+      } else {
+        setError(Array.isArray(msg) ? msg[0] : msg || "Something went wrong. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

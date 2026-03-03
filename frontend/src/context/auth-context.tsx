@@ -3,15 +3,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '@/services/api';
 
-type User = {
+export type User = {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role?: string;
     systemRole?: string;
     communityTier?: string;
     isActive?: boolean;
+    chapterId?: string | null;
+    chapterName?: string | null;
+    chapterCode?: string | null;
+    profilePicture?: string | null;
+    professionTitle?: string | null;
+    companyName?: string | null;
+    tattMemberId?: string | null;
+    flags?: string[];
 };
 
 type AuthContextType = {
