@@ -25,10 +25,10 @@
 
 .dark {
   color-scheme: dark;
-  --background: #000000;
+  --background: #0d0d0c;
   --foreground: #ffffff;
-  --surface: #181811;
-  --border: #333333;
+  --surface: #1e1e1b;
+  --border: #333330;
 }
 
 @theme inline {

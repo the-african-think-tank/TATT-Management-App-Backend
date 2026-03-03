@@ -222,6 +222,7 @@ export class ConnectionsService {
                     attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier'],
                 },
             ],
+            order: [['createdAt', 'DESC']],
         });
     }
 
@@ -239,6 +240,7 @@ export class ConnectionsService {
                     attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier'],
                 },
             ],
+            order: [['createdAt', 'DESC']],
         });
     }
 
@@ -251,6 +253,7 @@ export class ConnectionsService {
                     { requesterId: memberId, recipientId: currentUser.id },
                 ],
             },
+            order: [['createdAt', 'DESC']],
         });
 
         if (!connection) {

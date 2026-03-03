@@ -208,7 +208,7 @@ export default function NetworkPage() {
                 </div>
 
                 {/* Filters & Search */}
-                <div className="bg-surface dark:bg-black p-4 rounded-2xl border border-border shadow-sm space-y-4">
+                <div className="bg-surface p-4 rounded-2xl border border-border shadow-sm space-y-4">
                     <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tatt-gray" />
@@ -266,7 +266,7 @@ export default function NetworkPage() {
                         <p className="text-tatt-gray font-bold">Discovering members...</p>
                     </div>
                 ) : members.length === 0 ? (
-                    <div className="text-center py-24 bg-surface dark:bg-black rounded-2xl border border-dashed border-border">
+                    <div className="text-center py-24 bg-surface rounded-2xl border border-dashed border-border">
                         <Users className="h-12 w-12 text-tatt-gray mx-auto mb-4 opacity-20" />
                         <h3 className="text-xl font-black text-foreground mb-1">No members found</h3>
                         <p className="text-tatt-gray text-sm">Try adjusting your filters or search terms.</p>
@@ -281,7 +281,7 @@ export default function NetworkPage() {
                                 return (
                                     <div
                                         key={member.id}
-                                        className="group bg-white dark:bg-black rounded-2xl border border-border shadow-sm flex flex-col items-center text-center hover:shadow-xl hover:shadow-tatt-lime/5 hover:border-tatt-lime/30 transition-all duration-300 overflow-hidden"
+                                        className="group bg-surface rounded-2xl border border-border shadow-sm flex flex-col items-center text-center hover:shadow-xl hover:shadow-tatt-lime/5 hover:border-tatt-lime/30 transition-all duration-300 overflow-hidden"
                                     >
                                         {/* Avatar area */}
                                         <div className="pt-8 pb-4 px-6 flex flex-col items-center w-full">
@@ -337,10 +337,13 @@ export default function NetworkPage() {
                                                     <UserCheck className="h-3.5 w-3.5" /> Connected
                                                 </button>
                                             ) : status?.status === "PENDING" ? (
-                                                <button disabled className="flex items-center justify-center gap-1.5 bg-tatt-lime/10 text-tatt-lime-dark font-black py-2.5 rounded-xl text-[11px] uppercase tracking-wide cursor-default">
+                                                <Link
+                                                    href="/dashboard/messages"
+                                                    className="flex items-center justify-center gap-1.5 bg-tatt-lime/10 text-tatt-lime-dark font-black py-2.5 rounded-xl text-[11px] uppercase tracking-wide hover:bg-tatt-lime/20 transition-all"
+                                                >
                                                     <Clock className="h-3.5 w-3.5" />
                                                     {status.initiatedBy === "ME" ? "Sent" : "Respond"}
-                                                </button>
+                                                </Link>
                                             ) : (
                                                 <button
                                                     onClick={() => openModal(member)}
@@ -369,7 +372,7 @@ export default function NetworkPage() {
                                 <button
                                     onClick={handleLoadMore}
                                     disabled={loadingMore}
-                                    className="flex items-center gap-2 bg-surface dark:bg-black border border-border px-8 py-3 rounded-full text-sm font-bold text-foreground hover:border-tatt-lime hover:text-tatt-lime-dark transition-all disabled:opacity-50 shadow-sm"
+                                    className="flex items-center gap-2 bg-surface border border-border px-8 py-3 rounded-full text-sm font-bold text-foreground hover:border-tatt-lime hover:text-tatt-lime-dark transition-all disabled:opacity-50 shadow-sm"
                                 >
                                     {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                                     Show More Thinking Partners
@@ -388,7 +391,7 @@ export default function NetworkPage() {
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
                 >
-                    <div className="bg-white dark:bg-black w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                    <div className="bg-surface w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
 
                         {/* Modal Header */}
                         <div className="bg-[#1a1a15] pt-10 pb-8 px-8 text-center flex flex-col items-center relative">
@@ -420,7 +423,7 @@ export default function NetworkPage() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-8 flex flex-col gap-6 bg-white dark:bg-black">
+                        <div className="p-8 flex flex-col gap-6 bg-surface">
                             <div className="flex flex-col gap-3">
                                 <label className="text-[15px] font-bold text-black dark:text-white" htmlFor="connect-msg">
                                     Add a personalized message

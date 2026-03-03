@@ -12,6 +12,12 @@ type User = {
     systemRole?: string;
     communityTier?: string;
     isActive?: boolean;
+    chapterId?: string;
+    profilePicture?: string | null;
+    tattMemberId?: string;
+    professionTitle?: string | null;
+    companyName?: string | null;
+    location?: string | null;
 };
 
 type AuthContextType = {

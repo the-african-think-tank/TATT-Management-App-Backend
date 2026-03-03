@@ -53,7 +53,7 @@ export default function DashboardPage() {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
                     <div>
                         <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Connections</p>
                         <h3 className="text-3xl font-black text-foreground">1,842</h3>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
                     <div>
                         <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Active Jobs</p>
                         <h3 className="text-3xl font-black text-foreground">124</h3>
@@ -77,7 +77,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
                     <div>
                         <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Workshops</p>
                         <h3 className="text-3xl font-black text-foreground">04</h3>
@@ -140,14 +140,14 @@ export default function DashboardPage() {
                                 Recent Discussions
                             </h3>
                             <div className="flex gap-2">
-                                <button className="bg-surface dark:bg-black px-3 py-1.5 rounded-lg border border-border text-xs font-bold shadow-sm">Hot</button>
-                                <button className="bg-background dark:bg-black/30 px-3 py-1.5 rounded-lg text-xs font-bold text-tatt-gray hover:text-foreground">New</button>
+                                <button className="bg-surface px-3 py-1.5 rounded-lg border border-border text-xs font-bold shadow-sm">Hot</button>
+                                <button className="bg-[#f0f0f0] dark:bg-white/5 px-3 py-1.5 rounded-lg text-xs font-bold text-tatt-gray hover:text-foreground">New</button>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             {/* Discussion Item 1 */}
-                            <div className="bg-surface dark:bg-black p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
+                            <div className="bg-surface p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
                                 <div className="flex gap-4">
                                     <div className="size-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-800 shrink-0">C</div>
                                     <div className="flex-1 min-w-0">
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                             </div>
 
                             {/* Discussion Item 2 */}
-                            <div className="bg-surface dark:bg-black p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
+                            <div className="bg-surface p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
                                 <div className="flex gap-4">
                                     <div className="size-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-800 shrink-0">S</div>
                                     <div className="flex-1 min-w-0">
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                     </section>
 
                     {/* Premium Perks Summary */}
-                    <section className="bg-surface dark:bg-black p-6 rounded-2xl border border-tatt-lime/30 shadow-sm relative overflow-hidden group hover:border-tatt-lime transition-all">
+                    <section className="bg-surface p-6 rounded-2xl border border-tatt-lime/30 shadow-sm relative overflow-hidden group hover:border-tatt-lime transition-all">
                         <div className="relative z-10">
                             <h3 className="text-lg font-black mb-4 flex items-center gap-2 text-foreground">
                                 <GraduationCap className="text-tatt-lime h-6 w-6" />

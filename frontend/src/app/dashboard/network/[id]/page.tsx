@@ -148,7 +148,7 @@ export default function MemberProfilePage() {
 
     return (
         <>
-            <div className="min-h-screen bg-surface dark:bg-black font-sans text-foreground">
+            <div className="min-h-screen bg-surface font-sans text-foreground">
                 {/* Hero Section */}
                 <div className="relative w-full h-48 lg:h-64 bg-tatt-gray">
                     <div className="absolute inset-0 bg-cover bg-center opacity-30 dark:opacity-20" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80')" }}></div>
@@ -337,7 +337,7 @@ export default function MemberProfilePage() {
 
                         {/* Business/Enterprise Widget (Only for Kiongozi) */}
                         {member.communityTier === "KIONGOZI" && (
-                            <div className="bg-white dark:bg-black rounded-2xl border-2 border-tatt-lime/30 p-6 shadow-sm relative overflow-hidden">
+                            <div className="bg-surface rounded-2xl border-2 border-tatt-lime/30 p-6 shadow-sm relative overflow-hidden">
                                 <div className="absolute inset-0 bg-tatt-lime/[0.03] pointer-events-none"></div>
                                 <div className="flex items-center gap-3 mb-4 relative z-10">
                                     <div className="size-12 rounded-xl bg-tatt-lime flex items-center justify-center text-tatt-black shrink-0">
@@ -367,7 +367,7 @@ export default function MemberProfilePage() {
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                         onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
                     >
-                        <div className="bg-white dark:bg-black w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                        <div className="bg-surface w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
 
                             {/* Modal Header */}
                             <div className="bg-[#1a1a15] pt-10 pb-8 px-8 text-center flex flex-col items-center relative">
@@ -399,7 +399,7 @@ export default function MemberProfilePage() {
                             </div>
 
                             {/* Modal Body */}
-                            <div className="p-8 flex flex-col gap-6 bg-white dark:bg-black">
+                            <div className="p-8 flex flex-col gap-6 bg-surface">
                                 <div className="flex flex-col gap-3">
                                     <label className="text-[15px] font-bold text-black dark:text-white" htmlFor="connect-msg">
                                         Add a personalized message

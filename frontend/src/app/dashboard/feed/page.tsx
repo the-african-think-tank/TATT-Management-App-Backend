@@ -1,0 +1,1347 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
+import {
+    Search,
+    MoreHorizontal,
+    ThumbsUp,
+    MessageSquare,
+    Share2,
+    Image as ImageIcon,
+    BarChart2,
+    Paperclip,
+    Bell,
+    Plus,
+    TrendingUp,
+    UserPlus,
+    Calendar,
+    MapPin,
+    Video,
+    Lock,
+    ExternalLink,
+    X,
+    CheckCircle2,
+    Briefcase,
+    Zap,
+    GraduationCap,
+    Info,
+    ChevronDown,
+    ChevronUp,
+    Send,
+    Bookmark,
+    Highlighter,
+    Repeat2,
+    Link2,
+    ArrowBigUp,
+    Flag,
+    Eye
+} from "lucide-react";
+import Link from "next/link";
+import api from "@/services/api";
+import { useAuth } from "@/context/auth-context";
+import toast, { Toaster } from "react-hot-toast";
+import { formatDistanceToNow } from "date-fns";
+
+// --- Types ---
+
+interface PostAuthor {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string | null;
+    professionTitle: string | null;
+    communityTier: string;
+    tattMemberId: string;
+}
+
+interface PostChapter {
+    id: string;
+    name: string;
+    code: string;
+}
+
+interface Post {
+    id: string;
+    type: "GENERAL" | "RESOURCE" | "EVENT" | "ANNOUNCEMENT";
+    isPremium: boolean;
+    isPremiumLocked: boolean;
+    title: string | null;
+    content: string | null;
+    contentFormat: "PLAIN" | "MARKDOWN" | "HTML";
+    mediaUrls: string[];
+    tags: string[];
+    author: PostAuthor;
+    chapter: PostChapter | null;
+    isBookmarked: boolean;
+    isHighlighted: boolean;
+    likesCount: number;
+    upvotesCount: number;
+    commentsCount: number;
+    viewsCount: number;
+    isLikedByMe: boolean;
+    isUpvotedByMe: boolean;
+    createdAt: string;
+    updatedAt: string;
+    parentPost?: Post;
+}
+
+interface Comment {
+    id: string;
+    postId: string;
+    content: string;
+    author: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        profilePicture: string | null;
+        professionTitle: string | null;
+    };
+    replies: any[];
+    createdAt: string;
+}
+
+interface Recommendation {
+    member: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        profilePicture: string | null;
+        professionTitle: string | null;
+        companyName: string | null;
+        location: string | null;
+        tattMemberId: string;
+        communityTier: string;
+        industry: string | null;
+    };
+    matchReason: {
+        sharedInterestCount: number;
+        sharedInterestNames: string[];
+        sameIndustry: boolean;
+        sameChapter: boolean;
+        score: number;
+    };
+    canConnect: boolean;
+}
+
+interface TATTEvent {
+    id: string;
+    title: string;
+    type: string;
+    dateTime: string;
+    imageUrl: string | null;
+    locations: Array<{
+        chapter: {
+            id: string;
+            name: string;
+            code: string;
+        };
+        address: string;
+    }>;
+}
+
+const POST_TYPES = [
+    { id: "GENERAL", name: "General Update", icon: MessageSquare, description: "Share a thought, insight, or status update.", minTier: "FREE", staffOnly: false },
+    { id: "EVENT", name: "Event or Workshop", icon: Calendar, description: "Promote a chapter event, webinar, or workshop.", minTier: "FREE", staffOnly: false },
+    { id: "RESOURCE", name: "Strategic Resource", icon: Briefcase, description: "Share reports, whitepapers, or strategic frameworks.", minTier: "FREE", staffOnly: true },
+    { id: "ANNOUNCEMENT", name: "Organization Announcement", icon: Zap, description: "Official TATT news and major updates.", minTier: "FREE", staffOnly: true },
+];
+
+export default function FeedPage() {
+    const { user } = useAuth();
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [filter, setFilter] = useState<"ALL" | "CHAPTER" | "PREMIUM" | "BOOKMARKS">("ALL");
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<TATTEvent[]>([]);
+    const [isPostWizardOpen, setIsPostWizardOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedPostType, setSelectedPostType] = useState<string>("GENERAL");
+    const [newPostContent, setNewPostContent] = useState("");
+    const [newPostTitle, setNewPostTitle] = useState("");
+    const [isPremiumPost, setIsPremiumPost] = useState(false);
+    const [attachments, setAttachments] = useState<File[]>([]);
+    const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+    const [connectModal, setConnectModal] = useState<{ open: boolean; member: any }>({ open: false, member: null });
+    const [connectMessage, setConnectMessage] = useState("");
+    const [isSendingConnect, setIsSendingConnect] = useState(false);
+
+    // Sidebar loading
+    const [isLoadingSidebar, setIsLoadingSidebar] = useState(true);
+
+    useEffect(() => {
+        fetchFeed(1, filter, true);
+    }, [filter]);
+
+    useEffect(() => {
+        fetchSidebarData();
+    }, []);
+
+    const fetchFeed = async (pageNum: number, currentFilter: string, reset: boolean = false) => {
+        setIsLoadingPosts(true);
+        try {
+            const res = await api.get("/feed", {
+                params: {
+                    filter: currentFilter,
+                    page: pageNum,
+                    limit: 10
+                }
+            });
+            const newPosts = res.data.data;
+            if (reset) {
+                setPosts(newPosts);
+            } else {
+                setPosts(prev => [...prev, ...newPosts]);
+            }
+            setHasMore(res.data.meta.page < res.data.meta.totalPages);
+            setPage(pageNum);
+        } catch (error) {
+            console.error("Error fetching feed:", error);
+            toast.error("Failed to load feed");
+        } finally {
+            setIsLoadingPosts(false);
+        }
+    };
+
+    const fetchSidebarData = async () => {
+        setIsLoadingSidebar(true);
+        try {
+            const [recRes, eventRes] = await Promise.all([
+                api.get("/connections/recommend", { params: { limit: 3 } }),
+                api.get("/events")
+            ]);
+            setRecommendations(recRes.data);
+            setUpcomingEvents(eventRes.data.slice(0, 2)); // Only show top 2
+        } catch (error) {
+            console.error("Error fetching sidebar data:", error);
+        } finally {
+            setIsLoadingSidebar(false);
+        }
+    };
+
+    const handleLike = async (postId: string) => {
+        try {
+            const res = await api.post(`/feed/${postId}/like`);
+            setPosts(prev => prev.map(p => {
+                if (p.id === postId) {
+                    return {
+                        ...p,
+                        isLikedByMe: res.data.liked,
+                        likesCount: res.data.liked ? p.likesCount + 1 : p.likesCount - 1
+                    };
+                }
+                return p;
+            }));
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Action failed");
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length + attachments.length > 10) {
+            toast.error("Maximum 10 attachments allowed");
+            return;
+        }
+
+        const newPreviews = files.map(file => URL.createObjectURL(file));
+        setAttachments(prev => [...prev, ...files]);
+        setAttachmentPreviews(prev => [...prev, ...newPreviews]);
+
+        // Reset input so same file can be selected again if removed
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const removeAttachment = (index: number) => {
+        if (attachmentPreviews[index]) {
+            URL.revokeObjectURL(attachmentPreviews[index]);
+        }
+
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+        setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleCreatePost = async () => {
+        if (!newPostContent.trim()) {
+            toast.error("Please add some content to your post.");
+            return;
+        }
+
+        const loadingToast = toast.loading("Publishing your strategic insight...");
+        try {
+            let uploadedMediaUrls: string[] = [];
+
+            // 1. Upload attachments if any
+            if (attachments.length > 0) {
+                const formData = new FormData();
+                attachments.forEach(file => formData.append("files", file));
+
+                const uploadRes = await api.post("/uploads/media", formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+
+                uploadedMediaUrls = uploadRes.data.files.map((f: any) => f.url);
+            }
+
+            // 2. Create the post
+            await api.post("/feed", {
+                title: newPostTitle,
+                content: newPostContent,
+                type: selectedPostType,
+                isPremium: isPremiumPost,
+                mediaUrls: uploadedMediaUrls,
+                contentFormat: "PLAIN"
+            });
+
+            toast.success("Post successfully shared to the TATT Feed!", { id: loadingToast });
+            setIsCreateModalOpen(false);
+            setNewPostTitle("");
+            setNewPostContent("");
+            setIsPremiumPost(false);
+            setAttachments([]);
+            setAttachmentPreviews([]);
+            fetchFeed(1, filter, true); // Refresh feed
+        } catch (error: any) {
+
+            toast.error(error.response?.data?.message || "Failed to publish post", { id: loadingToast });
+        }
+    };
+
+    const handleConnect = (member: any) => {
+        setConnectModal({ open: true, member });
+        setConnectMessage(`Hi ${member.firstName}, I saw your profile in my elite recommendations and would love to connect and share strategic insights.`);
+    };
+
+    const submitConnect = async () => {
+        if (!connectModal.member || !connectMessage.trim()) return;
+        setIsSendingConnect(true);
+        try {
+            await api.post("/connections/request", {
+                recipientId: connectModal.member.id,
+                message: connectMessage
+            });
+            toast.success("Connection request sent!");
+            setConnectModal({ open: false, member: null });
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to send request");
+        } finally {
+            setIsSendingConnect(false);
+        }
+    };
+
+    const isStaff = user?.systemRole !== "COMMUNITY_MEMBER";
+    const isPaid = user?.communityTier && user.communityTier !== "FREE";
+
+    const allowedPostTypes = POST_TYPES.filter(t => {
+        if (t.staffOnly) return isStaff;
+        return true;
+    });
+
+    const getTierColor = (tier: string) => {
+        switch (tier) {
+            case "KIONGOZI": return "bg-tatt-lime text-black";
+            case "IMANI": return "bg-tatt-black text-white border border-white/20";
+            case "UBUNTU": return "bg-white/10 text-white border border-white/10";
+            default: return "bg-tatt-gray/20 text-tatt-gray";
+        }
+    };
+
+    return (
+        <div className="p-4 lg:p-8 max-w-[1400px] mx-auto min-h-screen bg-transparent">
+            <Toaster position="top-right" />
+
+            <div className="flex flex-col lg:flex-row gap-8">
+                {/* Main Feed Column */}
+                <div className="flex-1 space-y-6">
+                    {/* Post Composer Trigger */}
+                    <div className="bg-surface rounded-2xl shadow-sm border border-border overflow-hidden">
+                        <div className="p-4 flex gap-4">
+                            <div className="size-11 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center font-bold text-tatt-lime shrink-0">
+                                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                            </div>
+                            <button
+                                onClick={() => setIsPostWizardOpen(true)}
+                                className="flex-1 text-left bg-background hover:bg-black/5 dark:hover:bg-white/5 border border-border rounded-xl px-4 py-3 text-tatt-gray transition-colors"
+                            >
+                                Share a strategic update, research, or poll...
+                            </button>
+                        </div>
+                        <div className="px-5 py-3 bg-black/5 dark:bg-white/5 border-t border-border flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Add Image">
+                                    <ImageIcon className="h-5 w-5" />
+                                </button>
+                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Create Poll">
+                                    <BarChart2 className="h-5 w-5" />
+                                </button>
+                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Attach Document">
+                                    <Paperclip className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setIsPostWizardOpen(true)}
+                                className="bg-tatt-lime text-black font-bold px-6 py-2.5 rounded-xl text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-tatt-lime/10"
+                            >
+                                Post Update
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Feed Filters */}
+                    <div className="flex border-b border-border sticky top-16 z-30 bg-background/80 backdrop-blur-md pt-2 px-1 gap-6 lg:gap-8 overflow-x-auto no-scrollbar">
+                        <button
+                            onClick={() => setFilter("ALL")}
+                            className={`pb-4 border-b-2 transition-all text-sm whitespace-nowrap ${filter === "ALL" ? "border-tatt-lime text-foreground font-bold" : "border-transparent text-tatt-gray hover:text-foreground font-medium"}`}
+                        >
+                            All Posts
+                        </button>
+                        <button
+                            onClick={() => setFilter("CHAPTER")}
+                            className={`pb-4 border-b-2 transition-all text-sm whitespace-nowrap ${filter === "CHAPTER" ? "border-tatt-lime text-foreground font-bold" : "border-transparent text-tatt-gray hover:text-foreground font-medium"}`}
+                        >
+                            My Chapter
+                        </button>
+                        {isPaid && (
+                            <button
+                                onClick={() => setFilter("PREMIUM")}
+                                className={`pb-4 border-b-2 transition-all text-sm whitespace-nowrap ${filter === "PREMIUM" ? "border-tatt-lime text-foreground font-bold" : "border-transparent text-tatt-gray hover:text-foreground font-medium"}`}
+                            >
+                                <span className="flex items-center gap-2">
+                                    Premium Posts
+                                    <Lock className="h-3 w-3 text-tatt-lime fill-tatt-lime" />
+                                </span>
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setFilter("BOOKMARKS")}
+                            className={`pb-4 border-b-2 transition-all text-sm whitespace-nowrap ${filter === "BOOKMARKS" ? "border-tatt-lime text-foreground font-bold" : "border-transparent text-tatt-gray hover:text-foreground font-medium"}`}
+                        >
+                            My Bookmarks
+                        </button>
+                    </div>
+
+
+                    {/* Post List */}
+                    <div className="space-y-6">
+                        {posts.map(post => (
+                            <PostCard key={post.id} post={post} onLike={() => handleLike(post.id)} />
+                        ))}
+
+                        {isLoadingPosts && (
+                            <div className="flex justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-tatt-lime"></div>
+                            </div>
+                        )}
+
+                        {!isLoadingPosts && posts.length === 0 && (
+                            <div className="bg-surface rounded-2xl border border-border p-12 text-center">
+                                <div className="size-16 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <TrendingUp className="h-8 w-8 text-tatt-gray" />
+                                </div>
+                                <h3 className="text-lg font-bold mb-2">No posts found</h3>
+                                <p className="text-tatt-gray max-w-xs mx-auto text-sm">
+                                    {filter === "CHAPTER"
+                                        ? "Be the first to share an update with your chapter members!"
+                                        : filter === "PREMIUM"
+                                            ? "Premium resources will appear here once they are published."
+                                            : filter === "BOOKMARKS"
+                                                ? "You haven't bookmarked any strategic insights yet."
+                                                : "Your feed is empty. Start following more members or join a chapter!"}
+                                </p>
+
+                            </div>
+                        )}
+
+                        {hasMore && !isLoadingPosts && (
+                            <button
+                                onClick={() => fetchFeed(page + 1, filter)}
+                                className="w-full py-4 text-sm font-bold text-tatt-lime hover:bg-tatt-lime/5 rounded-xl border border-dashed border-tatt-lime/30 transition-all uppercase tracking-widest"
+                            >
+                                Load more insights
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Discovery Sidebar */}
+                <div className="w-full lg:w-80 space-y-6">
+                    {/* Elite Connections */}
+                    <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Elite Connections</h2>
+                            <TrendingUp className="h-4 w-4 text-tatt-lime" />
+                        </div>
+                        <div className="space-y-5">
+                            {isLoadingSidebar ? (
+                                Array(3).fill(0).map((_, i) => (
+                                    <div key={i} className="flex animate-pulse gap-3">
+                                        <div className="size-12 bg-border rounded-full"></div>
+                                        <div className="flex-1 space-y-2 py-1">
+                                            <div className="h-3 bg-border rounded w-3/4"></div>
+                                            <div className="h-2 bg-border rounded w-1/2"></div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : recommendations.length > 0 ? (
+                                recommendations.map(rec => (
+                                    <div key={rec.member.id} className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <Link href={`/dashboard/network/${rec.member.id}`} className="block">
+                                                    <div className="size-12 rounded-full border border-border overflow-hidden bg-background">
+                                                        {rec.member.profilePicture ? (
+                                                            <Image src={rec.member.profilePicture} alt={rec.member.firstName} width={48} height={48} className="object-cover" />
+                                                        ) : (
+                                                            <div className="size-full flex items-center justify-center font-bold text-tatt-lime text-sm">
+                                                                {rec.member.firstName.charAt(0)}{rec.member.lastName.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Link>
+                                                <div className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white dark:border-black ${rec.member.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
+                                            </div>
+                                            <div>
+                                                <Link href={`/dashboard/network/${rec.member.id}`}>
+                                                    <p className="text-sm font-bold group-hover:text-tatt-lime transition-colors">{rec.member.firstName} {rec.member.lastName}</p>
+                                                </Link>
+                                                <p className="text-[10px] text-tatt-gray font-medium uppercase tracking-tight line-clamp-1">{rec.member.professionTitle || 'Member'}</p>
+                                            </div>
+                                        </div>
+                                        {rec.canConnect && (
+                                            <button
+                                                onClick={() => handleConnect(rec.member)}
+                                                title="Connect"
+                                                className="size-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 transition-all border border-transparent hover:border-tatt-lime/30"
+                                            >
+                                                <UserPlus className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-tatt-gray text-center py-4">No recommendations yet. Complete your profile to get matched!</p>
+                            )}
+                        </div>
+                        <button className="w-full mt-6 py-2.5 text-[10px] font-black text-tatt-gray hover:text-foreground uppercase tracking-[0.2em] transition-all border border-border rounded-xl hover:border-tatt-lime/50">
+                            Explore Network
+                        </button>
+                    </div>
+
+                    {/* Upcoming Events */}
+                    <div className="bg-tatt-black rounded-2xl border border-white/10 p-6 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 size-24 bg-tatt-lime/10 blur-3xl -mr-12 -mt-12 rounded-full"></div>
+                        <div className="flex items-center justify-between mb-6 relative z-10">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-white">Upcoming Mixers</h2>
+                            <Calendar className="h-4 w-4 text-tatt-lime" />
+                        </div>
+                        <div className="space-y-6 relative z-10">
+                            {isLoadingSidebar ? (
+                                Array(2).fill(0).map((_, i) => (
+                                    <div key={i} className="flex animate-pulse gap-4">
+                                        <div className="w-12 h-14 bg-white/10 rounded"></div>
+                                        <div className="flex-1 space-y-2 py-1">
+                                            <div className="h-3 bg-white/10 rounded w-full"></div>
+                                            <div className="h-2 bg-white/10 rounded w-2/3"></div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : upcomingEvents.length > 0 ? (
+                                upcomingEvents.map(event => {
+                                    const date = new Date(event.dateTime);
+                                    const locationName = (event.locations && event.locations.length > 0)
+                                        ? event.locations[0]?.chapter?.name
+                                        : "Global";
+                                    return (
+                                        <div key={event.id} className="flex gap-4 group cursor-pointer">
+                                            <div className="bg-white/10 text-white rounded-xl flex flex-col items-center justify-center p-2 min-w-[52px] h-14 border border-white/5 group-hover:bg-tatt-lime group-hover:text-black transition-all">
+                                                <span className="text-[10px] font-black uppercase tracking-tighter opacity-70">{date.toLocaleString('default', { month: 'short' })}</span>
+                                                <span className="text-xl font-black leading-none">{date.getDate()}</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-white group-hover:text-tatt-lime transition-colors line-clamp-1">{event.title}</h3>
+                                                <p className="text-[10px] text-white/50 mt-1 flex items-center gap-1 font-medium italic">
+                                                    {event.type === 'WEBINAR' ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                                                    {locationName}
+                                                </p>
+                                                <button className="text-[10px] font-black text-tatt-lime uppercase tracking-widest mt-2 hover:underline">Register Now</button>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-xs text-white/50 text-center py-4">Check back soon for new events!</p>
+                            )}
+                        </div>
+                        <button className="w-full mt-6 py-2 text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors">View Calendar</button>
+                    </div>
+
+                    {/* Footer Links */}
+                    <div className="px-6 py-4 flex flex-wrap gap-x-4 gap-y-2 opacity-30 text-foreground">
+                        <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Privacy</a>
+                        <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Terms</a>
+                        <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Guidelines</a>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mt-2 w-full">© 2024 The African Think Tank</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Post Type Selector (Wizard) */}
+            {isPostWizardOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsPostWizardOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                        <div className="p-8 border-b border-border bg-gradient-to-r from-tatt-lime/10 to-transparent">
+                            <div className="flex items-center justify-between mb-2">
+                                <h2 className="text-2xl font-black tracking-tight text-foreground">Choose Post Type</h2>
+                                <button onClick={() => setIsPostWizardOpen(false)} className="size-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <p className="text-tatt-gray text-sm">Select the nature of your contribution to the TATT community.</p>
+                        </div>
+                        <div className="p-6 grid gap-4">
+                            {allowedPostTypes.map(type => (
+                                <button
+                                    key={type.id}
+                                    onClick={() => {
+                                        setSelectedPostType(type.id);
+                                        setIsPostWizardOpen(false);
+                                        setIsCreateModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-5 p-5 rounded-2xl border border-border hover:border-tatt-lime hover:bg-tatt-lime/5 transition-all text-left group"
+                                >
+                                    <div className="size-14 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-tatt-lime group-hover:text-black transition-all">
+                                        <type.icon className="h-7 w-7" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-foreground mb-1">{type.name}</h4>
+                                        <p className="text-xs text-tatt-gray">{type.description}</p>
+                                    </div>
+                                    <Plus className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime group-hover:translate-x-1 transition-all" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Post Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsCreateModalOpen(false)} />
+                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="p-6 border-b border-border flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setIsCreateModalOpen(false);
+                                        setIsPostWizardOpen(true);
+                                    }}
+                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-tatt-gray"
+                                >
+                                    <ChevronDown className="h-5 w-5 rotate-90" />
+                                </button>
+                                <div>
+                                    <h2 className="text-lg font-bold">New {POST_TYPES.find(t => t.id === selectedPostType)?.name}</h2>
+                                    <p className="text-[10px] text-tatt-gray font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        Authoring as <span className="text-tatt-lime">{user?.firstName} {user?.lastName}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="size-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                            <input
+                                value={newPostTitle}
+                                onChange={(e) => setNewPostTitle(e.target.value)}
+                                placeholder="Post Title (Optional)"
+                                className="w-full bg-transparent border-none text-xl font-bold focus:ring-0 placeholder:text-tatt-gray outline-none"
+                            />
+
+                            <textarea
+                                value={newPostContent}
+                                onChange={(e) => setNewPostContent(e.target.value)}
+                                placeholder="What's on your mind? Use strategic insights to engage the community..."
+                                className="w-full bg-transparent border-none text-base resize-none focus:ring-0 min-h-[200px] placeholder:text-tatt-gray/50 outline-none"
+                            />
+
+                            {/* Attachment Previews */}
+                            {attachmentPreviews.length > 0 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pb-4">
+                                    {attachmentPreviews.map((preview, i) => (
+                                        <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-border group">
+                                            <Image src={preview} alt="Attachment preview" fill className="object-cover" />
+                                            <button
+                                                onClick={() => removeAttachment(i)}
+                                                className="absolute top-2 right-2 size-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+
+                        {/* Actions */}
+                        <div className="p-6 border-t border-border space-y-4">
+                            {(user?.systemRole === 'ADMIN' || user?.systemRole === 'SUPERADMIN' || user?.systemRole === 'MODERATOR') && (
+                                <div className="flex items-center justify-between p-4 bg-tatt-lime/5 rounded-2xl border border-tatt-lime/20">
+                                    <div className="flex items-center gap-3 text-tatt-lime">
+                                        <Lock className="h-5 w-5" />
+                                        <div>
+                                            <p className="text-sm font-bold">Premium Visibility</p>
+                                            <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight">Only paid members will see the full content</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsPremiumPost(!isPremiumPost)}
+                                        className={`w-12 h-6 rounded-full transition-all relative ${isPremiumPost ? 'bg-tatt-lime' : 'bg-tatt-gray/30'}`}
+                                    >
+                                        <div className={`absolute top-1 size-4 bg-white rounded-full transition-all ${isPremiumPost ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        multiple
+                                        hidden
+                                        accept="image/*,video/*,application/pdf"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2.5 bg-black/5 dark:bg-white/5 hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
+                                    >
+                                        <ImageIcon className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2.5 bg-black/5 dark:bg-white/5 hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
+                                    >
+                                        <Paperclip className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={handleCreatePost}
+                                    className="bg-tatt-lime text-black font-black px-8 py-3 rounded-xl text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                                >
+                                    Publish Post
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
+            {/* Connection Modal */}
+            {connectModal.open && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setConnectModal({ open: false, member: null })} />
+                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                        <div className="p-6 border-b border-border flex items-center justify-between bg-black/5">
+                            <h3 className="font-bold">Connect with {connectModal.member?.firstName}</h3>
+                            <button onClick={() => setConnectModal({ open: false, member: null })} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-tatt-gray">Add a personalized message to your connection request.</p>
+                            <textarea
+                                value={connectMessage}
+                                onChange={(e) => setConnectMessage(e.target.value)}
+                                className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
+                                placeholder="Write your message..."
+                            />
+                            <button
+                                onClick={submitConnect}
+                                disabled={isSendingConnect}
+                                className="w-full bg-tatt-lime text-black font-black py-3 rounded-xl uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isSendingConnect ? <div className="size-4 border-2 border-black border-t-transparent animate-spin rounded-full" /> : <Send className="h-4 w-4" />}
+                                Send Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
+    const { user } = useAuth();
+    const [showComments, setShowComments] = useState(false);
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [newComment, setNewComment] = useState("");
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [localCommentsCount, setLocalCommentsCount] = useState(post.commentsCount);
+    const [showOptions, setShowOptions] = useState(false);
+    const [isReposting, setIsReposting] = useState(false);
+    const [isReporting, setIsReporting] = useState(false);
+    const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked);
+    const [isHighlighted, setIsHighlighted] = useState(post.isHighlighted);
+    const [isUpvoted, setIsUpvoted] = useState(post.isUpvotedByMe);
+    const [localUpvotesCount, setLocalUpvotesCount] = useState(post.upvotesCount);
+
+
+    const handleBookmark = async () => {
+        try {
+            const res = await api.post(`/feed/${post.id}/bookmark`);
+            setIsBookmarked(res.data.bookmarked);
+            toast.success(res.data.message);
+        } catch (error) {
+            toast.error("Failed to bookmark post");
+        }
+        setShowOptions(false);
+    };
+
+    const handleHighlight = async () => {
+        try {
+            const res = await api.post(`/feed/${post.id}/highlight`);
+            setIsHighlighted(res.data.isHighlighted);
+            toast.success(res.data.message);
+        } catch (error) {
+            toast.error("Failed to highlight post");
+        }
+        setShowOptions(false);
+    };
+
+    const handleShare = () => {
+        const shareUrl = `${window.location.origin}/share/${post.id}`;
+        navigator.clipboard.writeText(shareUrl);
+        toast.success("Strategic insight link copied! Ready to share.");
+    };
+
+    const handleUpvote = async () => {
+        try {
+            const res = await api.post(`/feed/${post.id}/upvote`);
+            setIsUpvoted(res.data.upvoted);
+            setLocalUpvotesCount(prev => res.data.upvoted ? prev + 1 : prev - 1);
+        } catch (error) {
+            toast.error("Failed to upvote");
+        }
+    };
+
+
+
+    const toggleComments = async () => {
+        if (!showComments && comments.length === 0) {
+            fetchComments();
+        }
+        setShowComments(!showComments);
+    };
+
+    const fetchComments = async () => {
+        if (post.isPremiumLocked) return;
+        setIsLoadingComments(true);
+        try {
+            const res = await api.get(`/feed/${post.id}/comments`);
+            setComments(res.data.data);
+            setLocalCommentsCount(res.data.meta.total);
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+        } finally {
+            setIsLoadingComments(false);
+        }
+    };
+
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim()) return;
+
+        setIsSubmittingComment(true);
+        try {
+            await api.post(`/feed/${post.id}/comments`, { content: newComment });
+            setNewComment("");
+            fetchComments();
+            // Optimistically update count if desired, though fetchComments will do it
+            setLocalCommentsCount(prev => prev + 1);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to add comment");
+        } finally {
+            setIsSubmittingComment(false);
+        }
+    };
+
+    const getTierColor = (tier: string) => {
+        switch (tier) {
+            case "KIONGOZI": return "bg-tatt-lime text-black";
+            case "IMANI": return "bg-tatt-black text-white border border-white/20 shadow-lg";
+            case "UBUNTU": return "bg-[#333] text-white";
+            default: return "bg-gray-100 text-gray-600";
+        }
+    };
+
+    return (
+        <article className="bg-surface rounded-2xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden group">
+            {post.isPremium && (
+                <div className="bg-gradient-to-r from-tatt-lime/20 via-tatt-lime/5 to-transparent h-1" />
+            )}
+
+            <div className="p-5">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-5">
+                    <div className="flex gap-4">
+                        <div className="relative">
+                            <Link href={`/dashboard/network/${post.author.id}`} className="block">
+                                <div className="size-12 rounded-full border-2 border-border overflow-hidden bg-background">
+                                    {post.author.profilePicture ? (
+                                        <Image src={post.author.profilePicture} alt={post.author.firstName} width={48} height={48} className="object-cover" />
+                                    ) : (
+                                        <div className="size-full flex items-center justify-center font-bold text-tatt-lime">
+                                            {post.author.firstName.charAt(0)}{post.author.lastName.charAt(0)}
+                                        </div>
+                                    )}
+                                </div>
+                            </Link>
+                            <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white dark:border-black shadow-sm ${post.author.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
+                        </div>
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Link href={`/dashboard/network/${post.author.id}`}>
+                                    <h3 className="font-black text-foreground hover:text-tatt-lime transition-colors">{post.author.firstName} {post.author.lastName}</h3>
+                                </Link>
+                                <span className={`${getTierColor(post.author.communityTier)} text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-[0.1em]`}>
+                                    {post.author.communityTier}
+                                </span>
+                                {post.isPremium && (
+                                    <span className="bg-tatt-lime/10 text-tatt-lime text-[9px] font-black px-2 py-0.5 rounded border border-tatt-lime/20 uppercase tracking-[0.1em] flex items-center gap-1">
+                                        <Lock className="h-2 w-2" />
+                                        Premium
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-widest mt-1">
+                                {post.chapter?.name || 'Global'} Chapter • {formatDistanceToNow(new Date(post.createdAt))} ago
+                            </p>
+                        </div>
+                    </div>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowOptions(!showOptions)}
+                            className="text-tatt-gray hover:text-tatt-lime p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                        >
+                            <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                        {showOptions && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] border border-border rounded-2xl shadow-2xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200">
+                                <button onClick={handleBookmark} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                                    <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-tatt-lime text-tatt-lime' : ''}`} />
+                                    {isBookmarked ? 'Bookmarked' : 'Bookmark Post'}
+                                </button>
+                                {(user?.systemRole === 'ADMIN' || user?.systemRole === 'SUPERADMIN' || user?.systemRole === 'MODERATOR' || user?.systemRole === 'REGIONAL_ADMIN') && (
+                                    <button onClick={handleHighlight} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                                        <Highlighter className={`h-4 w-4 ${isHighlighted ? 'text-tatt-lime' : ''}`} />
+                                        {isHighlighted ? 'Remove Highlight' : 'Highlight in Chapter'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => { setShowOptions(false); setIsReposting(true); }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                                >
+                                    <Repeat2 className="h-4 w-4" />
+                                    Repost
+                                </button>
+                                <button
+                                    onClick={() => { setShowOptions(false); setIsReporting(true); }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-900/10 text-red-600 transition-colors text-left"
+                                >
+                                    <Flag className="h-4 w-4" />
+                                    Report Post
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
+
+                {/* Content */}
+                <div className="space-y-4 mb-2">
+                    {post.title && (
+                        <h2 className="text-xl lg:text-2xl font-black tracking-tight leading-tight text-foreground">{post.title}</h2>
+                    )}
+
+                    {post.isPremiumLocked ? (
+                        <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-8 border border-dashed border-border flex flex-col items-center text-center space-y-4">
+                            <div className="size-16 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center text-tatt-lime">
+                                <Lock className="size-8" />
+                            </div>
+                            <div className="max-w-md">
+                                <h4 className="text-lg font-black mb-1">Elite Strategic Insight</h4>
+                                <p className="text-sm text-tatt-gray">This resource is exclusive to TATT Ubuntu, Imani, and Kiongozi members. Upgrade your tier to unlock full access.</p>
+                            </div>
+                            <button className="bg-tatt-lime text-black font-black px-8 py-2.5 rounded-xl text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-tatt-lime/10">
+                                Upgrade Now
+                            </button>
+                        </div>
+                    ) : post.contentFormat === 'HTML' ? (
+                        <div
+                            className="text-foreground/90 text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words"
+                            dangerouslySetInnerHTML={{ __html: post.content || "" }}
+                        />
+                    ) : (
+                        <div className="text-foreground/90 text-sm lg:text-base leading-relaxed whitespace-pre-wrap break-words">
+                            {post.content}
+                        </div>
+                    )}
+
+                    {post.mediaUrls && post.mediaUrls.length > 0 && !post.isPremiumLocked && (
+                        <div className={`grid gap-2 mt-4 overflow-hidden rounded-2xl border border-border ${post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {post.mediaUrls.map((url, i) => (
+                                <div key={i} className="relative aspect-video lg:aspect-auto lg:h-[400px]">
+                                    <Image src={url} alt="Post content" fill className="object-cover" />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Original Post Preview (for reposts) */}
+                    {post.parentPost && (
+                        <div className="mt-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border space-y-3 cursor-pointer hover:border-border/60 transition-colors" onClick={() => window.location.href = `/dashboard/feed/${post.parentPost?.id}`}>
+                            <div className="flex items-center gap-3">
+                                <div className="size-8 rounded-full border border-border overflow-hidden bg-background">
+                                    {post.parentPost.author.profilePicture ? (
+                                        <Image src={post.parentPost.author.profilePicture} alt={post.parentPost.author.firstName} width={32} height={32} className="object-cover" />
+                                    ) : (
+                                        <div className="size-full flex items-center justify-center text-[10px] font-bold text-tatt-lime">
+                                            {post.parentPost.author.firstName.charAt(0)}{post.parentPost.author.lastName.charAt(0)}
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-xs font-black text-foreground">{post.parentPost.author.firstName} {post.parentPost.author.lastName}</span>
+                                <span className="text-[10px] text-tatt-gray">• {formatDistanceToNow(new Date(post.parentPost.createdAt))} ago</span>
+                            </div>
+                            <div className="text-sm line-clamp-3 text-tatt-gray italic">
+                                {post.parentPost.isPremiumLocked ? "Elite Strategic Insight (Locked)" : (post.parentPost.content || "").replace(/<[^>]*>?/gm, '').substring(0, 200) + '...'}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Tags */}
+                {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {post.tags.map(tag => (
+                            <span key={tag} className="text-[10px] font-black text-tatt-lime uppercase tracking-widest">#{tag}</span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Footer Actions */}
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
+                    <div className="flex gap-1">
+                        <button
+                            onClick={onLike}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${post.isLikedByMe ? 'bg-tatt-lime text-black' : 'text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10'}`}
+                        >
+                            <ThumbsUp className={`h-5 w-5 ${post.isLikedByMe ? 'fill-black' : ''}`} />
+                            <span className="text-xs font-black">{post.likesCount > 0 ? post.likesCount : 'Like'}</span>
+                        </button>
+                        <button
+                            onClick={toggleComments}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${showComments ? 'text-tatt-lime bg-tatt-lime/10' : 'text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10'}`}
+                        >
+                            <MessageSquare className="h-5 w-5" />
+                            <span className="text-xs font-black">{localCommentsCount > 0 ? localCommentsCount : 'Comment'}</span>
+                        </button>
+                        <button
+                            onClick={handleUpvote}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${isUpvoted ? 'bg-orange-500/10 text-orange-500' : 'text-tatt-gray hover:text-orange-500 hover:bg-orange-500/10'}`}
+                        >
+                            <ArrowBigUp className={`h-5 w-5 ${isUpvoted ? 'fill-orange-500' : ''}`} />
+                            <span className="text-xs font-black">{localUpvotesCount > 0 ? localUpvotesCount : 'Upvote'}</span>
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-tatt-gray text-[10px] font-bold uppercase tracking-widest mr-2">
+                            <Eye className="h-3 w-3" />
+                            {post.viewsCount || 0}
+                        </div>
+                        <button onClick={handleShare} className="flex items-center gap-2.5 px-3 py-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-xl transition-all border border-border/50">
+                            <Share2 className="h-4.5 w-4.5" />
+                            <span className="text-xs font-black hidden sm:inline uppercase tracking-widest text-[10px]">Share Insight</span>
+                        </button>
+                    </div>
+                </div>
+
+
+                {/* Repost Modal */}
+                {isReposting && (
+                    <RepostModal
+                        post={post}
+                        onClose={() => setIsReposting(false)}
+                        onSuccess={() => { setIsReposting(false); onLike(); }} // Refresh feed
+                    />
+                )}
+
+                {/* Report Modal */}
+                {isReporting && (
+                    <ReportModal
+                        post={post}
+                        onClose={() => setIsReporting(false)}
+                    />
+                )}
+
+
+                {/* Comments Section */}
+                {showComments && (
+                    <div className="mt-6 pt-6 border-t border-border space-y-6">
+                        {/* New Comment Input */}
+                        <form onSubmit={handleAddComment} className="flex gap-4">
+                            <div className="size-8 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center font-bold text-tatt-lime text-[10px] shrink-0 overflow-hidden relative">
+                                {user?.profilePicture ? (
+                                    <Image src={user.profilePicture} alt="Profile" fill className="object-cover" />
+                                ) : (
+                                    <span>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</span>
+                                )}
+                            </div>
+                            <div className="flex-1 relative">
+                                <input
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Add a Strategic perspective..."
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-4 pr-12 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none"
+                                />
+                                <button
+                                    disabled={isSubmittingComment}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-tatt-lime hover:scale-110 disabled:opacity-50 transition-all font-bold text-xs px-2"
+                                >
+                                    Post
+                                </button>
+                            </div>
+                        </form>
+
+                        {/* List of Comments */}
+                        <div className="space-y-5 px-1 max-h-[400px] overflow-y-auto no-scrollbar">
+                            {isLoadingComments ? (
+                                <div className="flex justify-center py-4">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-tatt-lime"></div>
+                                </div>
+                            ) : comments.length > 0 ? (
+                                comments.map(comment => (
+                                    <div key={comment.id} className="flex gap-4 group">
+                                        <div className="size-8 rounded-full border border-border overflow-hidden bg-background shrink-0">
+                                            {comment.author.profilePicture ? (
+                                                <Image src={comment.author.profilePicture} alt={comment.author.firstName} width={32} height={32} className="object-cover" />
+                                            ) : (
+                                                <div className="size-full flex items-center justify-center font-bold text-tatt-lime text-[10px]">
+                                                    {comment.author.firstName.charAt(0)}{comment.author.lastName.charAt(0)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-border">
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <div>
+                                                        <span className="font-bold text-sm">{comment.author.firstName} {comment.author.lastName}</span>
+                                                        <span className="text-[10px] text-tatt-gray ml-2 font-medium">{formatDistanceToNow(new Date(comment.createdAt))} ago</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-foreground/80 leading-relaxed">{comment.content}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4 mt-2 ml-4">
+                                                <button className="text-[10px] font-black text-tatt-gray hover:text-tatt-lime uppercase tracking-widest">Reply</button>
+                                                <button className="text-[10px] font-black text-tatt-gray hover:text-tatt-lime uppercase tracking-widest">Like</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-tatt-gray text-center py-4 italic">No perspectives shared yet.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </article >
+    );
+}
+
+function RepostModal({ post, onClose, onSuccess }: { post: Post, onClose: () => void, onSuccess: () => void }) {
+    const [commentary, setCommentary] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleRepost = async () => {
+        if (!commentary.trim()) {
+            toast.error("Please add some commentary to your repost.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await api.post("/feed", {
+                content: commentary,
+                contentFormat: "PLAIN",
+                parentPostId: post.id,
+                type: "GENERAL"
+            });
+            toast.success("Post successfully shared to your feed!");
+            onSuccess();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to repost");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white dark:bg-[#121212] w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
+                <div className="p-6 border-b border-border flex items-center justify-between bg-black/5">
+                    <h3 className="font-bold flex items-center gap-2">
+                        <Repeat2 className="h-5 w-5 text-tatt-lime" />
+                        Repost Insight
+                    </h3>
+                    <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors font-black">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <textarea
+                        value={commentary}
+                        onChange={(e) => setCommentary(e.target.value)}
+                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
+                        placeholder="Add your strategic perspective to this insight..."
+                    />
+
+                    <div className="p-4 rounded-2xl border border-border bg-black/5 opacity-80 scale-95 origin-top">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="size-6 rounded-full border border-border overflow-hidden bg-background">
+                                {post.author.profilePicture ? (
+                                    <Image src={post.author.profilePicture} alt={post.author.firstName} width={24} height={24} className="object-cover" />
+                                ) : (
+                                    <div className="size-full flex items-center justify-center text-[8px] font-bold text-tatt-lime">
+                                        {post.author.firstName.charAt(0)}{post.author.lastName.charAt(0)}
+                                    </div>
+                                )}
+                            </div>
+                            <span className="text-xs font-bold">{post.author.firstName} {post.author.lastName}</span>
+                        </div>
+                        <p className="text-xs text-tatt-gray line-clamp-2">
+                            {post.isPremiumLocked ? "Elite Strategic Insight (Locked)" : (post.content || "").replace(/<[^>]*>?/gm, '').substring(0, 150) + '...'}
+                        </p>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button onClick={onClose} className="px-6 py-3 rounded-xl text-sm font-bold hover:bg-black/5 transition-all uppercase tracking-widest text-xs">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleRepost}
+                            disabled={isSubmitting}
+                            className="bg-tatt-lime text-black font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 flex items-center gap-2"
+                        >
+                            {isSubmitting && <div className="size-3 border-2 border-black border-t-transparent animate-spin rounded-full" />}
+                            Share Post
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ReportModal({ post, onClose }: { post: Post, onClose: () => void }) {
+    const [reason, setReason] = useState("");
+    const [suggestedAction, setSuggestedAction] = useState("LIMIT_RECOMMENDATION");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleReport = async () => {
+        if (!reason.trim()) {
+            toast.error("Please describe why you are reporting this post.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await api.post(`/feed/${post.id}/report`, {
+                reason,
+                suggestedAction
+            });
+            toast.success("Thank you. Our content administrators will review this report.");
+            onClose();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to submit report");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white dark:bg-[#121212] w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
+                <div className="p-6 border-b border-border flex items-center justify-between bg-red-500/5">
+                    <h3 className="font-bold flex items-center gap-2 text-red-500">
+                        <Flag className="h-5 w-5" />
+                        Report Insight
+                    </h3>
+                    <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors font-black">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div>
+                        <label className="block text-xs font-black uppercase tracking-widest text-tatt-gray mb-3">Reason for Reporting</label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-red-500 outline-none min-h-[120px]"
+                            placeholder="Please describe why this post violates community guidelines..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-black uppercase tracking-widest text-tatt-gray mb-3">Suggested Strategic Action</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => setSuggestedAction("LIMIT_RECOMMENDATION")}
+                                className={`p-4 rounded-2xl border text-xs font-bold transition-all ${suggestedAction === "LIMIT_RECOMMENDATION" ? "border-tatt-lime bg-tatt-lime/5 text-foreground" : "border-border bg-black/5 text-tatt-gray hover:border-tatt-lime/30"}`}
+                            >
+                                Limit Reach
+                            </button>
+                            <button
+                                onClick={() => setSuggestedAction("DELETE")}
+                                className={`p-4 rounded-2xl border text-xs font-bold transition-all ${suggestedAction === "DELETE" ? "border-red-500 bg-red-500/5 text-red-500" : "border-border bg-black/5 text-tatt-gray hover:border-red-500/30"}`}
+                            >
+                                Delete Post
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button onClick={onClose} className="px-6 py-3 rounded-xl text-sm font-bold hover:bg-black/5 transition-all">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleReport}
+                            disabled={isSubmitting}
+                            className="bg-red-600 text-white font-black px-8 py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-2 shadow-lg shadow-red-600/20"
+                        >
+                            {isSubmitting && <div className="size-3 border-2 border-white border-t-transparent animate-spin rounded-full" />}
+                            Submit Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
