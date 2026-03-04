@@ -53,7 +53,7 @@ import { VolunteerTrainingResource } from '../../modules/volunteers/entities/vol
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource
                 ],
                 autoLoadModels: true,
-                synchronize: false,
+                synchronize: config.get<string>('DB_SYNC') === 'true',
                 logging: config.get<string>('NODE_ENV') === 'development' ? console.log : false,
             }),
         }),
