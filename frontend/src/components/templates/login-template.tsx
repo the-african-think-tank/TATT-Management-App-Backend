@@ -13,19 +13,6 @@ export function LoginTemplate() {
           </div>
         </div>
 
-        <footer className="flex items-center justify-center gap-4 border-t border-[#f0f0ea] pt-8 text-xs text-[#8c8c5f]">
-          <a href="#" className="hover:underline">
-            Privacy Policy
-          </a>
-          <span>•</span>
-          <a href="#" className="hover:underline">
-            Terms of Service
-          </a>
-          <span>•</span>
-          <a href="#" className="hover:underline">
-            Contact Support
-          </a>
-        </footer>
       </section>
     </main>
   );
