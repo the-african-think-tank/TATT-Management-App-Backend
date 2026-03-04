@@ -140,7 +140,8 @@ async function bootstrap() {
     // ── Database Synchronization ──────────────────────────────────────────────
     const sequelize = app.get(Sequelize);
     const dbSyncVal = configService.get<string | boolean>('DB_SYNC');
-    const shouldSync = dbSyncVal === 'true' || dbSyncVal === true || dbSyncVal === '1';
+    // Default to true unless explicitly set to false, 'false', or '0'
+    const shouldSync = dbSyncVal !== 'false' && dbSyncVal !== false && dbSyncVal !== '0';
 
     console.log(`[TATT-Management-App] DB_SYNC value: "${dbSyncVal}" (evaluated to: ${shouldSync})`);
 
