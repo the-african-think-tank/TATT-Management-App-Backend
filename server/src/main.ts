@@ -122,17 +122,19 @@ async function bootstrap() {
         .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api-docs', app, document, {
-        customSiteTitle: 'TATT API Docs',
-        swaggerOptions: {
-            docExpansion: 'none',
-            defaultModelsExpandDepth: 2,
-            displayRequestDuration: true,
-            persistAuthorization: true,
-            operationsSorter: 'method',
-            syntaxHighlight: { activate: true, theme: 'monokai' },
-        },
-    });
+    if (process.env.NODE_ENV !== 'production') {
+        SwaggerModule.setup('api-docs', app, document, {
+            customSiteTitle: 'TATT API Docs',
+            swaggerOptions: {
+                docExpansion: 'none',
+                defaultModelsExpandDepth: 2,
+                displayRequestDuration: true,
+                persistAuthorization: true,
+                operationsSorter: 'method',
+                syntaxHighlight: { activate: true, theme: 'monokai' },
+            },
+        });
+    }
 
     const port = process.env.PORT || 5000;
     await app.listen(port);
