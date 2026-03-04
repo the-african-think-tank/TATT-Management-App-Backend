@@ -8,6 +8,7 @@ npm-debug.log*
 .dockerignore
 Dockerfile
 docker-compose.yml
-uploads
-temp
-*.tsbuildinfo
+/uploads/
+/temp/
+!src/modules/uploads/**
+!src/modules/uploads
