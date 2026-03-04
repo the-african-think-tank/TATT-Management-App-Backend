@@ -14,8 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TATT Community Membership Platform",
-  description: "The African Think Tank membership platform.",
+  title: {
+    template: "%s | The African Think Tank",
+    default: "TATT Member Portal - The African Think Tank",
+  },
+  description: "Join The African Think Tank (TATT) community. A vibrant network empowering the African diaspora through culture, connection, professional development, and community impact. Access resources, network with leaders, and drive global change.",
+  keywords: ["African diaspora", "TATT", "The African Think Tank", "African networking", "African professionals", "African community", "NGO"],
+  openGraph: {
+    title: "TATT Member Portal - The African Think Tank",
+    description: "Empowering the African Diaspora through Culture, Connection, and Community. Join us in driving global change.",
+    siteName: "The African Think Tank",
+    type: "website",
+  },
+  icons: {
+    icon: "/assets/tattlogoIcon.svg",
+    apple: "/assets/tattlogoIcon.svg",
+  },
 };
 
 export default function RootLayout({
