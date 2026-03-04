@@ -130,6 +130,10 @@ export function Footer() {
                     <a href="https://www.theafricanthinktank.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Privacy Policy</a>
                     <span className="text-gray-700 hidden sm:inline">|</span>
                     <a href="https://www.theafricanthinktank.com/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Terms & Conditions</a>
+                    <span className="text-gray-700 hidden sm:inline">|</span>
+                    <a href="https://www.dohtechsolutions.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300 transition-colors">
+                        Developed and maintained by DOHTECH SOLUTIONS
+                    </a>
                 </div>
             </div>
         </footer>
