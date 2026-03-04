@@ -10,7 +10,7 @@ import { ConnectionsModule } from './modules/connections/connections.module';
 import { SecurityModule } from './modules/security/security.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { ResourcesModule } from './modules/resources/resources.module';
-import { UploadsModule } from './modules/uploads/uploads.module';
+import { UploadsModule } from './modules/media-uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { VolunteersModule } from './modules/volunteers/volunteers.module';
