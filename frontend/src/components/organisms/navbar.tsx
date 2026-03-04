@@ -31,9 +31,9 @@ export function Navbar() {
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
-                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Mission</Link>
-                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Programs</Link>
-                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Impact</Link>
+                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="/mission">Mission</Link>
+                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="/programs">Programs</Link>
+                <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="/impact">Impact</Link>
                 <Link
                     href={isAuthenticated ? "/dashboard/volunteers" : "/volunteer"}
                     className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest"
