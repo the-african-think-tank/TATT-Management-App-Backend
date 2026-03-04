@@ -34,20 +34,37 @@ export class SecurityPolicyService implements OnModuleInit {
 
     // ─── Bootstrap: ensure singleton row exists ───────────────────────────────
     async onModuleInit() {
-        // Wait briefly to ensure the global sync in main.ts has finished
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Retry logic: try up to 10 times to find/create the policy
+        // This gives the global DB_SYNC in main.ts time to finish
+        let attempts = 0;
+        const maxAttempts = 10;
 
-        try {
-            const [policy, created] = await this.policyRepo.findOrCreate({
-                where: { id: 'global' },
-                defaults: { id: 'global' } as any,
-            });
-            if (created) {
-                this.logger.log('Global security policy row created with defaults.');
+        const tryInitialize = async () => {
+            try {
+                const [policy, created] = await this.policyRepo.findOrCreate({
+                    where: { id: 'global' },
+                    defaults: { id: 'global' } as any,
+                });
+                if (created) {
+                    this.logger.log('Global security policy row created with defaults.');
+                }
+                return true;
+            } catch (err: any) {
+                attempts++;
+                if (attempts < maxAttempts) {
+                    this.logger.warn(`Security Policy table not ready yet (attempt ${attempts}/${maxAttempts}). Retrying in 2s...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return tryInitialize();
+                } else {
+                    this.logger.error(`Permanent failure initializing security policy after ${maxAttempts} attempts: ${err.message}`);
+                    return false;
+                }
             }
-        } catch (err: any) {
-            this.logger.error(`Failed to initialize global security policy: ${err.message}`);
-        }
+        };
+
+        // Run the initialization in the background so we don't block the WHOLE app startup
+        // if the database is just being slow.
+        tryInitialize();
     }
 
     // ─── GET CURRENT POLICY ──────────────────────────────────────────────────

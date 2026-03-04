@@ -40,6 +40,8 @@ services:
       start_period: 30s
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -48,7 +50,7 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASS: ${DB_PASS:-postgres}
       DB_NAME: ${DB_NAME:-tatt_db}
-      DB_SYNC: ${DB_SYNC:-false}
+      DB_SYNC: ${DB_SYNC:-true}
       JWT_SECRET: ${JWT_SECRET:-super_secret_for_tatt}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       MAIL_HOST: ${MAIL_HOST}

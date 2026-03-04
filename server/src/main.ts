@@ -139,7 +139,10 @@ async function bootstrap() {
 
     // ── Database Synchronization ──────────────────────────────────────────────
     const sequelize = app.get(Sequelize);
-    const shouldSync = configService.get<string | boolean>('DB_SYNC') === 'true' || configService.get<string | boolean>('DB_SYNC') === true;
+    const dbSyncVal = configService.get<string | boolean>('DB_SYNC');
+    const shouldSync = dbSyncVal === 'true' || dbSyncVal === true || dbSyncVal === '1';
+
+    console.log(`[TATT-Management-App] DB_SYNC value: "${dbSyncVal}" (evaluated to: ${shouldSync})`);
 
     if (shouldSync) {
         console.log('[TATT-Management-App] Synchronizing database schema...');
@@ -148,8 +151,9 @@ async function bootstrap() {
             console.log('[TATT-Management-App] Database synchronization complete.');
         } catch (error) {
             console.error('[TATT-Management-App] Database synchronization failed:', error);
-            // In a production environment, you might want to exit here if DB sync is critical
         }
+    } else {
+        console.log('[TATT-Management-App] Database synchronization skipped (DB_SYNC is not true).');
     }
 
     const port = process.env.PORT || 5000;
