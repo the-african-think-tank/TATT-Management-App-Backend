@@ -34,13 +34,10 @@ export class SecurityPolicyService implements OnModuleInit {
 
     // ─── Bootstrap: ensure singleton row exists ───────────────────────────────
     async onModuleInit() {
-        // Give Sequelize time to initialize connection
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait briefly to ensure the global sync in main.ts has finished
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         try {
-            // Force create the table if missing
-            await this.policyRepo.sync();
-
             const [policy, created] = await this.policyRepo.findOrCreate({
                 where: { id: 'global' },
                 defaults: { id: 'global' } as any,
@@ -49,22 +46,7 @@ export class SecurityPolicyService implements OnModuleInit {
                 this.logger.log('Global security policy row created with defaults.');
             }
         } catch (err: any) {
-            this.logger.error(`Failed to initialize global security policy: ${err.message}. Retrying in 5s...`);
-            // One-time retry after a longer wait
-            setTimeout(async () => {
-                try {
-                    await this.policyRepo.sync();
-                    const [policy, created] = await this.policyRepo.findOrCreate({
-                        where: { id: 'global' },
-                        defaults: { id: 'global' } as any,
-                    });
-                    if (created) {
-                        this.logger.log('Global security policy row created on retry.');
-                    }
-                } catch (retryErr: any) {
-                    this.logger.error(`Permanent failure initializing global security policy: ${retryErr.message}`);
-                }
-            }, 5000);
+            this.logger.error(`Failed to initialize global security policy: ${err.message}`);
         }
     }
 
