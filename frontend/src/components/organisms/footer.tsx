@@ -42,12 +42,12 @@ export function Footer() {
                 <div className="col-span-1 md:col-span-1 lg:col-span-1 space-y-4">
                     <h4 className="text-lg font-bold border-b border-tatt-lime pb-2 inline-block">Quick Links</h4>
                     <nav className="flex flex-col space-y-2 text-sm">
-                        <Link href="/" className="text-tatt-lime hover:text-white transition">Home</Link>
-                        <Link href="/about" className="text-tatt-lime hover:text-white transition">About</Link>
-                        <Link href="/programs" className="text-tatt-lime hover:text-white transition">Our Programs</Link>
-                        <Link href="/contact" className="text-tatt-lime hover:text-white transition">Contact Us</Link>
-                        <Link href="/volunteer" className="text-tatt-lime hover:text-white transition">Volunteer with US</Link>
-                        <Link href="/shop" className="text-tatt-lime hover:text-white transition">Shop</Link>
+                        <a href="https://www.theafricanthinktank.com/home" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Home</a>
+                        <a href="https://www.theafricanthinktank.com/about" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">About</a>
+                        <a href="https://www.theafricanthinktank.com/our-programs" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Our Programs</a>
+                        <a href="https://www.theafricanthinktank.com/contact-us" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Contact Us</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdmpcWaHGtDCxo_5-_kIJLPGboP2W-uxaRLCFNF08LrHAjj1Q/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Volunteer with US</a>
+                        <a href="https://www.theafricanthinktank.com/shop-2" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Shop</a>
                     </nav>
                 </div>
 
@@ -55,14 +55,14 @@ export function Footer() {
                 <div className="col-span-1 md:col-span-1 lg:col-span-1 space-y-4">
                     <h4 className="text-lg font-bold border-b border-tatt-lime pb-2 inline-block">Follow Us</h4>
                     <div className="flex flex-col space-y-2 text-sm">
-                        <a href="#" className="text-tatt-lime hover:text-white transition">Instagram</a>
-                        <a href="#" className="text-tatt-lime hover:text-white transition">LinkedIn</a>
-                        <a href="#" className="text-tatt-lime hover:text-white transition">Facebook</a>
+                        <a href="https://instagram.com/theafricanthinktank?igshid=NGVhN2U2NjQ0Yg%3D%3D" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Instagram</a>
+                        <a href="https://www.linkedin.com/company/the-african-think-tank/" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">LinkedIn</a>
+                        <a href="https://www.facebook.com/theafrthinktank" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Facebook</a>
                     </div>
                     <div className="flex gap-4 mt-4 justify-center md:justify-start">
                         {/* Social Icons */}
                         <a
-                            href="https://linkedin.com"
+                            href="https://www.linkedin.com/company/the-african-think-tank/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="h-10 w-10 bg-white flex items-center justify-center rounded transition hover:bg-tatt-lime group"
@@ -71,7 +71,7 @@ export function Footer() {
                             <Linkedin className="h-5 w-5 text-tatt-black group-hover:text-tatt-white" />
                         </a>
                         <a
-                            href="https://facebook.com"
+                            href="https://www.facebook.com/theafrthinktank"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="h-10 w-10 bg-white flex items-center justify-center rounded transition hover:bg-tatt-lime group"
@@ -80,7 +80,7 @@ export function Footer() {
                             <Facebook className="h-5 w-5 text-tatt-black group-hover:text-tatt-white" />
                         </a>
                         <a
-                            href="https://instagram.com"
+                            href="https://instagram.com/theafricanthinktank?igshid=NGVhN2U2NjQ0Yg%3D%3D"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="h-10 w-10 bg-white flex items-center justify-center rounded transition hover:bg-tatt-lime group"
@@ -127,9 +127,9 @@ export function Footer() {
                     Empowering the African Diaspora through Culture, Connection, and Community.
                 </p>
                 <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
-                    <Link href="/privacy" className="text-tatt-lime hover:underline">Privacy Policy</Link>
+                    <a href="https://www.theafricanthinktank.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Privacy Policy</a>
                     <span className="text-gray-700 hidden sm:inline">|</span>
-                    <Link href="/terms" className="text-tatt-lime hover:underline">Terms & Conditions</Link>
+                    <a href="https://www.theafricanthinktank.com/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Terms & Conditions</a>
                 </div>
             </div>
         </footer>

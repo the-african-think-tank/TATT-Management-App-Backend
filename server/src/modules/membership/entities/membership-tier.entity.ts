@@ -6,6 +6,9 @@ import { CommunityTier } from '../../iam/enums/roles.enum';
 @Table({
     tableName: 'membership_tiers',
     timestamps: true,
+    indexes: [
+        { unique: true, fields: ['tier'] }
+    ]
 })
 export class MembershipTier extends Model<MembershipTier> {
     @Column({
@@ -18,7 +21,6 @@ export class MembershipTier extends Model<MembershipTier> {
     @Column({
         type: DataType.ENUM(...Object.values(CommunityTier)),
         allowNull: false,
-        unique: true,
     })
     tier: CommunityTier;
 
