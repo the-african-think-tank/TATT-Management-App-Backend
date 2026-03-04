@@ -21,9 +21,12 @@ import {
     CreditCard,
     X,
     Send,
-    AlertCircle
+    AlertCircle,
+    Linkedin
 } from "lucide-react";
 import api from "@/services/api";
+import MembershipCard from "@/components/molecules/MembershipCard";
+import { useAuth } from "@/context/auth-context";
 
 interface MemberProfile {
     id: string;
@@ -44,6 +47,7 @@ interface MemberProfile {
         code: string;
     } | null;
     createdAt?: string;
+    linkedInProfileUrl?: string;
 }
 
 const TIER_BADGES: Record<string, { label: string; classes: string }> = {
@@ -56,6 +60,7 @@ const TIER_BADGES: Record<string, { label: string; classes: string }> = {
 export default function MemberProfilePage() {
     const params = useParams();
     const router = useRouter();
+    const { user } = useAuth();
     const id = params.id as string;
 
     const [member, setMember] = useState<MemberProfile | null>(null);
@@ -190,7 +195,7 @@ export default function MemberProfilePage() {
                                             {member.professionTitle ? member.professionTitle : "No professional title"}
                                             {member.companyName && ` • ${member.companyName}`}
                                         </p>
-                                        <div className="flex items-center gap-2 pt-2">
+                                        <div className="flex items-center gap-3 pt-2">
                                             {member.chapter ? (
                                                 <div className="flex flex-wrap gap-2 text-sm font-bold text-foreground">
                                                     <span className="flex items-center gap-1.5"><Building2 className="h-4 w-4 text-tatt-lime" /> {member.chapter.name}</span>
@@ -199,6 +204,17 @@ export default function MemberProfilePage() {
                                                 <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                                                     <MapPin className="h-4 w-4 text-tatt-lime" /> {member.location || 'Location not specified'}
                                                 </div>
+                                            )}
+
+                                            {member.linkedInProfileUrl && (
+                                                <a
+                                                    href={member.linkedInProfileUrl.startsWith('http') ? member.linkedInProfileUrl : `https://linkedin.com/in/${member.linkedInProfileUrl}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 text-sm font-bold text-[#0077b5] hover:underline"
+                                                >
+                                                    <Linkedin className="h-4 w-4" /> LinkedIn
+                                                </a>
                                             )}
                                         </div>
                                     </div>
@@ -252,7 +268,9 @@ export default function MemberProfilePage() {
                                 </div>
                                 <div>
                                     <p className="text-[11px] text-tatt-gray font-black uppercase tracking-widest">Member ID</p>
-                                    <p className="text-base font-black text-foreground truncate">{member.tattMemberId || 'N/A'}</p>
+                                    <p className="text-base font-black text-foreground truncate">
+                                        {user?.id === member.id ? (member.tattMemberId || 'N/A') : '••••••••'}
+                                    </p>
                                 </div>
                             </div>
 
@@ -299,39 +317,16 @@ export default function MemberProfilePage() {
                         {/* Digital Identity Card Widget */}
                         <div className="bg-background rounded-2xl border border-border p-6">
                             <h3 className="text-xs font-black text-tatt-gray uppercase tracking-widest mb-4">Digital Identity Card</h3>
-                            <div className="relative w-full aspect-[1.6/1] bg-tatt-black rounded-2xl p-6 text-white overflow-hidden shadow-xl group">
-                                {/* Card Decoration */}
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-tatt-lime/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-tatt-lime/30 transition-all duration-500"></div>
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -ml-5 -mb-5"></div>
-
-                                <div className="relative h-full flex flex-col justify-between z-10">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex gap-2 items-center">
-                                            <div className="size-8 rounded-full bg-tatt-lime flex items-center justify-center">
-                                                <Image src="/assets/tattlogoIcon.svg" alt="TATT" width={20} height={20} className="invert brightness-0" />
-                                            </div>
-                                            <span className="text-[12px] font-black tracking-widest uppercase">TATT PASS</span>
-                                        </div>
-                                        <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${tier.classes}`}>
-                                            {tier.label}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-bold text-white/50 uppercase tracking-widest">Member</p>
-                                        <p className="text-lg font-black leading-none tracking-tight uppercase truncate">{member.firstName} {member.lastName}</p>
-                                    </div>
-
-                                    <div className="flex justify-between items-end">
-                                        <div className="text-[10px] font-mono opacity-60">
-                                            ID: {member.tattMemberId || 'PENDING'}
-                                        </div>
-                                        <div className="size-8 bg-white/10 backdrop-blur-sm rounded overflow-hidden flex items-center justify-center border border-white/20">
-                                            <QrCode className="h-5 w-5 text-white/80" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {member && (
+                                <MembershipCard
+                                    member={{
+                                        ...member,
+                                        chapterName: member.chapter?.name,
+                                        chapterCode: member.chapter?.code
+                                    }}
+                                    isCurrentUser={user?.id === member.id}
+                                />
+                            )}
                             <p className="mt-4 text-[11px] text-tatt-gray text-center font-bold">Verified by TATT Global Compliance</p>
                         </div>
 
@@ -407,7 +402,7 @@ export default function MemberProfilePage() {
                                     <textarea
                                         id="connect-msg"
                                         rows={4}
-                                        className="w-full p-5 bg-[#f9f9f9] dark:bg-white/5 border-none rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none"
+                                        className="w-full p-5 bg-[#f5f5f5] dark:bg-white/5 border border-border dark:border-white/10 rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none shadow-inner"
                                         placeholder={`Hi ${member.firstName}, I'd love to discuss your latest work on policy frameworks...`}
                                         value={connectMessage}
                                         onChange={(e) => { setConnectMessage(e.target.value); setSendError(null); }}
@@ -415,15 +410,6 @@ export default function MemberProfilePage() {
                                     />
                                 </div>
 
-                                {/* Informational Box */}
-                                <div className="flex items-center gap-4 p-5 bg-[#fefce8] dark:bg-yellow-900/20 rounded-2xl border border-[#fef08a] dark:border-yellow-800">
-                                    <div className="size-6 rounded-full border-2 border-yellow-400 flex items-center justify-center shrink-0">
-                                        <span className="text-yellow-600 dark:text-yellow-500 text-sm font-bold leading-none select-none">i</span>
-                                    </div>
-                                    <p className="text-sm text-black dark:text-gray-300 font-medium">
-                                        You have 12 of 20 connection requests remaining this month.
-                                    </p>
-                                </div>
 
                                 {sendError && (
                                     <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">

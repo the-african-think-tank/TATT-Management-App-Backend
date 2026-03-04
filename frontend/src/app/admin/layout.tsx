@@ -68,11 +68,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { icon: <Globe size={20} />, label: "Regional Chapters", href: "#", flag: "CAN_ACCESS_REGIONAL_CHAPTERS" },
                 { icon: <MessageSquare size={20} />, label: "Forum Moderation", href: "#", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
                 { icon: <Heart size={20} />, label: "Volunteer Center", href: "#", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
-                { icon: <Calendar size={20} />, label: "Events & Mixers", href: "#", flag: "CAN_ACCESS_EVENTS" },
+                { icon: <Calendar size={20} />, label: "Events & Mixers", href: "/admin/events", flag: "CAN_ACCESS_EVENTS" },
                 { icon: <ClipboardList size={20} />, label: "Programs", href: "#", flag: "CAN_ACCESS_PROGRAMS" },
                 { icon: <Rss size={20} />, label: "Community Feed", href: "#", flag: "CAN_ACCESS_COMMUNITY_FEED" },
                 { icon: <Handshake size={20} />, label: "Promotions & Partnerships", href: "#", flag: "CAN_ACCESS_PARTNERSHIPS" },
-                { icon: <IdCard size={20} />, label: "Membership Center", href: "#", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" }
+                { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" }
             ]
         },
         {

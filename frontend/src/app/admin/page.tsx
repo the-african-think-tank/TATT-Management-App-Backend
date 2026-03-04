@@ -14,32 +14,28 @@ import {
     Check,
     TrendingUp,
     TrendingDown,
-    Activity
+    Activity,
+    AlertCircle,
+    RefreshCw
 } from "lucide-react";
+import api from "@/services/api";
 
 export default function AdminDashboardOverview() {
     const [data, setData] = React.useState<any>(null);
     const [loading, setLoading] = React.useState(true);
 
+    const [error, setError] = React.useState<string | null>(null);
+
     React.useEffect(() => {
         const fetchDashboardData = async () => {
+            setLoading(true);
+            setError(null);
             try {
-                // Adjust if using an API context or a standard Axios hit
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const res = await fetch("http://localhost:3000/dashboard/overview", {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (res.ok) {
-                    const result = await res.json();
-                    setData(result);
-                }
-            } catch (error) {
+                const res = await api.get("/dashboard/overview");
+                setData(res.data);
+            } catch (error: any) {
                 console.error("Failed to fetch dashboard overview data", error);
+                setError(error.response?.data?.message || "Internal server error occurred while fetching dashboard statistics.");
             } finally {
                 setLoading(false);
             }
@@ -48,9 +44,34 @@ export default function AdminDashboardOverview() {
         fetchDashboardData();
     }, []);
 
-    if (loading || !data) {
-        return <div className="p-8 text-tatt-gray animate-pulse font-bold text-sm uppercase tracking-widest">Loading Dashboard...</div>;
+    if (loading) {
+        return (
+            <div className="flex h-96 w-full flex-col items-center justify-center space-y-4">
+                <RefreshCw className="size-10 animate-spin text-tatt-lime" />
+                <p className="text-tatt-gray font-bold text-sm uppercase tracking-widest animate-pulse">Loading Dashboard Statistics...</p>
+            </div>
+        );
     }
+
+    if (error) {
+        return (
+            <div className="flex h-96 w-full flex-col items-center justify-center space-y-4 text-center px-6">
+                <div className="size-16 rounded-full bg-red-100 flex items-center justify-center mb-2">
+                    <AlertCircle className="size-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-black text-foreground">Dashboard Load Failed</h3>
+                <p className="text-tatt-gray max-w-sm">{error}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 px-6 py-2 bg-tatt-lime text-tatt-black font-bold rounded-xl uppercase tracking-widest text-xs hover:brightness-105 transition-all"
+                >
+                    Retry Loading
+                </button>
+            </div>
+        );
+    }
+
+    if (!data) return null;
 
     const { kpis: backendKpis, communityGrowth, subscriberBreakdown, activities, moderationItems } = data;
 

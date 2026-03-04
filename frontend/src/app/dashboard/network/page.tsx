@@ -431,7 +431,7 @@ export default function NetworkPage() {
                                 <textarea
                                     id="connect-msg"
                                     rows={4}
-                                    className="w-full p-5 bg-[#f9f9f9] dark:bg-white/5 border-none rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none"
+                                    className="w-full p-5 bg-[#f5f5f5] dark:bg-white/5 border border-border dark:border-white/10 rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none shadow-inner"
                                     placeholder={`Hi ${modal.member.firstName}, I'd love to discuss your latest work on policy frameworks...`}
                                     value={connectMessage}
                                     onChange={(e) => { setConnectMessage(e.target.value); setSendError(null); }}
@@ -439,15 +439,6 @@ export default function NetworkPage() {
                                 />
                             </div>
 
-                            {/* Informational Box */}
-                            <div className="flex items-center gap-4 p-5 bg-[#fefce8] dark:bg-yellow-900/20 rounded-2xl border border-[#fef08a] dark:border-yellow-800">
-                                <div className="size-6 rounded-full border-2 border-yellow-400 flex items-center justify-center shrink-0">
-                                    <span className="text-yellow-600 dark:text-yellow-500 text-sm font-bold leading-none select-none">i</span>
-                                </div>
-                                <p className="text-sm text-black dark:text-gray-300 font-medium">
-                                    You have 12 of 20 connection requests remaining this month.
-                                </p>
-                            </div>
 
                             {sendError && (
                                 <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">

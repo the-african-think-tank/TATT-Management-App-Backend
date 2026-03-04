@@ -21,3 +21,9 @@ export enum AccountFlags {
     VOLUNTEER_MANAGER = 'VOLUNTEER_MANAGER',
     CITY_SCOPE = 'CITY_SCOPE'
 }
+
+export enum ConnectionPreference {
+    OPEN = 'OPEN',
+    CHAPTER_ONLY = 'CHAPTER_ONLY',
+    NO_CONNECTIONS = 'NO_CONNECTIONS',
+}

@@ -12,7 +12,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
-                router.push("/dashboard"); // Or login
+                router.push("/");
                 return;
             }
 

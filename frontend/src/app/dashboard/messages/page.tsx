@@ -8,6 +8,8 @@ import { initiateSocket, disconnectSocket, getSocket } from "@/services/socket";
 import Picker from "emoji-picker-react";
 import toast, { Toaster } from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
+import MembershipCard from "@/components/molecules/MembershipCard";
+import { useAuth } from "@/context/auth-context";
 
 type Tab = "Messages" | "Connections" | "Pending";
 
@@ -81,6 +83,7 @@ const getTierBadge = (tierCode: string | undefined): { label: string; classes: s
 };
 
 export default function CommunicationsPage() {
+    const { user: authUser } = useAuth();
     const [activeTab, setActiveTab] = useState<Tab>("Connections");
     const [search, setSearch] = useState("");
 
@@ -882,37 +885,14 @@ export default function CommunicationsPage() {
                     {/* Digital Member Card Section */}
                     <div className="mb-8">
                         <h3 className="text-sm font-bold text-tatt-gray uppercase tracking-widest mb-4">Digital Identity</h3>
-                        <div className="relative w-full aspect-[1.6/1] max-w-sm mx-auto bg-tatt-black rounded-2xl p-6 overflow-hidden shadow-xl text-white">
-                            {/* Card Content */}
-                            <div className="flex justify-between items-start mb-8 relative z-10">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-tatt-lime flex items-center justify-center">
-                                        <Image src="/assets/tattlogoIcon.svg" alt="TATT" width={16} height={16} className="invert brightness-0" />
-                                    </div>
-                                    <span className="font-bold tracking-tight text-lg">TATT PASS</span>
-                                </div>
-                                <span className={`text-[10px] font-bold uppercase border border-white/20 px-2 py-0.5 rounded ${tier.classes}`}>
-                                    {tier.label}
-                                </span>
-                            </div>
-                            <div className="mt-auto relative z-10">
-                                <p className="text-[10px] text-white/50 uppercase tracking-widest mb-1">Tier Level</p>
-                                <h4 className="text-xl font-bold text-tatt-lime mb-4">{tier.label}</h4>
-                                <div className="flex justify-between items-end">
-                                    <div className="flex flex-col">
-                                        <p className="text-[8px] text-white/40 uppercase">Member ID</p>
-                                        <p className="text-xs font-mono">{member.tattMemberId}</p>
-                                    </div>
-                                    <div className="flex flex-col text-right">
-                                        <p className="text-[8px] text-white/40 uppercase">Chapter</p>
-                                        <p className="text-xs">{member.chapter?.name || "Global"}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {/* Card Decoration */}
-                            <div className="absolute -right-12 -top-12 w-48 h-48 bg-tatt-lime/20 rounded-full blur-3xl pointer-events-none"></div>
-                            <div className="absolute -left-12 -bottom-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
-                        </div>
+                        <MembershipCard
+                            member={{
+                                ...member,
+                                chapterName: member.chapter?.name,
+                                chapterCode: member.chapter?.code
+                            }}
+                            isCurrentUser={authUser?.id === member.id}
+                        />
                     </div>
 
                     {/* Shared Info Component */}

@@ -100,10 +100,12 @@ export class ChaptersService {
         if (!isAdmin) {
             throw new ForbiddenException('Only chapter admins can post chapter activities.');
         }
+        const { eventDate, ...rest } = dto;
         const activity = await this.activityRepository.create({
             chapterId,
             authorId: author.id,
-            ...dto,
+            ...rest,
+            eventDate: eventDate ? new Date(eventDate) : undefined,
             isPublished: true,
         });
         return { message: 'Chapter activity posted successfully.', activityId: activity.id };
@@ -115,7 +117,9 @@ export class ChaptersService {
         const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN].includes(author.systemRole);
         const isOwner = activity.authorId === author.id;
         if (!isAdmin && !isOwner) throw new ForbiddenException('Unauthorised.');
-        Object.assign(activity, dto);
+        const { eventDate, ...rest } = dto;
+        Object.assign(activity, rest);
+        if (eventDate) activity.eventDate = new Date(eventDate);
         await activity.save();
         return { message: 'Activity updated.' };
     }

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/context/auth-context";
 import { Search, Bell, Menu } from "lucide-react";
+import { NotificationDropdown } from "./notification-dropdown";
 
 export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     const { user } = useAuth();
@@ -26,14 +27,11 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
 
             <div className="flex items-center gap-4 lg:gap-6">
-                <button className="relative text-foreground hover:text-tatt-lime transition-colors">
-                    <Bell className="h-6 w-6" />
-                    <span className="absolute -top-1 -right-1 size-2.5 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
-                </button>
+                <NotificationDropdown />
                 <div className="flex items-center gap-3 pl-4 lg:pl-6 border-l border-border">
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-bold leading-none">{user?.firstName} {user?.lastName}</p>
-                        <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">Lagos Chapter</p>
+                        <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">{user?.chapterName ?? "—"} Chapter</p>
                     </div>
                     <div className="size-10 rounded-full border-2 border-tatt-lime overflow-hidden bg-background flex items-center justify-center font-bold text-tatt-lime">
                         {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}

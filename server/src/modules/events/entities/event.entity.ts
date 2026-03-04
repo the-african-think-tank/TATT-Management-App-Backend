@@ -57,6 +57,12 @@ export class Event extends Model<Event> {
     isForAllMembers: boolean;
 
     @Column({
+        type: DataType.DECIMAL(10, 2),
+        defaultValue: 0,
+    })
+    basePrice: number;
+
+    @Column({
         type: DataType.ARRAY(DataType.STRING),
         allowNull: true,
     })

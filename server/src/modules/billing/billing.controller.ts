@@ -39,6 +39,12 @@ export class BillingController {
         }
     }
 
+    @ApiOperation({ summary: 'Get all active membership plans (Onboarding)' })
+    @Get('plans')
+    async getPlans() {
+        return this.billingService.getPlans();
+    }
+
     // --- ADMIN SUBSCRIPTION VIEWS ---
 
     @ApiBearerAuth()

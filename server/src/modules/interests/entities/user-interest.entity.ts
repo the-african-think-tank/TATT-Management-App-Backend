@@ -11,6 +11,7 @@ export class UserInterest extends Model<UserInterest> {
     @Column({
         type: DataType.UUID,
         primaryKey: true,
+        onDelete: 'CASCADE',
     })
     userId: string;
 

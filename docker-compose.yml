@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # --- Database ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: tatt-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+      POSTGRES_DB: ${DB_NAME:-tatt_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-tatt_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tatt-network
+
+  # --- Backend Application ---
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tatt-api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      DB_NAME: ${DB_NAME:-tatt_db}
+      DB_SYNC: ${DB_SYNC:-false}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_for_tatt}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
+    volumes:
+      - ./server/uploads:/app/uploads
+    networks:
+      - tatt-network
+
+  # --- Frontend Application ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tatt-frontend
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    networks:
+      - tatt-network
+
+  # --- Database Management ---
+  adminer:
+    image: adminer
+    container_name: tatt-adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - tatt-network
+
+networks:
+  tatt-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

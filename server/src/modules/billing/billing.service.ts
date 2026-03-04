@@ -5,7 +5,10 @@ import Stripe from 'stripe';
 import { User } from '../iam/entities/user.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { MailService } from '../../common/mail/mail.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 import { EventRegistration } from '../events/entities/event-registration.entity';
+import { MembershipPlan } from '../membership/entities/membership-plan.entity';
 
 @Injectable()
 export class BillingService {
@@ -15,7 +18,9 @@ export class BillingService {
     constructor(
         @InjectModel(User) private userRepository: typeof User,
         @InjectModel(EventRegistration) private eventRegistrationRepo: typeof EventRegistration,
+        @InjectModel(MembershipPlan) private planRepo: typeof MembershipPlan,
         private mailService: MailService,
+        private notificationsService: NotificationsService,
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
             apiVersion: '2025-01-27.acacia' as any,
@@ -96,6 +101,16 @@ export class BillingService {
             this.logger.log(`User ${user.email} downgraded to FREE tier`);
             // Send downgrade notification email
             await this.mailService.sendSubscriptionDowngradeNotice(user.email, user.firstName, subscription.status);
+
+            // In-app notification
+            await this.notificationsService.create(
+                user.id,
+                NotificationType.SUBSCRIPTION_DOWNGRADE,
+                'Membership Tier Updated',
+                `Your membership has been downgraded to the Free tier. Reason: ${subscription.status.replace('_', ' ')}.`,
+                { status: subscription.status },
+                false // Email already sent above
+            );
         }
     }
 
@@ -119,6 +134,16 @@ export class BillingService {
         await user.save();
 
         this.logger.log(`User ${user.email} subscription automatically renewed until ${expiresAt.toISOString()}`);
+
+        // In-app & email notification
+        await this.notificationsService.create(
+            user.id,
+            NotificationType.SUBSCRIPTION_RENEWAL,
+            'Subscription Renewed Successfully',
+            `Your TATT membership has been automatically renewed until ${expiresAt.toLocaleDateString()}.`,
+            { expiresAt },
+            true // Notify via email as well
+        );
     }
 
     private async handleSubscriptionAutoPayStatus(subscription: Stripe.Subscription) {
@@ -171,10 +196,26 @@ export class BillingService {
         let sentCount = 0;
         for (const user of usersToNotify) {
             await this.mailService.sendRenewalReminder(user.email, user.firstName, user.subscriptionExpiresAt);
+
+            await this.notificationsService.create(
+                user.id,
+                NotificationType.SUBSCRIPTION_EXPIRING,
+                'Membership Renewal Reminder',
+                `Your TATT membership is expiring on ${user.subscriptionExpiresAt.toLocaleDateString()}. Please renew soon to maintain access.`,
+                { expiresAt: user.subscriptionExpiresAt },
+                false // Email already sent above
+            );
+
             sentCount++;
         }
 
         return { message: `Notified ${sentCount} community members about upcoming renewals.` };
+    }
+
+    async getPlans() {
+        return this.planRepo.findAll({
+            order: [['monthlyPrice', 'ASC']]
+        });
     }
 
     async getRevenueMetrics() {

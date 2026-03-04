@@ -18,6 +18,8 @@ import { SystemRole, CommunityTier } from '../enums/roles.enum';
 import { MailService } from '../../../common/mail/mail.service';
 import { SecurityPolicyService } from '../../security/security-policy.service';
 import { TwoFactorService } from '../../security/two-factor.service';
+import { Chapter } from '../../chapters/entities/chapter.entity';
+import { ProfessionalInterest } from '../../interests/entities/interest.entity';
 
 @Injectable()
 export class AuthService {
@@ -101,7 +103,12 @@ export class AuthService {
             };
         }
 
-        return this.generateAuthResponse(user);
+        const authResponse = this.generateAuthResponse(user) as any;
+        if (user.deletionRequestedAt) {
+            authResponse.isScheduledForDeletion = true;
+            authResponse.deletionDate = new Date(user.deletionRequestedAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+        }
+        return authResponse;
     }
 
     // ─── COMPLETE 2FA STEP (called after partial token is returned) ───────────
@@ -451,9 +458,15 @@ export class AuthService {
             attributes: [
                 'id', 'firstName', 'lastName', 'email', 'systemRole', 'communityTier',
                 'chapterId', 'profilePicture', 'professionTitle', 'companyName', 'tattMemberId',
-                'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod'
+                'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod',
+                'connectionPreference', 'expertise', 'businessName', 'businessRole',
+                'businessProfileLink', 'professionalHighlight', 'location', 'deletionRequestedAt',
+                'linkedInProfileUrl'
             ],
-            include: ['chapter'],
+            include: [
+                { model: Chapter, as: 'chapter' },
+                { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
+            ],
         });
         if (!user) throw new UnauthorizedException('User not found');
         const plain = user.get({ plain: true }) as any;
@@ -486,6 +499,7 @@ export class AuthService {
                 isActive: user.isActive,
                 isTwoFactorEnabled: user.isTwoFactorEnabled,
                 twoFactorMethod: user.twoFactorMethod ?? null,
+                deletionRequestedAt: user.deletionRequestedAt || null,
             },
         };
     }

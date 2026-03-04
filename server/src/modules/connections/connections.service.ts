@@ -13,6 +13,8 @@ import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { SendConnectionRequestDto, RespondToConnectionDto } from './dto/connection.dto';
 import { MailService } from '../../common/mail/mail.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 /** Paid tiers that can initiate connection requests */
 const PAID_TIERS: CommunityTier[] = [
@@ -27,6 +29,7 @@ export class ConnectionsService {
         @InjectModel(Connection) private connectionRepo: typeof Connection,
         @InjectModel(User) private userRepo: typeof User,
         private mailService: MailService,
+        private notificationsService: NotificationsService,
     ) { }
 
     // ─── GUARD: Ensure requesting user is a paid member ─────────────────────────
@@ -91,6 +94,16 @@ export class ConnectionsService {
             )
             .catch(() => { /* Silently swallow — connection was still created */ });
 
+        // In-app notification
+        this.notificationsService.create(
+            dto.recipientId,
+            NotificationType.CONNECTION_REQUEST,
+            'New Connection Request',
+            `${requester.firstName} ${requester.lastName} wants to connect with you.`,
+            { connectionId: connection.id, requesterId: requester.id },
+            false // Email already sent above
+        ).catch(() => { });
+
         return {
             message: 'Connection request sent successfully.',
             connectionId: connection.id,
@@ -117,6 +130,17 @@ export class ConnectionsService {
 
         connection.status = dto.status;
         await connection.save();
+
+        if (dto.status === ConnectionStatus.ACCEPTED) {
+            this.notificationsService.create(
+                connection.requesterId,
+                NotificationType.CONNECTION_ACCEPTED,
+                'Connection Request Accepted',
+                `${currentUser.firstName} ${currentUser.lastName} accepted your connection request.`,
+                { connectionId: connection.id, partnerId: currentUser.id },
+                true // Notify via email as well
+            ).catch(() => { });
+        }
 
         return {
             message: `Connection request ${dto.status.toLowerCase()} successfully.`,
