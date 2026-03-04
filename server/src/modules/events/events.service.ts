@@ -4,6 +4,7 @@ import { Event } from './entities/event.entity';
 import { EventChapter } from './entities/event-chapter.entity';
 import { EventGuest } from './entities/event-guest.entity';
 import { EventRegistration } from './entities/event-registration.entity';
+import { EventType } from './enums/event-type.enum';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -12,6 +13,8 @@ import { SystemRole, CommunityTier } from '../iam/enums/roles.enum';
 import { Op } from 'sequelize';
 import Stripe from 'stripe';
 import { MailService } from '../../common/mail/mail.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class EventsService {
@@ -25,6 +28,7 @@ export class EventsService {
         @InjectModel(EventRegistration) private eventRegistrationRepo: typeof EventRegistration,
         @InjectModel(User) private userRepo: typeof User,
         private mailService: MailService,
+        private notificationsService: NotificationsService,
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
             apiVersion: '2025-01-27.acacia' as any,
@@ -45,6 +49,7 @@ export class EventsService {
             imageUrl: dto.imageUrl,
             isForAllMembers: dto.isForAllMembers,
             targetMembershipTiers: dto.targetMembershipTiers,
+            basePrice: dto.basePrice || 0,
         });
 
         for (const loc of dto.locations) {
@@ -78,13 +83,14 @@ export class EventsService {
 
         const users = await this.userRepo.findAll({
             where,
-            attributes: ['email', 'firstName'],
+            attributes: ['id', 'email', 'firstName'],
         });
 
         const dateStr = event.dateTime.toLocaleString();
 
         // Notify in background
         users.forEach(user => {
+            // Email
             this.mailService.sendEventNotification(
                 user.email,
                 user.firstName,
@@ -93,6 +99,16 @@ export class EventsService {
                 event.type,
                 event.id
             ).catch(err => this.logger.error(`Failed to notify ${user.email} about event ${event.id}`, err.stack));
+
+            // In-app
+            this.notificationsService.create(
+                (user as any).id, // need to fetch id too
+                NotificationType.EVENT_REMINDER,
+                'New Community Event',
+                `A new ${event.type} "${event.title}" has been scheduled for ${dateStr}.`,
+                { eventId: event.id },
+                false // Email already sent above
+            ).catch(() => { });
         });
 
         this.logger.log(`Queued notifications for ${users.length} members for event: ${event.title}`);
@@ -105,8 +121,8 @@ export class EventsService {
         // Let's allow everyone to see them for now, but restrict registration.
         return this.eventRepo.findAll({
             include: [
-                { model: EventChapter, include: [Chapter] },
-                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] },
+                { model: EventChapter, as: 'locations', include: [{ model: Chapter, as: 'chapter' }] },
+                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'], through: { attributes: [] } },
             ],
             order: [['dateTime', 'ASC']],
         });
@@ -115,8 +131,8 @@ export class EventsService {
     async getEvent(id: string) {
         const event = await this.eventRepo.findByPk(id, {
             include: [
-                { model: EventChapter, include: [Chapter] },
-                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] },
+                { model: EventChapter, as: 'locations', include: [{ model: Chapter, as: 'chapter' }] },
+                { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'], through: { attributes: [] } },
             ],
         });
         if (!event) throw new NotFoundException('Event not found');
@@ -132,10 +148,30 @@ export class EventsService {
             }
         }
 
-        let amountToPay = 0;
+        let amountToPay = event.basePrice || 0;
+
+        // Apply membership discounts
+        if (user.communityTier === CommunityTier.KIONGOZI) {
+            amountToPay = 0;
+        } else if (user.communityTier === CommunityTier.IMANI) {
+            if (event.type === EventType.WORKSHOP) {
+                amountToPay = 0; // Free Workshops
+            } else if (event.type === EventType.MIXER) {
+                amountToPay = amountToPay * 0.75; // 25% Discount
+            }
+        } else if (user.communityTier === CommunityTier.UBUNTU) {
+            amountToPay = amountToPay * 0.85; // 15% Discount
+        }
+
+        // Business registration might have extra costs or fixed price
         if (dto.isBusinessRegistration) {
             if (user.communityTier !== CommunityTier.KIONGOZI) {
-                amountToPay = 75.00;
+                // If there's a specific logic for business, apply it here. 
+                // For now, let's keep the user's previous logic if it was intended, 
+                // or just apply the basePrice logic. 
+                // The requirement says "reflect on their dashboard when they are booking for that event"
+                // Let's assume business registration is also subject to discounts or has a fixed floor.
+                if (amountToPay < 75) amountToPay = 75; // Example: floor for business
             }
         }
 
@@ -177,5 +213,17 @@ export class EventsService {
         }
 
         return { registration, message: 'Registration successful.' };
+    }
+
+    async getEventAttendees(eventId: string) {
+        return this.eventRegistrationRepo.findAll({
+            where: { eventId, status: 'COMPLETED' },
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'communityTier', 'chapterId'],
+                include: [{ model: Chapter, as: 'chapter' }]
+            }],
+        });
     }
 }

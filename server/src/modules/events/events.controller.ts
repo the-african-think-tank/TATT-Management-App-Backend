@@ -43,4 +43,12 @@ export class EventsController {
     async register(@Param('id') id: string, @Body() registerDto: RegisterEventDto, @Req() req: any) {
         return this.eventsService.register(req.user, id, registerDto);
     }
+
+    @Get(':id/attendees')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get list of completed registrations (attendees) for an event' })
+    async getAttendees(@Param('id') id: string) {
+        return this.eventsService.getEventAttendees(id);
+    }
 }

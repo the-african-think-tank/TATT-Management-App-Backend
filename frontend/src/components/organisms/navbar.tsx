@@ -34,6 +34,12 @@ export function Navbar() {
                 <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Mission</Link>
                 <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Programs</Link>
                 <Link className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest" href="#">Impact</Link>
+                <Link
+                    href={isAuthenticated ? "/dashboard/volunteers" : "/volunteer"}
+                    className="text-xs font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest"
+                >
+                    Volunteer
+                </Link>
 
                 <div className="h-6 w-px bg-border mx-2"></div>
 
@@ -46,7 +52,7 @@ export function Navbar() {
                     </button>
                 ) : (
                     <button
-                        onClick={() => router.push('/login')}
+                        onClick={() => router.push("/")}
                         className="bg-tatt-lime text-tatt-black px-6 py-2 rounded-lg text-xs font-black shadow-sm hover:brightness-110 transition-all uppercase tracking-widest"
                     >
                         Log In

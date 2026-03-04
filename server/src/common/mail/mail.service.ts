@@ -40,7 +40,7 @@ export class MailService {
     }
 
     async sendPasswordReset(email: string, token: string) {
-        const resetLink = `${this.frontendUrl}/auth/reset-password?token=${token}`;
+        const resetLink = `${this.frontendUrl}/reset-password?token=${token}`;
 
         try {
             await this.mailerService.sendMail({
@@ -226,6 +226,34 @@ export class MailService {
             this.logger.log(`Event notification email sent to ${email} for event: ${eventTitle}`);
         } catch (error: any) {
             this.logger.error(`Failed to send event notification email to ${email}`, error.stack);
+        }
+    }
+
+    async sendNotificationEmail(email: string, firstName: string, title: string, message: string, actionLink?: string, actionLabel?: string) {
+        try {
+            await this.mailerService.sendMail({
+                to: email,
+                subject: `TATT: ${title}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                        <h2 style="color: #0044cc;">Hello ${firstName},</h2>
+                        <p style="font-size: 16px; line-height: 1.6; color: #333;">${message}</p>
+                        ${actionLink ? `
+                            <div style="margin: 30px 0; text-align: center;">
+                                <a href="${actionLink}" style="padding: 12px 24px; background-color: #0044cc; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    ${actionLabel || 'View Details'}
+                                </a>
+                            </div>
+                        ` : ''}
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="font-size: 12px; color: #888;">You received this email because of your TATT account notification settings. Log in to your dashboard to manage your notifications.</p>
+                        <p style="font-size: 12px; color: #888; margin-top: 10px;">&copy; ${new Date().getFullYear()} The African Think Tank. All rights reserved.</p>
+                    </div>
+                `,
+            });
+            this.logger.log(`Notification email sent to ${email}: ${title}`);
+        } catch (error: any) {
+            this.logger.error(`Failed to send notification email to ${email}`, error.stack);
         }
     }
 }

@@ -1,311 +1,334 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
+import api from "@/services/api";
 import {
-    PlusCircle,
-    TrendingUp,
-    Network,
-    Briefcase,
-    Calendar,
-    Stars,
-    MessageSquare,
-    ThumbsUp,
-    MessageCircle,
-    Share2,
-    MemoryStick,
-    Wifi,
-    Download,
+    Users,
+    Eye,
+    UserSearch,
+    PiggyBank,
     GraduationCap,
-    CheckCircle
+    Ticket,
+    Megaphone,
+    Shield,
+    FileText,
+    Award,
+    MessageSquare,
+    Download,
+    ChevronDown,
+    Loader2,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import MembershipCard from "@/components/molecules/MembershipCard";
 
 export default function DashboardPage() {
     const { user } = useAuth();
+    const [connectionCount, setConnectionCount] = useState<number | null>(null);
+    const [networkLoading, setNetworkLoading] = useState(true);
+    const [dashboardEvents, setDashboardEvents] = useState<any[]>([]);
+    const [eventsLoading, setEventsLoading] = useState(true);
 
-    // Default to mock data if user is not fully loaded yet to preserve layout preview.
-    const firstName = user?.firstName || "Abebe";
-    const communityTier = user?.communityTier || "FREE";
-    const displayTierName = communityTier.charAt(0).toUpperCase() + communityTier.slice(1).toLowerCase() + " Member";
+    const safeDate = (dateStr: string) => {
+        try {
+            const d = new Date(dateStr);
+            return isNaN(d.getTime()) ? new Date() : d;
+        } catch {
+            return new Date();
+        }
+    };
 
-    // We'll calculate a mock ID based on the user's ID or fallback.
-    const memberId = user?.id ? `TATT-${user.id.substring(0, 8).toUpperCase()}` : "TATT-LG-2024-0842";
+    useEffect(() => {
+        const fetchNetwork = async () => {
+            try {
+                const { data } = await api.get<Array<{ connectionId: string; member: unknown }>>("/connections/network");
+                setConnectionCount(Array.isArray(data) ? data.length : 0);
+            } catch {
+                setConnectionCount(0);
+            } finally {
+                setNetworkLoading(false);
+            }
+        };
+        if (user?.id) fetchNetwork();
+
+        const fetchEvents = async () => {
+            try {
+                const { data } = await api.get("/events");
+                // Filter for upcoming events and limit to 2
+                const upcoming = (data || [])
+                    .filter((e: any) => new Date(e.dateTime) > new Date())
+                    .sort((a: any, b: any) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+                    .slice(0, 2);
+                setDashboardEvents(upcoming);
+            } catch (err) {
+                console.error("Dashboard events error:", err);
+            } finally {
+                setEventsLoading(false);
+            }
+        };
+        fetchEvents();
+    }, [user?.id]);
+
+    const firstName = user?.firstName || "Member";
+    const tier = user?.communityTier || "FREE";
+    const displayTierName =
+        tier === "KIONGOZI"
+            ? "Kiongozi Business Member"
+            : `${tier.charAt(0)}${tier.slice(1).toLowerCase()} Member`;
+    const chapterName = user?.chapterName || "—";
+    const memberId = user?.tattMemberId || (user?.id ? `MEM-2024-${user.id.slice(0, 4)}` : "MEM-2024-0000");
+    const initials = user?.firstName && user?.lastName
+        ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
+        : "M";
+    const companyName = user?.companyName || "—";
+    const professionTitle = user?.professionTitle || "—";
 
     return (
         <div className="p-4 lg:p-8 space-y-8 animate-in fade-in duration-500">
-            {/* Welcome Banner */}
-            <div className="flex flex-wrap items-end justify-between gap-6">
+            {/* Welcome */}
+            <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-foreground">
+                    <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
                         Welcome back, {firstName}!
                     </h2>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-[#5d4037] px-3 py-1 rounded-full text-[10px] font-black uppercase text-white tracking-wider">
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="px-3 py-1 bg-tatt-lime text-tatt-black text-xs font-black uppercase rounded shadow-sm">
                             {displayTierName}
                         </span>
-                        <span className="text-tatt-gray text-sm font-medium">• 14 days until next networking mixer</span>
+                        <span className="text-tatt-gray text-sm font-medium">• {chapterName} Chapter</span>
                     </div>
                 </div>
-                <button className="bg-tatt-lime text-tatt-black font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-lg shadow-tatt-lime/20 hover:scale-[1.02] transition-transform active:scale-95">
-                    <PlusCircle className="h-5 w-5" />
-                    Post Update
-                </button>
+                <Link
+                    href="/dashboard/profile"
+                    className="px-6 py-2.5 bg-foreground text-background rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+                >
+                    <Users className="h-4 w-4" />
+                    View Public Profile
+                </Link>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
-                    <div>
-                        <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Connections</p>
-                        <h3 className="text-3xl font-black text-foreground">1,842</h3>
-                        <p className="text-green-600 text-xs font-bold mt-1 flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" /> +48 this week
-                        </p>
+            {/* Key metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
+                            <Eye className="h-5 w-5" />
+                        </span>
+                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">+12%</span>
                     </div>
-                    <div className="size-12 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime-dark">
-                        <Network className="h-6 w-6" />
-                    </div>
+                    <p className="text-tatt-gray text-sm font-medium">Business Impressions</p>
+                    <p className="text-3xl font-black text-foreground">12,482</p>
                 </div>
-
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
-                    <div>
-                        <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Active Jobs</p>
-                        <h3 className="text-3xl font-black text-foreground">124</h3>
-                        <p className="text-tatt-lime-dark text-xs font-bold mt-1">12 new matches for you</p>
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
+                            <Users className="h-5 w-5" />
+                        </span>
+                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                            {networkLoading ? "…" : "+5%"}
+                        </span>
                     </div>
-                    <div className="size-12 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime-dark">
-                        <Briefcase className="h-6 w-6" />
-                    </div>
+                    <p className="text-tatt-gray text-sm font-medium">Network Connections</p>
+                    <p className="text-3xl font-black text-foreground">
+                        {networkLoading ? "—" : connectionCount ?? 0}
+                    </p>
                 </div>
-
-                <div className="bg-surface dark:bg-black p-6 rounded-xl border border-border shadow-sm flex items-center justify-between hover:border-tatt-lime transition-colors">
-                    <div>
-                        <p className="text-tatt-gray text-xs font-bold uppercase tracking-wider mb-1">Workshops</p>
-                        <h3 className="text-3xl font-black text-foreground">04</h3>
-                        <p className="text-tatt-gray text-xs font-bold mt-1">Scheduled this month</p>
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
+                            <UserSearch className="h-5 w-5" />
+                        </span>
+                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">+18%</span>
                     </div>
-                    <div className="size-12 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime-dark">
-                        <Calendar className="h-6 w-6" />
+                    <p className="text-tatt-gray text-sm font-medium">Talent Applications</p>
+                    <p className="text-3xl font-black text-foreground">156</p>
+                </div>
+                <div className="bg-surface p-6 rounded-xl border border-border shadow-sm bg-gradient-to-br from-surface to-tatt-lime/5">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
+                            <PiggyBank className="h-5 w-5" />
+                        </span>
+                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">DBU Saver</span>
                     </div>
+                    <p className="text-tatt-gray text-sm font-medium">Workforce Savings</p>
+                    <p className="text-3xl font-black text-foreground">$2,400</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Left & Middle: Feed & Business Spotlight */}
-                <div className="xl:col-span-2 space-y-8">
-                    {/* Business Spotlight */}
-                    <section>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xl font-black flex items-center gap-2 text-foreground">
-                                <Stars className="text-tatt-lime h-6 w-6" />
-                                Business Spotlight
-                            </h3>
-                            <a className="text-tatt-lime-dark text-sm font-bold hover:underline" href="#">View All</a>
-                        </div>
-                        <div className="bg-tatt-lime/5 border border-tatt-lime/20 rounded-2xl p-6 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4">
-                                <span className="bg-tatt-lime/20 text-tatt-lime-dark px-3 py-1 rounded text-[10px] font-black uppercase">
-                                    Verified Member Business
-                                </span>
-                            </div>
-                            <div className="flex flex-col sm:flex-row gap-6 items-start relative z-10">
-                                <div className="size-20 bg-white rounded-xl shadow-md p-2 flex items-center justify-center overflow-hidden shrink-0">
-                                    <div className="w-full h-full bg-tatt-lime/20 rounded-lg flex items-center justify-center">
-                                        <span className="font-black text-tatt-lime-dark">ECO</span>
-                                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left: DBU Academy, Business Spotlight, Benefits */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* DBU Career Academy */}
+                    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-border flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="size-10 rounded-lg bg-foreground flex items-center justify-center text-tatt-lime">
+                                    <GraduationCap className="h-5 w-5" />
                                 </div>
-                                <div className="space-y-2">
-                                    <h4 className="text-2xl font-black text-foreground">EcoTech Solutions Ltd</h4>
-                                    <p className="text-foreground/70 text-sm max-w-xl">
-                                        Providing sustainable solar irrigation systems for small-scale farmers across the Sahel region. Looking for partners in logistics and supply chain management.
-                                    </p>
-                                    <div className="flex flex-wrap gap-3 pt-2">
-                                        <button className="bg-black text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-black/80 transition-colors">
-                                            Connect with Founder
-                                        </button>
-                                        <button className="bg-surface border border-border text-foreground text-xs font-bold px-4 py-2 rounded-lg hover:bg-black/5 transition-colors">
-                                            Learn More
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="absolute -bottom-10 -right-10 size-40 bg-tatt-lime/10 rounded-full blur-3xl group-hover:bg-tatt-lime/20 transition-all duration-500"></div>
-                        </div>
-                    </section>
-
-                    {/* Community Feed Preview */}
-                    <section>
-                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                            <h3 className="text-xl font-black flex items-center gap-2 text-foreground">
-                                <MessageSquare className="text-tatt-lime h-6 w-6" />
-                                Recent Discussions
-                            </h3>
-                            <div className="flex gap-2">
-                                <button className="bg-surface dark:bg-black px-3 py-1.5 rounded-lg border border-border text-xs font-bold shadow-sm">Hot</button>
-                                <button className="bg-background dark:bg-black/30 px-3 py-1.5 rounded-lg text-xs font-bold text-tatt-gray hover:text-foreground">New</button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* Discussion Item 1 */}
-                            <div className="bg-surface dark:bg-black p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
-                                <div className="flex gap-4">
-                                    <div className="size-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-800 shrink-0">C</div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start mb-1 gap-2">
-                                            <h5 className="font-bold text-sm text-foreground truncate">Opportunities in West African Fintech</h5>
-                                            <span className="text-[10px] text-tatt-gray whitespace-nowrap">2h ago</span>
-                                        </div>
-                                        <p className="text-sm text-tatt-gray line-clamp-2">Has anyone else noticed the surge in cross-border payment platforms? I'm curious about the regulatory hurdles in Francophone markets...</p>
-                                        <div className="flex gap-4 mt-3">
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-tatt-lime-dark text-xs font-bold transition-colors">
-                                                <ThumbsUp className="h-4 w-4" /> 24
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-foreground text-xs font-bold transition-colors">
-                                                <MessageCircle className="h-4 w-4" /> 12
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-foreground text-xs font-bold transition-colors ml-auto">
-                                                <Share2 className="h-4 w-4" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Discussion Item 2 */}
-                            <div className="bg-surface dark:bg-black p-4 rounded-xl border border-border hover:shadow-md hover:border-tatt-lime/30 transition-all cursor-pointer">
-                                <div className="flex gap-4">
-                                    <div className="size-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-800 shrink-0">S</div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start mb-1 gap-2">
-                                            <h5 className="font-bold text-sm text-foreground truncate">African Continental Free Trade Area (AfCFTA) Impact</h5>
-                                            <span className="text-[10px] text-tatt-gray whitespace-nowrap">5h ago</span>
-                                        </div>
-                                        <p className="text-sm text-tatt-gray line-clamp-2">Let's discuss the practical implications for SME exports. Who has successfully leveraged the new framework?</p>
-                                        <div className="flex gap-4 mt-3">
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-tatt-lime-dark text-xs font-bold transition-colors">
-                                                <ThumbsUp className="h-4 w-4" /> 156
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-foreground text-xs font-bold transition-colors">
-                                                <MessageCircle className="h-4 w-4" /> 42
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-tatt-gray hover:text-foreground text-xs font-bold transition-colors ml-auto">
-                                                <Share2 className="h-4 w-4" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button className="w-full mt-4 py-3 border-2 border-dashed border-border rounded-xl text-sm font-bold text-tatt-gray hover:border-tatt-lime hover:text-tatt-lime-dark transition-all">
-                            Load more discussions
-                        </button>
-                    </section>
-                </div>
-
-                {/* Right Column: Member ID Card & Premium Perks */}
-                <div className="space-y-8">
-                    {/* Digital ID Card */}
-                    <section>
-                        <h3 className="text-xl font-black mb-4 text-foreground">Digital Identity</h3>
-                        <div className="bg-gradient-to-br from-[#23230f] to-[#3a3a1a] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group">
-                            {/* Chip & NFC Icon */}
-                            <div className="flex justify-between items-start mb-8">
-                                <div className="size-10 bg-yellow-600/30 rounded-md border border-yellow-500/50 flex items-center justify-center">
-                                    <MemoryStick className="text-yellow-500 h-6 w-6" />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Wifi className="text-tatt-lime h-6 w-6 transform rotate-90" />
-                                    <span className="font-black text-xl italic tracking-tighter text-white">TATT</span>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 mb-8">
-                                <div className="size-20 rounded-lg border-2 border-tatt-lime overflow-hidden shrink-0 shadow-lg bg-black flex justify-center items-center text-tatt-lime font-black text-3xl">
-                                    {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-lg font-black leading-none text-white">{firstName} {user?.lastName || 'Bikila'}</h4>
-                                    <p className="text-[10px] text-tatt-lime font-black uppercase tracking-widest">{displayTierName}</p>
-                                    <div className="flex items-center gap-2 pt-2">
-                                        <div className="size-5 rounded-full overflow-hidden bg-green-600">
-                                            {/* Mock flag dot */}
-                                        </div>
-                                        <p className="text-xs font-medium text-white/80">Lagos Chapter</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="text-[10px] text-white/40 font-bold uppercase mb-1">Member ID</p>
-                                    <p className="text-sm font-mono tracking-widest text-tatt-lime">{memberId}</p>
+                                    <h3 className="font-bold text-lg text-foreground">DBU Career Academy</h3>
+                                    <p className="text-sm text-tatt-gray font-medium">Employee Upskilling & Licensing</p>
                                 </div>
-                                <div className="bg-white p-1 rounded-sm">
-                                    <div className="size-10 bg-black/5 flex items-center justify-center">
-                                        <span className="text-[8px] text-tatt-gray">QR</span>
+                            </div>
+                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold rounded-full">Active Portal</span>
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                <div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="font-bold text-foreground">License Usage</span>
+                                        <span className="font-medium text-tatt-gray">24 / 30 Licenses</span>
                                     </div>
+                                    <div className="w-full bg-background h-3 rounded-full overflow-hidden">
+                                        <div className="bg-tatt-lime h-full w-[80%] rounded-full" />
+                                    </div>
+                                    <p className="text-xs text-tatt-gray mt-3 italic">"You are saving $400 per license compared to retail rates."</p>
+                                </div>
+                                <div className="bg-background p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                                    <p className="text-xs font-black uppercase text-tatt-gray mb-1">Exclusive Kiongozi Offer</p>
+                                    <p className="text-2xl font-black text-foreground mb-3">$99<span className="text-sm font-medium">/year per license</span></p>
+                                    <button className="w-full bg-tatt-lime text-tatt-black font-black py-2 rounded-lg hover:brightness-105 transition-all text-sm shadow-sm">
+                                        Purchase More Licenses
+                                    </button>
                                 </div>
                             </div>
-
-                            {/* Card Overlay Shine */}
-                            <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:left-[100%] transition-all duration-1000"></div>
                         </div>
+                    </div>
 
-                        <button className="w-full mt-4 flex items-center justify-center gap-2 text-tatt-gray text-xs font-bold hover:text-foreground transition-colors group">
-                            <Download className="h-4 w-4 group-hover:translate-y-0.5 transition-transform" />
-                            Download Digital Pass
-                        </button>
-                    </section>
-
-                    {/* Premium Perks Summary */}
-                    <section className="bg-surface dark:bg-black p-6 rounded-2xl border border-tatt-lime/30 shadow-sm relative overflow-hidden group hover:border-tatt-lime transition-all">
-                        <div className="relative z-10">
-                            <h3 className="text-lg font-black mb-4 flex items-center gap-2 text-foreground">
-                                <GraduationCap className="text-tatt-lime h-6 w-6" />
-                                DBU Career Academy Benefit
-                            </h3>
-
-                            <div className="bg-tatt-lime/10 p-4 rounded-xl border border-tatt-lime/20 mb-4 transition-colors group-hover:bg-tatt-lime/15">
-                                <p className="text-sm font-bold mb-1 text-foreground">Exclusive Academy Access</p>
-                                <p className="text-xs text-tatt-gray mb-2">
-                                    Get full access for just <span className="text-foreground dark:text-white font-bold">$99/year</span> (Regularly $399 — a <span className="text-green-600 font-bold dark:text-green-400">$300 savings</span>).
+                    {/* Business Spotlight */}
+                    <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-bold text-lg text-foreground">Annual Business Spotlight</h3>
+                            <div className="flex items-center gap-2">
+                                <span className="size-2 bg-tatt-lime rounded-full animate-pulse" />
+                                <span className="text-sm font-bold text-tatt-lime uppercase">Scheduled: Oct 2024</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-6 p-4 bg-background rounded-xl">
+                            <div className="size-24 rounded-lg bg-surface border border-border flex items-center justify-center p-4">
+                                <div className="w-full h-full bg-foreground flex items-center justify-center rounded text-tatt-lime font-black text-xl">
+                                    {companyName.slice(0, 2).toUpperCase()}
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-black text-foreground">{companyName} Spotlight</h4>
+                                <p className="text-sm text-tatt-gray mt-1 leading-relaxed">
+                                    Your business can be featured across the TATT network. Ensure your media kit is ready.
                                 </p>
-                                <p className="text-[10px] font-bold uppercase text-tatt-gray mb-2">Certificate Pathways:</p>
-                                <ul className="grid grid-cols-1 gap-1.5 text-[11px] font-medium text-[#5d4037] dark:text-tatt-lime/80">
-                                    <li className="flex items-center gap-2"><div className="size-1.5 rounded-full bg-tatt-lime"></div> Project Management</li>
-                                    <li className="flex items-center gap-2"><div className="size-1.5 rounded-full bg-tatt-lime"></div> Leadership & Management</li>
-                                    <li className="flex items-center gap-2"><div className="size-1.5 rounded-full bg-tatt-lime"></div> Data & Technology</li>
-                                    <li className="flex items-center gap-2"><div className="size-1.5 rounded-full bg-tatt-lime"></div> Business & Finance</li>
-                                    <li className="flex items-center gap-2"><div className="size-1.5 rounded-full bg-tatt-lime"></div> Entrepreneurship</li>
-                                </ul>
-                                <button className="mt-5 w-full bg-tatt-lime text-tatt-black text-xs font-black py-2.5 rounded-lg hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all">
-                                    Claim Your License
-                                </button>
-                            </div>
-
-                            <div className="space-y-3">
-                                <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Your Member Benefits:</p>
-                                <ul className="space-y-2.5">
-                                    <li className="flex items-center gap-2.5 text-xs font-medium text-foreground">
-                                        <CheckCircle className="text-tatt-lime h-4 w-4 shrink-0" /> TATT Growth Mindset Mixers
-                                    </li>
-                                    <li className="flex items-center gap-2.5 text-xs font-medium text-foreground">
-                                        <CheckCircle className="text-tatt-lime h-4 w-4 shrink-0" /> DBU Career Academy License
-                                    </li>
-                                    <li className="flex items-center gap-2.5 text-xs font-medium text-foreground">
-                                        <CheckCircle className="text-tatt-lime h-4 w-4 shrink-0" /> Discounts from partner organizations
-                                    </li>
-                                    <li className="flex items-center gap-2.5 text-xs font-medium text-foreground">
-                                        <CheckCircle className="text-tatt-lime h-4 w-4 shrink-0" /> Annual Members-Only Appreciation Event
-                                    </li>
-                                </ul>
+                                <div className="flex gap-4 mt-4">
+                                    <button className="px-4 py-2 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90">Manage Spotlight Content</button>
+                                    <button className="px-4 py-2 border border-border rounded-lg text-xs font-bold hover:bg-background transition-colors">Preview Feature</button>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Background Decoration */}
-                        <div className="absolute -top-10 -right-10 size-32 bg-tatt-lime/5 rounded-full group-hover:scale-110 group-hover:bg-tatt-lime/10 transition-all duration-700"></div>
-                    </section>
+                    {/* Exclusive Member Benefits */}
+                    <div>
+                        <h3 className="font-bold text-lg text-foreground mb-4">Exclusive Member Benefits</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
+                                <Ticket className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
+                                <div>
+                                    <p className="font-bold text-sm text-foreground">Free Vendor Tables</p>
+                                    <p className="text-xs text-tatt-gray">2 credits available</p>
+                                </div>
+                            </div>
+                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
+                                <Megaphone className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
+                                <div>
+                                    <p className="font-bold text-sm text-foreground">Pitch Event Access</p>
+                                    <p className="text-xs text-tatt-gray">VIP Entry to Q4 Summit</p>
+                                </div>
+                            </div>
+                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
+                                <Shield className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
+                                <div>
+                                    <p className="font-bold text-sm text-foreground">Talent Access</p>
+                                    <p className="text-xs text-tatt-gray">Pre-vetted shortlist</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Digital ID card + Quick Resources */}
+                <div className="space-y-8">
+                    {/* Digital Business ID Card */}
+                    {user && (
+                        <MembershipCard
+                            member={{
+                                ...user,
+                                id: user.id || "",
+                                firstName: user.firstName || "",
+                                lastName: user.lastName || "",
+                                communityTier: user.communityTier || "FREE",
+                                chapterName: user.chapterName || "Global",
+                                createdAt: user.createdAt || new Date().toISOString()
+                            }}
+                            isCurrentUser={true}
+                        />
+                    )}
+
+                    {/* Upcoming Events */}
+                    <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-bold text-foreground">Upcoming Gatherings</h4>
+                            <Link href="/dashboard/events" className="text-[10px] font-black text-tatt-lime hover:underline uppercase">View All</Link>
+                        </div>
+                        <div className="space-y-4">
+                            {eventsLoading ? (
+                                <div className="flex items-center justify-center py-4">
+                                    <Loader2 className="size-5 animate-spin text-tatt-lime" />
+                                </div>
+                            ) : dashboardEvents.length === 0 ? (
+                                <p className="text-xs text-tatt-gray italic">No upcoming events found.</p>
+                            ) : (
+                                dashboardEvents.map(event => (
+                                    <Link key={event.id} href="/dashboard/events" className="block group">
+                                        <div className="flex gap-3">
+                                            <div className="size-10 rounded-lg bg-tatt-black flex flex-col items-center justify-center shrink-0 border border-white/5">
+                                                <span className="text-[7px] font-black text-white/50 uppercase leading-none">{safeDate(event.dateTime).toLocaleDateString("en-US", { month: "short" })}</span>
+                                                <span className="text-sm font-black text-white leading-none mt-1">{safeDate(event.dateTime).getDate()}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="text-xs font-bold text-foreground group-hover:text-tatt-lime transition-colors truncate">{event.title}</h5>
+                                                <p className="text-[10px] text-tatt-gray mt-0.5">{event.type} • {event.locations?.[0]?.chapter?.name || "Global"}</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Quick Resources */}
+                    <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
+                        <h4 className="font-bold text-foreground mb-4">Quick Resources</h4>
+                        <div className="space-y-4">
+                            <Link href="/dashboard/resources" className="flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <FileText className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
+                                    <span className="text-sm font-medium text-foreground">Business Toolkit 2024</span>
+                                </div>
+                                <Download className="h-4 w-4 text-tatt-gray" />
+                            </Link>
+                            <Link href="/dashboard/network" className="flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <Award className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
+                                    <span className="text-sm font-medium text-foreground">Network Directory</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-tatt-gray rotate-[-90deg]" />
+                            </Link>
+                            <Link href="/dashboard/feed" className="flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <MessageSquare className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
+                                    <span className="text-sm font-medium text-foreground">Executive Roundtable</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-tatt-gray rotate-[-90deg]" />
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

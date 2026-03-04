@@ -7,23 +7,35 @@ import helmet from 'helmet';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { ConfigService } from '@nestjs/config';
+
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-        cors: true,
+        cors: false, // we configure CORS explicitly below so one source of truth
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-        rawBody: true, // Required for Stripe Webhook signature verification
+        rawBody: true,
+    });
+
+    const configService = app.get(ConfigService);
+
+    // ── CORS: single source of truth from env ────────────────────────────────────
+    // Browsers treat http://localhost and http://127.0.0.1 as different origins.
+    // Set CORS_ORIGINS in .env (comma-separated), e.g.:
+    //   CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.231:3000
+    const corsOriginsRaw = process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000';
+    const allowedOrigins = corsOriginsRaw.split(',').map((o) => o.trim()).filter(Boolean);
+    app.enableCors({
+        origin: allowedOrigins,
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     });
 
     // ── Security Edge Middleware ────────────────────────────────────────────────
     app.use(helmet({
-        // Allow cross-origin images/media served from /uploads to be displayed in the frontend
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     }));
-    app.enableCors({
-        origin: process.env.CORS_ORIGINS?.split(',') || '*',
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        credentials: true,
-    });
+
 
     // ── Static file serving for uploaded media ──────────────────────────────────
     const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? './uploads');
@@ -122,7 +134,7 @@ async function bootstrap() {
         },
     });
 
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     await app.listen(port);
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
     console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api-docs`);

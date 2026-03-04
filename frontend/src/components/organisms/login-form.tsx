@@ -49,8 +49,14 @@ export function LoginForm() {
 
       if (response.data.access_token) {
         authLogin(response.data.access_token, response.data.user);
-        // Redirect to dashboard
-        window.location.href = "/dashboard";
+
+        // Redirect based on role
+        const systemRole = response.data.user.systemRole;
+        if (systemRole && systemRole !== 'COMMUNITY_MEMBER') {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/dashboard";
+        }
       } else if (response.data.requiresTwoFactor) {
         // Handle 2FA case
         setError("Two-factor authentication required. (2FA UI not yet implemented)");

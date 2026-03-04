@@ -10,8 +10,12 @@ export function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated && !isLoading && user && user.systemRole === 'COMMUNITY_MEMBER') {
-      router.push('/dashboard');
+    if (isAuthenticated && !isLoading && user) {
+      if (user.systemRole === 'COMMUNITY_MEMBER') {
+        router.push('/dashboard');
+      } else {
+        router.push('/admin');
+      }
     }
   }, [isAuthenticated, isLoading, user, router]);
 
@@ -24,7 +28,7 @@ export function HomePage() {
   }
 
   // If they are logging in they should be routed, show nothing
-  if (isAuthenticated && user && user.systemRole === 'COMMUNITY_MEMBER') {
+  if (isAuthenticated && user) {
     return null;
   }
 

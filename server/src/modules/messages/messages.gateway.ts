@@ -13,10 +13,14 @@ import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from './messages.service';
 import { MessageStatus } from './entities/direct-message.entity';
 
+// Use same CORS origins as REST (main.ts) so WebSocket upgrade is not blocked
+const wsCorsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
 @WebSocketGateway({
-    cors: {
-        origin: '*',
-    },
+    cors: { origin: wsCorsOrigins },
     namespace: 'messages',
 })
 export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {

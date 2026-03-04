@@ -9,9 +9,12 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Connection, ConnectionStatus } from './entities/connection.entity';
 import { User } from '../iam/entities/user.entity';
+import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { SendConnectionRequestDto, RespondToConnectionDto } from './dto/connection.dto';
 import { MailService } from '../../common/mail/mail.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 /** Paid tiers that can initiate connection requests */
 const PAID_TIERS: CommunityTier[] = [
@@ -26,6 +29,7 @@ export class ConnectionsService {
         @InjectModel(Connection) private connectionRepo: typeof Connection,
         @InjectModel(User) private userRepo: typeof User,
         private mailService: MailService,
+        private notificationsService: NotificationsService,
     ) { }
 
     // ─── GUARD: Ensure requesting user is a paid member ─────────────────────────
@@ -90,6 +94,16 @@ export class ConnectionsService {
             )
             .catch(() => { /* Silently swallow — connection was still created */ });
 
+        // In-app notification
+        this.notificationsService.create(
+            dto.recipientId,
+            NotificationType.CONNECTION_REQUEST,
+            'New Connection Request',
+            `${requester.firstName} ${requester.lastName} wants to connect with you.`,
+            { connectionId: connection.id, requesterId: requester.id },
+            false // Email already sent above
+        ).catch(() => { });
+
         return {
             message: 'Connection request sent successfully.',
             connectionId: connection.id,
@@ -116,6 +130,17 @@ export class ConnectionsService {
 
         connection.status = dto.status;
         await connection.save();
+
+        if (dto.status === ConnectionStatus.ACCEPTED) {
+            this.notificationsService.create(
+                connection.requesterId,
+                NotificationType.CONNECTION_ACCEPTED,
+                'Connection Request Accepted',
+                `${currentUser.firstName} ${currentUser.lastName} accepted your connection request.`,
+                { connectionId: connection.id, partnerId: currentUser.id },
+                true // Notify via email as well
+            ).catch(() => { });
+        }
 
         return {
             message: `Connection request ${dto.status.toLowerCase()} successfully.`,
@@ -221,6 +246,7 @@ export class ConnectionsService {
                     attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier'],
                 },
             ],
+            order: [['createdAt', 'DESC']],
         });
     }
 
@@ -238,6 +264,7 @@ export class ConnectionsService {
                     attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier'],
                 },
             ],
+            order: [['createdAt', 'DESC']],
         });
     }
 
@@ -250,6 +277,7 @@ export class ConnectionsService {
                     { requesterId: memberId, recipientId: currentUser.id },
                 ],
             },
+            order: [['createdAt', 'DESC']],
         });
 
         if (!connection) {
@@ -261,5 +289,85 @@ export class ConnectionsService {
             connectionId: connection.id,
             initiatedBy: connection.requesterId === currentUser.id ? 'ME' : 'THEM',
         };
+    }
+
+    // ─── GET ALL MEMBERS (DIRECTORY) ─────────────────────────────────────────────
+    async getAllMembers(query: any, excludeUserId?: string) {
+        const { search, chapterId, industry, page = 1, limit = 10 } = query;
+        const offset = (page - 1) * limit;
+
+        const where: any = {
+            isActive: true,
+            // Exclude the requesting user from their own directory view
+            ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
+        };
+
+        if (chapterId) {
+            where.chapterId = chapterId;
+        }
+
+        if (industry) {
+            where.industry = industry;
+        }
+
+        if (search) {
+            where[Op.or] = [
+                { firstName: { [Op.iLike]: `%${search}%` } },
+                { lastName: { [Op.iLike]: `%${search}%` } },
+                { professionTitle: { [Op.iLike]: `%${search}%` } },
+                { companyName: { [Op.iLike]: `%${search}%` } },
+            ];
+        }
+
+        const { rows: members, count: total } = await this.userRepo.findAndCountAll({
+            where,
+            attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier', 'industry', 'chapterId'],
+            include: [
+                {
+                    model: Chapter,
+                    as: 'chapter',
+                    attributes: ['id', 'name', 'code'],
+                    required: false,
+                }
+            ],
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']],
+        });
+
+        return {
+            members,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
+    // ─── GET MEMBER PUBLIC PROFILE ────────────────────────────────────────────────
+    async getMemberProfile(memberId: string) {
+        const member = await this.userRepo.findByPk(memberId, {
+            attributes: [
+                'id', 'firstName', 'lastName', 'profilePicture', 'professionTitle',
+                'companyName', 'location', 'tattMemberId', 'communityTier', 'industry',
+                'chapterId', 'professionalHighlight',
+            ],
+            include: [
+                {
+                    model: Chapter,
+                    as: 'chapter',
+                    attributes: ['id', 'name', 'code'],
+                    required: false,
+                }
+            ],
+        });
+
+        if (!member || !member.isActive) {
+            throw new NotFoundException('Member not found.');
+        }
+
+        return member;
     }
 }

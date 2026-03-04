@@ -9,6 +9,8 @@ import { Connection, ConnectionStatus } from '../connections/entities/connection
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { SendMessageDto, MessageHistoryQueryDto } from './dto/messages.dto';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 // Profile fields returned in conversation list and message sender context
 const PARTNER_ATTRS = [
@@ -27,6 +29,7 @@ export class MessagesService {
         @InjectModel(DirectMessage) private messageRepo: typeof DirectMessage,
         @InjectModel(Connection) private connectionRepo: typeof Connection,
         @InjectModel(User) private userRepo: typeof User,
+        private notificationsService: NotificationsService,
     ) { }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -84,6 +87,16 @@ export class MessagesService {
             status: MessageStatus.SENT,
             clientMessageId: dto.clientMessageId ?? null,
         });
+
+        // Async notify without blocking the send flow
+        this.notificationsService.create(
+            receiverId,
+            NotificationType.NEW_MESSAGE,
+            'New Message Received',
+            `${sender.firstName} ${sender.lastName} sent you a message.`,
+            { connectionId, senderId: sender.id },
+            true // True for email
+        ).catch(err => this.logger.error(`Failed message notification: ${err.message}`));
 
         return message;
     }

@@ -15,12 +15,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useEffect(() => {
         if (!isLoading) {
             if (!isAuthenticated) {
-                router.push('/login');
-            } else if (user && user.systemRole !== 'COMMUNITY_MEMBER') {
-                // If they are admin or superadmin etc., route them to the admin dashboard.
-                // You can add logic here to differentiate based on the actual roles if needed.
-                // For now, redirect them since this is explicitly the community dashboard.
                 router.push('/');
+            } else if (user && user.systemRole !== 'COMMUNITY_MEMBER') {
+                router.push('/admin');
             }
         }
     }, [isAuthenticated, isLoading, user, router]);
@@ -43,6 +40,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
                 <DashboardHeader onMenuClick={() => setIsSidebarOpen(true)} />
+                {user?.deletionRequestedAt && (
+                    <div className="bg-red-500 text-white px-4 py-3 flex items-center justify-between shadow-lg z-20">
+                        <div className="flex items-center gap-3">
+                            <span className="animate-ping size-2 bg-white rounded-full"></span>
+                            <span className="text-xs font-black uppercase tracking-widest">Account Closure Pending</span>
+                            <span className="hidden md:inline text-xs opacity-90 italic">
+                                Your account is scheduled for deletion in {Math.ceil((new Date(new Date(user.deletionRequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days.
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => router.push('/dashboard/settings')}
+                            className="bg-white text-red-500 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full hover:bg-red-50 hover:scale-105 transition-all"
+                        >
+                            Review Request
+                        </button>
+                    </div>
+                )}
                 <div className="flex-1">
                     {children}
                 </div>

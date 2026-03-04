@@ -18,6 +18,8 @@ import { SystemRole, CommunityTier } from '../enums/roles.enum';
 import { MailService } from '../../../common/mail/mail.service';
 import { SecurityPolicyService } from '../../security/security-policy.service';
 import { TwoFactorService } from '../../security/two-factor.service';
+import { Chapter } from '../../chapters/entities/chapter.entity';
+import { ProfessionalInterest } from '../../interests/entities/interest.entity';
 
 @Injectable()
 export class AuthService {
@@ -101,7 +103,12 @@ export class AuthService {
             };
         }
 
-        return this.generateAuthResponse(user);
+        const authResponse = this.generateAuthResponse(user) as any;
+        if (user.deletionRequestedAt) {
+            authResponse.isScheduledForDeletion = true;
+            authResponse.deletionDate = new Date(user.deletionRequestedAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+        }
+        return authResponse;
     }
 
     // ─── COMPLETE 2FA STEP (called after partial token is returned) ───────────
@@ -392,7 +399,20 @@ export class AuthService {
         user.resetPasswordExpiresAt = expiresAt;
         await user.save();
 
-        await this.mailService.sendPasswordReset(user.email, resetTokenRaw);
+        if (process.env.NODE_ENV === 'development') {
+            this.logger.log(`[DEV] Password reset requested for ${user.email}. Raw token: ${resetTokenRaw}`);
+            this.logger.log(`[DEV] Reset link: ${process.env.FRONTEND_URL}/reset-password?token=${resetTokenRaw}`);
+        }
+
+        try {
+            await this.mailService.sendPasswordReset(user.email, resetTokenRaw);
+        } catch (mailError) {
+            this.logger.error(`Failed to send password reset email: ${mailError.message}`);
+            if (process.env.NODE_ENV !== 'development') {
+                throw mailError;
+            }
+        }
+
         return { message: 'If that email exists, a reset link has been sent.' };
     }
 
@@ -432,6 +452,32 @@ export class AuthService {
         return { message: 'Password has been successfully reset.' };
     }
 
+    // ─── GET CURRENT USER PROFILE (for frontend /auth/me) ──────────────────────
+    async getMe(userId: string) {
+        const user = await this.userRepository.findByPk(userId, {
+            attributes: [
+                'id', 'firstName', 'lastName', 'email', 'systemRole', 'communityTier',
+                'chapterId', 'profilePicture', 'professionTitle', 'companyName', 'tattMemberId',
+                'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod',
+                'connectionPreference', 'expertise', 'businessName', 'businessRole',
+                'businessProfileLink', 'professionalHighlight', 'location', 'deletionRequestedAt',
+                'linkedInProfileUrl'
+            ],
+            include: [
+                { model: Chapter, as: 'chapter' },
+                { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
+            ],
+        });
+        if (!user) throw new UnauthorizedException('User not found');
+        const plain = user.get({ plain: true }) as any;
+        if (plain.chapter) {
+            plain.chapterName = plain.chapter.name;
+            plain.chapterCode = plain.chapter.code;
+        }
+        delete plain.chapter;
+        return plain;
+    }
+
     // ─── INTERNAL: GENERATE FULL AUTH RESPONSE ────────────────────────────────
     private generateAuthResponse(user: User) {
         const payload = {
@@ -453,6 +499,7 @@ export class AuthService {
                 isActive: user.isActive,
                 isTwoFactorEnabled: user.isTwoFactorEnabled,
                 twoFactorMethod: user.twoFactorMethod ?? null,
+                deletionRequestedAt: user.deletionRequestedAt || null,
             },
         };
     }

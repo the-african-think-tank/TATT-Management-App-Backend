@@ -15,6 +15,21 @@ import { PostComment } from '../../modules/feed/entities/post-comment.entity';
 import { DirectMessage } from '../../modules/messages/entities/direct-message.entity';
 import { Resource } from '../../modules/resources/entities/resource.entity';
 import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
+import { Notification } from '../../modules/notifications/entities/notification.entity';
+
+import { MembershipPlan } from '../../modules/membership/entities/membership-plan.entity';
+import { Event } from '../../modules/events/entities/event.entity';
+import { EventChapter } from '../../modules/events/entities/event-chapter.entity';
+import { EventGuest } from '../../modules/events/entities/event-guest.entity';
+import { EventRegistration } from '../../modules/events/entities/event-registration.entity';
+import { JobListing } from '../../modules/jobs/entities/job-listing.entity';
+import { JobApplication } from '../../modules/jobs/entities/job-application.entity';
+import { SavedJob } from '../../modules/jobs/entities/saved-job.entity';
+import { VolunteerRole } from '../../modules/volunteers/entities/volunteer-role.entity';
+import { VolunteerActivity } from '../../modules/volunteers/entities/volunteer-activity.entity';
+import { VolunteerApplication } from '../../modules/volunteers/entities/volunteer-application.entity';
+import { VolunteerStat } from '../../modules/volunteers/entities/volunteer-stat.entity';
+import { VolunteerTrainingResource } from '../../modules/volunteers/entities/volunteer-training.entity';
 
 @Module({
     imports: [
@@ -31,7 +46,11 @@ import { ResourceInteraction } from '../../modules/resources/entities/resource-i
                     User, Chapter, ProfessionalInterest, UserInterest, Connection,
                     SecurityPolicy, PasswordHistory, EmailOtp,
                     Post, PostLike, PostComment, DirectMessage,
-                    Resource, ResourceInteraction,
+                    Resource, ResourceInteraction, Notification,
+                    MembershipPlan,
+                    Event, EventChapter, EventGuest, EventRegistration,
+                    JobListing, JobApplication, SavedJob,
+                    VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource
                 ],
                 autoLoadModels: true,
                 synchronize: false,

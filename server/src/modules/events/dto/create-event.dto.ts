@@ -36,6 +36,9 @@ export class CreateEventDto {
     @IsOptional()
     targetMembershipTiers?: CommunityTier[];
 
+    @IsOptional()
+    basePrice?: number;
+
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => EventLocationDto)

@@ -1,6 +1,6 @@
 import { Table, Column, Model, DataType, Default, BelongsTo, BelongsToMany, ForeignKey, AfterCreate, BeforeCreate, HasMany } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
-import { SystemRole, CommunityTier, AccountFlags } from '../enums/roles.enum';
+import { SystemRole, CommunityTier, AccountFlags, ConnectionPreference } from '../enums/roles.enum';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { ProfessionalInterest } from '../../interests/entities/interest.entity';
 import { UserInterest } from '../../interests/entities/user-interest.entity';
@@ -9,6 +9,7 @@ import { Post } from '../../feed/entities/post.entity';
 import { PostLike } from '../../feed/entities/post-like.entity';
 import { PostComment } from '../../feed/entities/post-comment.entity';
 import { DirectMessage } from '../../messages/entities/direct-message.entity';
+import { Notification } from '../../notifications/entities/notification.entity';
 
 @Table({
     tableName: 'users',
@@ -242,6 +243,9 @@ export class User extends Model<User> {
     @HasMany(() => DirectMessage, 'receiverId')
     receivedMessages: DirectMessage[];
 
+    @HasMany(() => Notification, 'userId')
+    notifications: Notification[];
+
     @Column(DataType.STRING)
     stripeCustomerId?: string;
 
@@ -257,6 +261,28 @@ export class User extends Model<User> {
     @Default(true)
     @Column(DataType.BOOLEAN)
     hasAutoPayEnabled: boolean;
+
+    @Default(ConnectionPreference.OPEN)
+    @Column({
+        type: DataType.ENUM(...Object.values(ConnectionPreference)),
+    })
+    connectionPreference: ConnectionPreference;
+
+    @Column(DataType.TEXT)
+    expertise?: string;
+
+    // -- Kiongozi Tier Business Profile Section --
+    @Column(DataType.STRING)
+    businessName?: string;
+
+    @Column(DataType.STRING)
+    businessRole?: string;
+
+    @Column(DataType.STRING)
+    businessProfileLink?: string;
+
+    @Column(DataType.STRING)
+    linkedInProfileUrl?: string;
 
     // -- PASSWORD ROTATION TRACKING --
 
@@ -276,4 +302,11 @@ export class User extends Model<User> {
         allowNull: true,
     })
     passwordExpiryNotifiedAt?: string;
+
+    /** When the user requested account deletion. Full deletion occurs 14 days later. */
+    @Column({
+        type: DataType.DATE,
+        allowNull: true,
+    })
+    deletionRequestedAt?: Date;
 }

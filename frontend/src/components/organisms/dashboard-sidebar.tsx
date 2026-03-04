@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import Image from "next/image";
 
 import {
     LayoutDashboard,
@@ -66,8 +65,15 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
             `}>
                 <div className="p-6 flex items-center justify-between gap-3 border-b border-border">
                     <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-lg flex items-center justify-center">
-                            <Image src="/assets/tattlogoIcon.svg" alt="TATT Logo" width={40} height={40} className="object-contain" />
+                        <div className="size-10 rounded-lg flex items-center justify-center shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src="/assets/tattlogoIcon.svg"
+                                alt="TATT Logo"
+                                width={40}
+                                height={40}
+                                className="object-contain w-10 h-10"
+                            />
                         </div>
                         <div>
                             <h1 className="font-black text-xl tracking-tighter leading-none text-white whitespace-nowrap">The African</h1>

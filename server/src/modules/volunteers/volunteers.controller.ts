@@ -20,7 +20,7 @@ import {
     VolunteerActivitySchema,
     VolunteerStatSchema,
     TrainingResourceSchema,
-    MessageResponseSchema,
+    VolunteerMessageResponseSchema,
 } from './dto/volunteers.schemas';
 
 @ApiTags('Volunteers & Impact')
@@ -34,7 +34,7 @@ import {
     VolunteerActivitySchema,
     VolunteerStatSchema,
     TrainingResourceSchema,
-    MessageResponseSchema,
+    VolunteerMessageResponseSchema,
 )
 @Controller('volunteers')
 export class VolunteersController {
@@ -80,7 +80,7 @@ export class VolunteersController {
         summary: 'Update activity status',
         description: 'Mark an activity as COMPLETED or DECLINED. Completing activities awards points.'
     })
-    @ApiResponse({ status: 200, type: MessageResponseSchema })
+    @ApiResponse({ status: 200, type: VolunteerMessageResponseSchema })
     @UseGuards(VolunteerGuard)
     @Patch('activities/:id/status')
     async updateActivityStatus(@Request() req, @Param('id') id: string, @Body() dto: UpdateActivityStatusDto) {
@@ -110,7 +110,7 @@ export class VolunteersController {
     }
 
     @ApiOperation({ summary: 'Close a volunteer role (Admin)' })
-    @ApiResponse({ status: 200, type: MessageResponseSchema })
+    @ApiResponse({ status: 200, type: VolunteerMessageResponseSchema })
     @UseGuards(RolesGuard)
     @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
     @Patch('roles/:id/close')
@@ -128,7 +128,7 @@ export class VolunteersController {
     }
 
     @ApiOperation({ summary: 'Review/Approve application (Admin)' })
-    @ApiResponse({ status: 200, type: MessageResponseSchema })
+    @ApiResponse({ status: 200, type: VolunteerMessageResponseSchema })
     @UseGuards(RolesGuard)
     @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
     @Patch('applications/:id/status')

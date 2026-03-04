@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './core/database/database.module';
 import { IamModule } from './modules/iam/iam.module';
 import { BillingModule } from './modules/billing/billing.module';
@@ -11,8 +12,12 @@ import { FeedModule } from './modules/feed/feed.module';
 import { ResourcesModule } from './modules/resources/resources.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { VolunteersModule } from './modules/volunteers/volunteers.module';
 import { EventsModule } from './modules/events/events.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { MembershipModule } from './modules/membership/membership.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -23,6 +28,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
             envFilePath: '.env',
             expandVariables: true,
         }),
+        ScheduleModule.forRoot(),
         ThrottlerModule.forRoot([{
             ttl: 60000,
             limit: 100, // Anti-abuse rate limiting per IP
@@ -38,8 +44,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
         ResourcesModule,    // Knowledge & Resource Hub (guides, documents, partnerships)
         UploadsModule,      // File/Media Upload handling (images, video, audio, docs)
         MessagesModule,     // Real-time Direct Messaging Domain
+        NotificationsModule, // User In-app & Email Notifications Domain
         VolunteersModule,   // Volunteer Management Domain
         EventsModule,       // Events & Workshops Domain
+        JobsModule,         // Job Board & Opportunities Domain
+        DashboardModule,    // Admin Dashboards & Stats Domain
+        MembershipModule,   // Admin Membership Center & Discounts Domain
         MailModule,         // Transactional Email Domain (Global)
     ],
     controllers: [],
