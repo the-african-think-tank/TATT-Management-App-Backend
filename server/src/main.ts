@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { Sequelize } from 'sequelize-typescript';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -134,6 +135,21 @@ async function bootstrap() {
                 syntaxHighlight: { activate: true, theme: 'monokai' },
             },
         });
+    }
+
+    // ── Database Synchronization ──────────────────────────────────────────────
+    const sequelize = app.get(Sequelize);
+    const shouldSync = configService.get<string | boolean>('DB_SYNC') === 'true' || configService.get<string | boolean>('DB_SYNC') === true;
+
+    if (shouldSync) {
+        console.log('[TATT-Management-App] Synchronizing database schema...');
+        try {
+            await sequelize.sync({ alter: true });
+            console.log('[TATT-Management-App] Database synchronization complete.');
+        } catch (error) {
+            console.error('[TATT-Management-App] Database synchronization failed:', error);
+            // In a production environment, you might want to exit here if DB sync is critical
+        }
     }
 
     const port = process.env.PORT || 5000;
