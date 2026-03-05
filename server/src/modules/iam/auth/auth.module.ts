@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '../entities/user.entity';
 import { SecurityModule } from '../../security/security.module';
+import { UserSeederService } from './user-seeder.service';
 
 @Module({
     imports: [
@@ -21,7 +22,7 @@ import { SecurityModule } from '../../security/security.module';
         SecurityModule, // Provides SecurityPolicyService + TwoFactorService
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy],
+    providers: [AuthService, JwtStrategy, UserSeederService],
     exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule { }

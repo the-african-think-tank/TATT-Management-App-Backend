@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { MembershipTier } from './entities/membership-tier.entity';
@@ -11,7 +11,7 @@ import { Sequelize } from 'sequelize-typescript';
 import Stripe from 'stripe';
 
 @Injectable()
-export class MembershipService {
+export class MembershipService implements OnApplicationBootstrap {
     private readonly logger = new Logger(MembershipService.name);
     private stripe: Stripe;
 
@@ -25,6 +25,73 @@ export class MembershipService {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
             apiVersion: '2025-01-27.acacia' as any,
         });
+    }
+
+    async onApplicationBootstrap() {
+        this.logger.log('Checking Membership Plans for seeding...');
+        const planCount = await this.planRepo.count();
+        if (planCount === 0) {
+            this.logger.log('Seeding initial Membership Plans...');
+            await this.seedPlans();
+        }
+    }
+
+    private async seedPlans() {
+        const plans = [
+            {
+                tier: CommunityTier.FREE,
+                name: 'Free Member',
+                tagline: 'Join the community for free',
+                monthlyPrice: 0,
+                yearlyPrice: 0,
+                features: ['Access to chapter events', 'Basic community forums', 'Newsletter updates'],
+                isPopular: false,
+                stripeMonthlyPriceId: null,
+                stripeYearlyPriceId: null,
+                hasYearlyDiscount: false,
+            },
+            {
+                tier: CommunityTier.UBUNTU,
+                name: 'Ubuntu',
+                tagline: 'I am because we are',
+                monthlyPrice: 19.99,
+                yearlyPrice: 199.99,
+                features: ['All Free features', 'Exclusive workshops', 'Mentorship program beta access', 'Member directory access'],
+                isPopular: true,
+                stripeMonthlyPriceId: process.env.STRIPE_PRICE_UBUNTU_MONTHLY || null,
+                stripeYearlyPriceId: process.env.STRIPE_PRICE_UBUNTU_YEARLY || null,
+                hasYearlyDiscount: true,
+            },
+            {
+                tier: CommunityTier.IMANI,
+                name: 'Imani',
+                tagline: 'Faith in our collective vision',
+                monthlyPrice: 49.99,
+                yearlyPrice: 499.99,
+                features: ['All Ubuntu features', '1-on-1 Mentorship', 'Job board priority access', 'Annual retreat invite'],
+                isPopular: false,
+                stripeMonthlyPriceId: process.env.STRIPE_PRICE_IMANI_MONTHLY || null,
+                stripeYearlyPriceId: process.env.STRIPE_PRICE_IMANI_YEARLY || null,
+                hasYearlyDiscount: true,
+            },
+            {
+                tier: CommunityTier.KIONGOZI,
+                name: 'Kiongozi',
+                tagline: 'Leadership and legacy',
+                monthlyPrice: 99.99,
+                yearlyPrice: 999.99,
+                features: ['All Imani features', 'VIP event seating', 'Shape organizational policy', 'Exclusive mastermind groups'],
+                isPopular: false,
+                stripeMonthlyPriceId: process.env.STRIPE_PRICE_KIONGOZI_MONTHLY || null,
+                stripeYearlyPriceId: process.env.STRIPE_PRICE_KIONGOZI_YEARLY || null,
+                hasYearlyDiscount: true,
+            }
+        ];
+
+        for (const planData of plans) {
+            await this.planRepo.create(planData as any);
+        }
+        this.logger.log('Membership Plans seeded successfully.');
     }
 
     // --- Membership Plans (Onboarding & Admin) ---
