@@ -1,11 +1,25 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Bell, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { NotificationDropdown } from "./notification-dropdown";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     return (
         <header className="h-16 bg-surface/80 border-b border-border flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 backdrop-blur-sm">
@@ -28,14 +42,42 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
 
             <div className="flex items-center gap-4 lg:gap-6">
                 <NotificationDropdown />
-                <div className="flex items-center gap-3 pl-4 lg:pl-6 border-l border-border">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold leading-none">{user?.firstName} {user?.lastName}</p>
-                        <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">{user?.chapterName ?? "—"} Chapter</p>
+                <div className="relative" ref={dropdownRef}>
+                    <div
+                        className="flex items-center gap-3 pl-4 lg:pl-6 border-l border-border cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                    >
+                        <div className="text-right hidden sm:block">
+                            <p className="text-sm font-bold leading-none">{user?.firstName} {user?.lastName}</p>
+                            <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">{user?.systemRole?.replace('_', ' ') || user?.communityTier || "—"} Member</p>
+                        </div>
+                        <div className="size-10 rounded-full border-2 border-tatt-lime overflow-hidden bg-background flex items-center justify-center font-bold text-tatt-lime select-none">
+                            {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                        </div>
                     </div>
-                    <div className="size-10 rounded-full border-2 border-tatt-lime overflow-hidden bg-background flex items-center justify-center font-bold text-tatt-lime">
-                        {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
-                    </div>
+
+                    {dropdownOpen && (
+                        <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                            <Link
+                                href="/dashboard/settings"
+                                className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                onClick={() => setDropdownOpen(false)}
+                            >
+                                <UserIcon className="h-4 w-4" />
+                                Go to Profile
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    setDropdownOpen(false);
+                                    logout();
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left"
+                            >
+                                <LogOut className="h-4 w-4" />
+                                Logout
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
