@@ -107,6 +107,27 @@ export default function DashboardPage() {
                 </Link>
             </div>
 
+            {/* Profile Setup Banner for New Members */}
+            {(!user?.professionTitle || !companyName || companyName === "—") && (
+                <div className="bg-tatt-lime/10 border border-tatt-lime/30 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 className="font-black text-foreground text-lg flex items-center gap-2">
+                            <span className="bg-tatt-lime text-tatt-black p-1 rounded-full"><Award className="h-4 w-4" /></span>
+                            Welcome to the community!
+                        </h3>
+                        <p className="text-tatt-gray text-sm font-medium mt-1">
+                            Your profile is currently incomplete. Take a moment to add your profession, company, and location to get the most out of your TATT experience.
+                        </p>
+                    </div>
+                    <Link
+                        href="/dashboard/settings"
+                        className="shrink-0 px-6 py-2.5 bg-tatt-lime text-tatt-black font-black uppercase text-xs rounded-lg hover:brightness-105 transition-all shadow-sm"
+                    >
+                        Setup My Profile
+                    </Link>
+                </div>
+            )}
+
             {/* Key metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
