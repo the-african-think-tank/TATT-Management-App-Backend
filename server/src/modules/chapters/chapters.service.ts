@@ -35,7 +35,21 @@ export class ChaptersService {
     }
 
     async getAllChapters() {
-        return this.chapterRepository.findAll();
+        return this.chapterRepository.findAll({
+            include: [
+                {
+                    model: User,
+                    as: 'regionalManager',
+                    attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle'],
+                },
+                {
+                    model: User,
+                    as: 'associateRegionalDirector',
+                    attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle'],
+                },
+            ],
+            order: [['createdAt', 'DESC']],
+        });
     }
 
     async getChapterById(id: string) {
@@ -44,6 +58,11 @@ export class ChaptersService {
                 {
                     model: User,
                     as: 'regionalManager',
+                    attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle'],
+                },
+                {
+                    model: User,
+                    as: 'associateRegionalDirector',
                     attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle'],
                 },
             ],

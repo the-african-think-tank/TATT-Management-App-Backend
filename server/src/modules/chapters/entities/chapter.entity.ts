@@ -35,6 +35,18 @@ export class Chapter extends Model<Chapter> {
     description?: string;
 
     @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    country?: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    stateRegion?: string;
+
+    @Column({
         type: DataType.ARRAY(DataType.STRING),
         allowNull: false,
         defaultValue: [],
@@ -50,6 +62,16 @@ export class Chapter extends Model<Chapter> {
 
     @BelongsTo(() => User, 'regionalManagerId')
     regionalManager: User;
+
+    @ForeignKey(() => User)
+    @Column({
+        type: DataType.UUID,
+        allowNull: true,
+    })
+    associateRegionalDirectorId?: string;
+
+    @BelongsTo(() => User, 'associateRegionalDirectorId')
+    associateRegionalDirector: User;
 
     @HasMany(() => User, 'chapterId')
     members: User[];

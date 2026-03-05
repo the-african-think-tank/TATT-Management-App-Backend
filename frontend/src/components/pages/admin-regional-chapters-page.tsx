@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import {
     PlusCircle,
     Search,
@@ -15,15 +14,133 @@ import {
     ChevronLeft,
     ChevronRight,
     MapPin,
-    X
+    X,
+    Loader2,
+    CheckCircle2,
+    AlertCircle
 } from "lucide-react";
+import api from "@/services/api";
+import { useAuth, User } from "@/context/auth-context";
+
+interface Chapter {
+    id: string;
+    code: string;
+    name: string;
+    description?: string;
+    country?: string;
+    stateRegion?: string;
+    cities: string[];
+    regionalManagerId?: string;
+    associateRegionalDirectorId?: string;
+    regionalManager?: User;
+    associateRegionalDirector?: User;
+    createdAt: string;
+    _count?: {
+        members: number;
+    }
+}
 
 export function AdminRegionalChaptersPage() {
     const [activeTab, setActiveTab] = useState("directory");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [chapters, setChapters] = useState<Chapter[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [orgMembers, setOrgMembers] = useState<User[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Form State
+    const [formData, setFormData] = useState({
+        name: "",
+        country: "",
+        stateRegion: "",
+        cities: "",
+        regionalManagerId: "",
+        associateRegionalDirectorId: ""
+    });
+
+    useEffect(() => {
+        fetchChapters();
+        fetchOrgMembers();
+    }, []);
+
+    const fetchChapters = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get("/chapters");
+            setChapters(response.data);
+        } catch (error) {
+            console.error("Failed to fetch chapters:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchOrgMembers = async () => {
+        try {
+            // Fetch potential leaders (admins/staff)
+            const response = await api.get("/users/org-members", {
+                params: { role: 'ADMIN' } // Or fetch all and filter
+            });
+            setOrgMembers(response.data);
+        } catch (error) {
+            console.error("Failed to fetch org members:", error);
+        }
+    };
+
+    const generateChapterCode = () => {
+        // Find highest existing code if they are numeric
+        const numericCodes = chapters
+            .map(c => parseInt(c.code))
+            .filter(n => !isNaN(n));
+
+        if (numericCodes.length === 0) return "1001";
+
+        const nextCode = Math.max(...numericCodes) + 1;
+        return nextCode.toString().padStart(4, "0");
+    };
+
+    const handleCreateChapter = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setIsSubmitting(true);
+            const code = generateChapterCode();
+
+            const payload = {
+                ...formData,
+                code,
+                cities: formData.cities.split(",").map(c => c.trim()).filter(c => c !== ""),
+                regionalManagerId: formData.regionalManagerId || undefined,
+                associateRegionalDirectorId: formData.associateRegionalDirectorId || undefined
+            };
+
+            await api.post("/chapters", payload);
+            setIsCreateModalOpen(false);
+            setFormData({
+                name: "",
+                country: "",
+                stateRegion: "",
+                cities: "",
+                regionalManagerId: "",
+                associateRegionalDirectorId: ""
+            });
+            fetchChapters();
+        } catch (error) {
+            console.error("Failed to create chapter:", error);
+            alert("Error creating chapter. Please check if the name is unique.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const filteredChapters = chapters.filter(c =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.stateRegion?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto pb-10">
+        <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto pb-10 px-4 sm:px-0">
             {/* Header / Title */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -44,28 +161,26 @@ export function AdminRegionalChaptersPage() {
                 <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
                     <p className="text-sm text-tatt-gray font-medium">Total Chapters</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-3xl font-black text-foreground">12</span>
-                        <span className="text-xs text-green-600 font-bold bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">+2</span>
+                        <span className="text-3xl font-black text-foreground">{chapters.length}</span>
                     </div>
                 </div>
-                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
+                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
                     <p className="text-sm text-tatt-gray font-medium">Global Volunteers</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-3xl font-black text-foreground">450</span>
-                        <span className="text-xs text-green-600 font-bold bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded">+15%</span>
+                        <span className="text-3xl font-black text-foreground">--</span>
+                        <span className="text-[10px] text-tatt-gray italic font-medium px-1.5 py-0.5 rounded">Coming Soon</span>
                     </div>
                 </div>
-                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
+                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
                     <p className="text-sm text-tatt-gray font-medium">Active Members</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-3xl font-black text-foreground">1,248</span>
+                        <span className="text-3xl font-black text-foreground">--</span>
                     </div>
                 </div>
-                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
+                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
                     <p className="text-sm text-tatt-gray font-medium">Recent Activities</p>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-3xl font-black text-foreground">34</span>
-                        <span className="text-xs text-tatt-lime font-bold bg-tatt-lime/10 px-1.5 py-0.5 rounded">This Month</span>
+                        <span className="text-3xl font-black text-foreground">--</span>
                     </div>
                 </div>
             </div>
@@ -101,6 +216,8 @@ export function AdminRegionalChaptersPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray h-4 w-4" />
                             <input
                                 type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search chapters by name or region..."
                                 className="w-full bg-surface border border-border rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder:text-tatt-gray/60"
                             />
@@ -113,198 +230,100 @@ export function AdminRegionalChaptersPage() {
                                 <thead>
                                     <tr className="bg-background border-b border-border">
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Chapter Name & Region</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">ID / Code</th>
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Leadership Team</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Quick Stats</th>
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
-                                    {/* Chapter Row 1 */}
-                                    <tr className="hover:bg-background/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <div className="font-bold text-foreground flex items-center gap-2">
-                                                West Africa - Accra
-                                            </div>
-                                            <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
-                                                <MapPin className="h-3 w-3" />
-                                                Ghana / ECOWAS Sub-region
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex -space-x-3">
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-lime flex items-center justify-center text-tatt-black font-bold text-xs ring-2 ring-transparent">
-                                                        AM
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-20 text-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <Loader2 className="h-8 w-8 text-tatt-lime animate-spin" />
+                                                    <p className="text-sm text-tatt-gray font-medium">Loading chapters...</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : filteredChapters.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-20 text-center text-tatt-gray">
+                                                {searchQuery ? "No chapters match your search." : "No chapters created yet."}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredChapters.map((chapter) => (
+                                            <tr key={chapter.id} className="hover:bg-background/50 transition-colors">
+                                                <td className="px-6 py-5">
+                                                    <div className="font-bold text-foreground flex items-center gap-2">
+                                                        {chapter.name}
                                                     </div>
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-black flex items-center justify-center text-white font-bold text-xs ring-2 ring-transparent">
-                                                        KA
+                                                    <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
+                                                        <MapPin className="h-3 w-3" />
+                                                        {chapter.country || "Unspecified"} / {chapter.stateRegion || chapter.cities?.[0]}
                                                     </div>
-                                                </div>
-                                                <div className="text-xs">
-                                                    <p className="font-bold text-foreground">Ama Mensah <span className="text-tatt-gray font-normal">(RD)</span></p>
-                                                    <p className="text-tatt-gray mt-0.5">Kofi Addo <span className="opacity-70">(ARD)</span></p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex gap-4 items-center">
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Members</p>
-                                                    <p className="text-base font-black text-foreground">120</p>
-                                                </div>
-                                                <div className="w-px h-6 bg-border"></div>
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Volunteers</p>
-                                                    <p className="text-base font-black text-foreground">45</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Manage Volunteers">
-                                                    <Users className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="View Activities">
-                                                    <ClipboardList className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Edit Chapter">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                    {/* Chapter Row 2 */}
-                                    <tr className="hover:bg-background/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <div className="font-bold text-foreground flex items-center gap-2">
-                                                East Africa - Nairobi
-                                            </div>
-                                            <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
-                                                <MapPin className="h-3 w-3" />
-                                                Kenya / East African Community
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex -space-x-3">
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-lime flex items-center justify-center text-tatt-black font-bold text-xs ring-2 ring-transparent">
-                                                        SK
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <span className="font-mono text-xs bg-background px-2 py-1 rounded border border-border font-bold">
+                                                        ID: {chapter.code}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="flex -space-x-2">
+                                                            {chapter.regionalManager ? (
+                                                                <div className="size-8 rounded-full border-2 border-surface bg-tatt-lime flex items-center justify-center text-tatt-black font-bold text-[10px] uppercase">
+                                                                    {chapter.regionalManager.firstName[0]}{chapter.regionalManager.lastName[0]}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="size-8 rounded-full border-2 border-surface bg-background flex items-center justify-center text-tatt-gray">
+                                                                    <Users className="h-3 w-3" />
+                                                                </div>
+                                                            )}
+                                                            {chapter.associateRegionalDirector ? (
+                                                                <div className="size-8 rounded-full border-2 border-surface bg-tatt-black flex items-center justify-center text-white font-bold text-[10px] uppercase">
+                                                                    {chapter.associateRegionalDirector.firstName[0]}{chapter.associateRegionalDirector.lastName[0]}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                        <div className="text-[11px] leading-tight">
+                                                            {chapter.regionalManager ? (
+                                                                <p className="font-bold text-foreground">
+                                                                    {chapter.regionalManager.firstName} {chapter.regionalManager.lastName} <span className="text-tatt-gray font-normal">(RD)</span>
+                                                                </p>
+                                                            ) : <p className="text-tatt-gray italic">No Director Assigned</p>}
+                                                            {chapter.associateRegionalDirector && (
+                                                                <p className="text-tatt-gray mt-0.5">
+                                                                    {chapter.associateRegionalDirector.firstName} {chapter.associateRegionalDirector.lastName} <span className="opacity-70">(ARD)</span>
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-black flex items-center justify-center text-white font-bold text-xs ring-2 ring-transparent">
-                                                        FM
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Manage Volunteers">
+                                                            <Users className="h-4 w-4" />
+                                                        </button>
+                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="View Activities">
+                                                            <ClipboardList className="h-4 w-4" />
+                                                        </button>
+                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Edit Chapter">
+                                                            <Edit className="h-4 w-4" />
+                                                        </button>
                                                     </div>
-                                                </div>
-                                                <div className="text-xs">
-                                                    <p className="font-bold text-foreground">Samuel Kariuki <span className="text-tatt-gray font-normal">(RD)</span></p>
-                                                    <p className="text-tatt-gray mt-0.5">Faith Mwashighadi <span className="opacity-70">(ARD)</span></p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex gap-4 items-center">
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Members</p>
-                                                    <p className="text-base font-black text-foreground">95</p>
-                                                </div>
-                                                <div className="w-px h-6 bg-border"></div>
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Volunteers</p>
-                                                    <p className="text-base font-black text-foreground">30</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Manage Volunteers">
-                                                    <Users className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="View Activities">
-                                                    <ClipboardList className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Edit Chapter">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                    {/* Chapter Row 3 */}
-                                    <tr className="hover:bg-background/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <div className="font-bold text-foreground flex items-center gap-2">
-                                                Southern Africa - Johannesburg
-                                            </div>
-                                            <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
-                                                <MapPin className="h-3 w-3" />
-                                                South Africa / SADC
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex -space-x-3">
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-lime flex items-center justify-center text-tatt-black font-bold text-xs ring-2 ring-transparent">
-                                                        TM
-                                                    </div>
-                                                    <div className="size-8 rounded-full border-2 border-surface bg-tatt-black flex items-center justify-center text-white font-bold text-xs ring-2 ring-transparent">
-                                                        ZD
-                                                    </div>
-                                                </div>
-                                                <div className="text-xs">
-                                                    <p className="font-bold text-foreground">Thabo Molefe <span className="text-tatt-gray font-normal">(RD)</span></p>
-                                                    <p className="text-tatt-gray mt-0.5">Zanele Dlamini <span className="opacity-70">(ARD)</span></p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex gap-4 items-center">
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Members</p>
-                                                    <p className="text-base font-black text-foreground">156</p>
-                                                </div>
-                                                <div className="w-px h-6 bg-border"></div>
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-wider">Volunteers</p>
-                                                    <p className="text-base font-black text-foreground">62</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Manage Volunteers">
-                                                    <Users className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="View Activities">
-                                                    <ClipboardList className="h-4 w-4" />
-                                                </button>
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Edit Chapter">
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
-                        </div>
-                        <div className="bg-background px-6 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-border gap-4">
-                            <p className="text-xs text-tatt-gray font-medium">Showing <span className="text-foreground font-bold">3</span> of <span className="text-foreground font-bold">12</span> chapters</p>
-                            <div className="flex gap-2">
-                                <button className="px-3 py-1.5 text-xs font-bold text-tatt-gray bg-surface border border-border rounded-lg shadow-sm hover:bg-background transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <ChevronLeft className="h-3 w-3" />
-                                    Prev
-                                </button>
-                                <button className="px-3 py-1.5 text-xs font-bold text-foreground bg-surface border border-border rounded-lg shadow-sm hover:bg-background transition-colors flex items-center gap-1">
-                                    Next
-                                    <ChevronRight className="h-3 w-3" />
-                                </button>
-                            </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
                         {/* Chapter Activities Mini View */}
-                        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
+                        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm opacity-60">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="font-bold text-lg flex items-center gap-2 text-foreground">
                                     <Activity className="h-5 w-5 text-tatt-lime" />
@@ -312,30 +331,13 @@ export function AdminRegionalChaptersPage() {
                                 </h3>
                                 <button className="text-[10px] font-black text-tatt-lime uppercase tracking-widest hover:underline" onClick={() => setActiveTab('activities')}>View All</button>
                             </div>
-                            <div className="space-y-4">
-                                <div className="p-4 rounded-lg bg-background border-l-4 border-tatt-lime">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div>
-                                            <p className="font-bold text-sm text-foreground">Youth Tech Summit - Accra</p>
-                                            <p className="text-xs text-tatt-gray mt-1">West Africa Chapter • Dec 12-14, 2023</p>
-                                        </div>
-                                        <span className="text-[9px] font-black px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-full uppercase tracking-wider shrink-0">Active</span>
-                                    </div>
-                                </div>
-                                <div className="p-4 rounded-lg bg-background border-l-4 border-border">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div>
-                                            <p className="font-bold text-sm text-foreground">Economic Policy Review</p>
-                                            <p className="text-xs text-tatt-gray mt-1">East Africa Chapter • Jan 5, 2024</p>
-                                        </div>
-                                        <span className="text-[9px] font-black px-2.5 py-1 bg-surface border border-border text-tatt-gray rounded-full uppercase tracking-wider shrink-0">Draft</span>
-                                    </div>
-                                </div>
+                            <div className="py-8 text-center">
+                                <p className="text-xs text-tatt-gray italic">Activity integration coming soon...</p>
                             </div>
                         </div>
 
                         {/* Regional Announcements Mini View */}
-                        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
+                        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm opacity-60">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="font-bold text-lg flex items-center gap-2 text-foreground">
                                     <Megaphone className="h-5 w-5 text-tatt-lime" />
@@ -343,32 +345,15 @@ export function AdminRegionalChaptersPage() {
                                 </h3>
                                 <button className="text-[10px] font-black text-tatt-lime uppercase tracking-widest hover:underline" onClick={() => setActiveTab('announcements')}>New Post</button>
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex gap-4 p-3 hover:bg-background rounded-xl transition-colors cursor-pointer border border-transparent hover:border-border">
-                                    <div className="size-10 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime shrink-0">
-                                        <Info className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold leading-tight text-foreground">New reporting guidelines for Q4 launched for all Regional Directors.</p>
-                                        <p className="text-[11px] font-medium text-tatt-gray mt-1.5">2 hours ago • Global Admin</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 p-3 hover:bg-background rounded-xl transition-colors cursor-pointer border border-transparent hover:border-border">
-                                    <div className="size-10 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime shrink-0">
-                                        <Users className="h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold leading-tight text-foreground">Volunteer recruitment drive results: 15% increase in East African region.</p>
-                                        <p className="text-[11px] font-medium text-tatt-gray mt-1.5">Yesterday • Operations Team</p>
-                                    </div>
-                                </div>
+                            <div className="py-8 text-center">
+                                <p className="text-xs text-tatt-gray italic">Announcements integration coming soon...</p>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {activeTab !== 'directory' && (
+            {(activeTab === 'activities' || activeTab === 'announcements') && (
                 <div className="py-12 flex flex-col items-center justify-center bg-surface border border-border border-dashed rounded-xl text-center">
                     <Globe className="h-10 w-10 text-tatt-gray mb-4 opacity-50" />
                     <h3 className="text-lg font-bold text-foreground">Content Coming Soon</h3>
@@ -386,58 +371,137 @@ export function AdminRegionalChaptersPage() {
 
             {/* Create Chapter Modal */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in transition-opacity">
-                    <div className="bg-surface rounded-2xl border border-border w-full max-w-lg shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-border flex justify-between items-center">
-                            <h3 className="text-xl font-bold text-foreground">Create New Chapter</h3>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="text-tatt-gray hover:text-foreground">
-                                <X className="h-5 w-5" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-tatt-black/80 backdrop-blur-sm p-4 animate-in fade-in transition-opacity">
+                    <div className="bg-surface rounded-2xl border border-border w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-border flex justify-between items-center bg-background/50">
+                            <div>
+                                <h3 className="text-xl font-bold text-foreground">Establish Regional Chapter</h3>
+                                <p className="text-xs text-tatt-gray mt-1">Configure identity, location, and leadership roles.</p>
+                            </div>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="bg-surface hover:bg-background h-8 w-8 flex items-center justify-center rounded-full border border-border text-tatt-gray hover:text-foreground transition-colors">
+                                <X className="h-4 w-4" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                            <div>
-                                <label className="block text-sm font-bold text-foreground mb-1">Chapter Name</label>
-                                <input type="text" className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40" placeholder="e.g. West Africa - Accra" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-foreground mb-1">Country</label>
-                                    <input type="text" className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40" placeholder="e.g. Ghana" />
+
+                        <form onSubmit={handleCreateChapter}>
+                            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                {/* Section: Identity */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
+                                        <Info className="h-3 w-3" />
+                                        Chapter Identity
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Chapter Name</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40 transition-all font-medium"
+                                            placeholder="e.g. Accra Collective Hub"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-foreground mb-1">State / Region</label>
-                                    <input type="text" className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40" placeholder="e.g. Greater Accra" />
+
+                                {/* Section: Location */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
+                                        <MapPin className="h-3 w-3" />
+                                        Detailed Location
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Country</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
+                                                placeholder="e.g. Ghana"
+                                                value={formData.country}
+                                                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">State / Region</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
+                                                placeholder="e.g. Greater Accra"
+                                                value={formData.stateRegion}
+                                                onChange={(e) => setFormData({ ...formData, stateRegion: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Primary Cities (Comma Separated)</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
+                                            placeholder="Accra, Tema, Kumasi"
+                                            value={formData.cities}
+                                            onChange={(e) => setFormData({ ...formData, cities: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Section: Leadership */}
+                                <div className="space-y-4 pt-2 border-t border-border/50">
+                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
+                                        <Users className="h-3 w-3" />
+                                        Leadership Directives
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Regional Director</label>
+                                            <select
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
+                                                value={formData.regionalManagerId}
+                                                onChange={(e) => setFormData({ ...formData, regionalManagerId: e.target.value })}
+                                            >
+                                                <option value="">Search & Assign Director...</option>
+                                                {orgMembers.map(member => (
+                                                    <option key={member.id} value={member.id}>{member.firstName} {member.lastName} ({member.email})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Associate Director</label>
+                                            <select
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
+                                                value={formData.associateRegionalDirectorId}
+                                                onChange={(e) => setFormData({ ...formData, associateRegionalDirectorId: e.target.value })}
+                                            >
+                                                <option value="">Search & Assign Associate...</option>
+                                                {orgMembers.map(member => (
+                                                    <option key={member.id} value={member.id}>{member.firstName} {member.lastName}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-foreground mb-1">City</label>
-                                <input type="text" className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40" placeholder="e.g. Accra" />
+
+                            <div className="p-6 bg-background border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-foreground bg-surface border border-border hover:bg-background transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="w-full sm:w-auto px-10 py-3 rounded-xl text-sm font-black text-tatt-black bg-tatt-lime hover:brightness-105 transition-all shadow-xl shadow-tatt-lime/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                    Create Regional Chapter
+                                </button>
                             </div>
-                            <div className="border-t border-border pt-4 mt-4">
-                                <label className="block text-sm font-bold text-foreground mb-1">Regional Director</label>
-                                <select className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground">
-                                    <option value="">Select a member...</option>
-                                    <option value="1">Ama Mensah</option>
-                                    <option value="2">Samuel Kariuki</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-foreground mb-1">Associate Regional Director</label>
-                                <select className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground">
-                                    <option value="">Select a member...</option>
-                                    <option value="3">Kofi Addo</option>
-                                    <option value="4">Faith Mwashighadi</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="p-6 bg-background border-t border-border flex justify-end gap-3">
-                            <button onClick={() => setIsCreateModalOpen(false)} className="px-6 py-2.5 rounded-lg text-sm font-bold text-foreground bg-surface border border-border hover:bg-background transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="px-6 py-2.5 rounded-lg text-sm font-bold text-tatt-black bg-tatt-lime hover:brightness-105 transition-colors shadow-sm">
-                                Create Chapter
-                            </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}
