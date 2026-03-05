@@ -96,7 +96,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        window.location.href = '/';
     };
+
+    // Auto-logout after 30 minutes of inactivity
+    useEffect(() => {
+        if (!token) return;
+
+        let inactivityTimer: NodeJS.Timeout;
+
+        const resetTimer = () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                console.log("Logged out due to inactivity");
+                logout();
+            }, 30 * 60 * 1000); // 30 minutes
+        };
+
+        const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+
+        events.forEach(event => window.addEventListener(event, resetTimer));
+        resetTimer(); // Initialize on mount
+
+        return () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            events.forEach(event => window.removeEventListener(event, resetTimer));
+        };
+    }, [token]);
 
     return (
         <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, isLoading }}>
