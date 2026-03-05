@@ -87,10 +87,10 @@ export function SignupForm() {
   return (
     <section className="w-full max-w-[448px]">
       <header className="space-y-2">
-        <h1 className="text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
+        <h1 className="text-[30px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
           Create Your Account
         </h1>
-        <p className="text-base leading-6 text-tatt-gray">
+        <p className="text-sm sm:text-base leading-6 text-tatt-gray">
           Step into a world of collective intelligence and impact.
         </p>
       </header>
@@ -111,7 +111,7 @@ export function SignupForm() {
         />
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SignupField
               id="firstName"
               label="First Name"
@@ -135,7 +135,7 @@ export function SignupForm() {
             error={errors.email?.message}
             {...register("email")}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <SignupField
               id="password"
               label="Password"

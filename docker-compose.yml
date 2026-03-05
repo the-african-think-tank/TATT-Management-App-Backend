@@ -58,7 +58,7 @@ services:
       MAIL_PASS: ${MAIL_PASS}
       MAIL_FROM: ${MAIL_FROM}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001,https://community.theafricanthinktank.com}
     volumes:
       - ./server/uploads:/app/uploads
     networks:

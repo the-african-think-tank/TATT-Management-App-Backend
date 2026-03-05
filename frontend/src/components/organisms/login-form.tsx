@@ -72,10 +72,10 @@ export function LoginForm() {
   return (
     <section className="w-full max-w-[448px]">
       <header className="space-y-2">
-        <h1 className="text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
+        <h1 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
           Welcome Back
         </h1>
-        <p className="text-base leading-6 text-tatt-gray">
+        <p className="text-sm sm:text-base leading-6 text-tatt-gray">
           Please enter your details to access the member portal.
         </p>
       </header>
