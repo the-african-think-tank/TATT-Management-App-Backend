@@ -11,6 +11,9 @@ import * as sanitizeHtml from 'sanitize-html';
 import { Post, PostType, ContentFormat } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
 import { PostComment } from './entities/post-comment.entity';
+import { PostUpvote } from './entities/post-upvote.entity';
+import { PostBookmark } from './entities/post-bookmark.entity';
+import { PostReport } from './entities/post-report.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier, SystemRole } from '../iam/enums/roles.enum';
@@ -18,6 +21,7 @@ import {
     FeedQueryDto, FeedFilter,
     CreatePostDto, UpdatePostDto,
     AddCommentDto, GetCommentsQueryDto,
+    ReportPostDto,
 } from './dto/feed.dto';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -46,47 +50,17 @@ const AUTHOR_ATTRS = [
 
 const CHAPTER_ATTRS = ['id', 'name', 'code'] as const;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function isStaff(user: User): boolean {
-    return STAFF_ROLES.includes(user.systemRole);
-}
-
-function isPaidMember(user: User): boolean {
-    return PAID_TIERS.includes(user.communityTier);
-}
-
-function canSeePremium(user: User): boolean {
-    return isStaff(user) || isPaidMember(user);
-}
-
-function canCreatePremium(user: User): boolean {
-    return isStaff(user) || isPaidMember(user);
-}
-
 /**
  * Allowed HTML elements and attributes for rich-text posts.
- * This allowlist is intentionally restrictive — no scripts, iframes, forms, etc.
  */
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
     allowedTags: [
-        // Headings
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        // Inline formatting
         'b', 'i', 'em', 'strong', 'u', 's', 'del', 'mark', 'small', 'sub', 'sup',
         'code', 'kbd', 'pre', 'abbr', 'span',
-        // Structure
         'p', 'br', 'hr', 'blockquote', 'div', 'section',
-        // Lists
-        'ul', 'ol', 'li',
-        // Links
-        'a',
-        // Tables
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
-        // Media (no scripts)
-        'img',
-        // Figure
-        'figure', 'figcaption',
+        'ul', 'ol', 'li', 'a', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+        'img', 'figure', 'figcaption',
     ],
     allowedAttributes: {
         'a': ['href', 'target', 'rel', 'title'],
@@ -98,33 +72,54 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
         'p': ['class'],
         'blockquote': ['class'],
         'pre': ['class'],
-        'code': ['class'], // for syntax highlighter class hooks
+        'code': ['class'],
     },
     allowedSchemes: ['https', 'http', 'mailto'],
-    // Force relative links to open in a new tab with safe attrs
     transformTags: {
         'a': sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer' }, true),
     },
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function isStaff(user?: User): boolean {
+    return user ? STAFF_ROLES.includes(user.systemRole) : false;
+}
+
+function isPaidMember(user?: User): boolean {
+    return user ? PAID_TIERS.includes(user.communityTier) : false;
+}
+
+function canSeePremium(user?: User): boolean {
+    return isStaff(user) || isPaidMember(user);
+}
+
+function canCreatePremium(user?: User): boolean {
+    return isStaff(user) || isPaidMember(user);
+}
+
 /**
  * Sanitizes content when format is HTML; returns content as-is for PLAIN/MARKDOWN.
- * Also trims the result and rejects if blank after sanitization.
  */
 function sanitizeContent(content: string, format: ContentFormat): string {
     if (format !== ContentFormat.HTML) return content;
     const clean = sanitizeHtml(content, SANITIZE_OPTIONS).trim();
     if (!clean) {
-        throw new BadRequestException('HTML content was empty after sanitization. Please review your input.');
+        throw new BadRequestException('HTML content was empty after sanitization.');
     }
     return clean;
 }
 
 /**
  * Strips or locks premium content based on viewer's plan.
- * Also attaches computed `isLikedByMe`, `likesCount`, `commentsCount`.
  */
-function applyPremiumGate(post: Post, viewer: User, likedPostIds: Set<string>): Record<string, any> {
+function applyPremiumGate(
+    post: Post, 
+    viewer: User | undefined, 
+    likedPostIds: Set<string>,
+    upvotedPostIds: Set<string>,
+    bookmarkedPostIds: Set<string>
+): Record<string, any> {
     const locked = post.isPremium && !canSeePremium(viewer);
     return {
         id: post.id,
@@ -133,14 +128,18 @@ function applyPremiumGate(post: Post, viewer: User, likedPostIds: Set<string>): 
         isPremiumLocked: locked,
         title: post.title ?? null,
         content: locked ? null : post.content,
-        contentFormat: post.contentFormat,   // always exposed so the frontend knows what to expect
+        contentFormat: post.contentFormat,
         mediaUrls: locked ? [] : (post.mediaUrls ?? []),
         tags: post.tags ?? [],
         author: post.author,
         chapter: post.chapter ?? null,
         likesCount: post.likes?.length ?? 0,
+        upvotesCount: post.upvotes?.length ?? 0,
         commentsCount: post.comments?.length ?? 0,
         isLikedByMe: likedPostIds.has(post.id),
+        isUpvotedByMe: upvotedPostIds.has(post.id),
+        isBookmarked: bookmarkedPostIds.has(post.id),
+        parentPost: post.parentPost ? applyPremiumGate(post.parentPost, viewer, new Set(), new Set(), new Set()) : null,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
     };
@@ -154,6 +153,9 @@ export class FeedService {
         @InjectModel(Post) private postRepo: typeof Post,
         @InjectModel(PostLike) private likeRepo: typeof PostLike,
         @InjectModel(PostComment) private commentRepo: typeof PostComment,
+        @InjectModel(PostUpvote) private upvoteRepo: typeof PostUpvote,
+        @InjectModel(PostBookmark) private bookmarkRepo: typeof PostBookmark,
+        @InjectModel(PostReport) private reportRepo: typeof PostReport,
         @InjectModel(User) private userRepo: typeof User,
     ) { }
 
@@ -165,24 +167,18 @@ export class FeedService {
         const { filter = FeedFilter.ALL, page = 1, limit = 20 } = query;
         const offset = (page - 1) * limit;
 
-        // ── PREMIUM filter gate ───────────────────────────────────────────────
         if (filter === FeedFilter.PREMIUM && !canSeePremium(viewer)) {
-            throw new ForbiddenException(
-                'The Premium feed is exclusively available to paid TATT members (Ubuntu, Imani, or Kiongozi tier). ' +
-                'Upgrade your membership to access curated premium resources.',
-            );
+            throw new ForbiddenException('Upgrade your membership to access curated premium resources.');
         }
 
-        // ── CHAPTER filter validation ─────────────────────────────────────────
         if (filter === FeedFilter.CHAPTER && !viewer.chapterId) {
             return {
                 data: [],
                 meta: { total: 0, page, limit, totalPages: 0 },
-                message: 'You are not assigned to a chapter. Join a chapter to see local posts.',
+                message: 'You are not assigned to a chapter.',
             };
         }
 
-        // ── Build WHERE clause ────────────────────────────────────────────────
         const where: Record<string, any> = { isPublished: true };
 
         if (filter === FeedFilter.CHAPTER) {
@@ -193,124 +189,114 @@ export class FeedService {
             where['isPremium'] = true;
         }
 
-        // ── Query posts ───────────────────────────────────────────────────────
+        const include: any[] = [
+            { model: User, as: 'author', attributes: [...AUTHOR_ATTRS] },
+            { model: Chapter, as: 'chapter', attributes: [...CHAPTER_ATTRS], required: false },
+            { model: PostLike, as: 'likes', attributes: ['userId'], required: false },
+            { model: PostUpvote, as: 'upvotes', attributes: ['userId'], required: false },
+            { model: PostComment, as: 'comments', attributes: ['id'], required: false, where: { parentId: null }, paranoid: false },
+            { 
+                model: Post, 
+                as: 'parentPost', 
+                required: false,
+                include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }]
+            }
+        ];
+
+        // ── BOOKMARKS filter logic ───────────────────────────────────────────
+        if (filter === FeedFilter.BOOKMARKS) {
+            include.push({
+                model: PostBookmark,
+                as: 'bookmarks',
+                where: { userId: viewer.id },
+                required: true, // only posts that HAVE a bookmark from this user
+            });
+        } else {
+            include.push({
+                model: PostBookmark,
+                as: 'bookmarks',
+                attributes: ['userId'],
+                required: false,
+            });
+        }
+
         const { count, rows: posts } = await this.postRepo.findAndCountAll({
             where,
-            include: [
-                {
-                    model: User,
-                    as: 'author',
-                    attributes: [...AUTHOR_ATTRS],
-                },
-                {
-                    model: Chapter,
-                    as: 'chapter',
-                    attributes: [...CHAPTER_ATTRS],
-                    required: false,
-                },
-                {
-                    model: PostLike,
-                    as: 'likes',
-                    attributes: ['userId'],
-                    required: false,
-                },
-                {
-                    model: PostComment,
-                    as: 'comments',
-                    attributes: ['id'],
-                    required: false,
-                    where: { parentId: null }, // only count top-level comments
-                    paranoid: false, // include soft-deleted in count
-                },
-            ],
+            include,
             order: [['createdAt', 'DESC']],
             limit,
             offset,
-            distinct: true, // required when using findAndCountAll with hasMany includes
+            distinct: true,
         });
 
-        // ── Build set of post IDs this viewer has liked ───────────────────────
         const postIds = posts.map((p) => p.id);
         let likedPostIds = new Set<string>();
+        let upvotedPostIds = new Set<string>();
+        let bookmarkedPostIds = new Set<string>();
 
         if (postIds.length > 0) {
-            const myLikes = await this.likeRepo.findAll({
-                where: { userId: viewer.id, postId: { [Op.in]: postIds } },
-                attributes: ['postId'],
-            });
-            likedPostIds = new Set(myLikes.map((l) => l.postId));
+            const [likes, upvotes, bookmarks] = await Promise.all([
+                this.likeRepo.findAll({ where: { userId: viewer.id, postId: { [Op.in]: postIds } }, attributes: ['postId'] }),
+                this.upvoteRepo.findAll({ where: { userId: viewer.id, postId: { [Op.in]: postIds } }, attributes: ['postId'] }),
+                this.bookmarkRepo.findAll({ where: { userId: viewer.id, postId: { [Op.in]: postIds } }, attributes: ['postId'] }),
+            ]);
+            likedPostIds = new Set(likes.map((l) => l.postId));
+            upvotedPostIds = new Set(upvotes.map((u) => u.postId));
+            bookmarkedPostIds = new Set(bookmarks.map((b) => b.postId));
         }
 
-        // ── Apply premium gate and format response ────────────────────────────
-        const data = posts.map((post) => applyPremiumGate(post, viewer, likedPostIds));
+        const data = posts.map((post) => applyPremiumGate(post, viewer, likedPostIds, upvotedPostIds, bookmarkedPostIds));
 
         return {
             data,
-            meta: {
-                total: count,
-                page,
-                limit,
-                totalPages: Math.ceil(count / limit),
-            },
+            meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) },
         };
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    //  SINGLE POST (with comments preview)
-    // ════════════════════════════════════════════════════════════════════════════
-
-    async getPost(viewer: User, postId: string) {
+    async getPost(viewer: User | undefined, postId: string) {
         const post = await this.postRepo.findByPk(postId, {
             include: [
                 { model: User, as: 'author', attributes: [...AUTHOR_ATTRS] },
                 { model: Chapter, as: 'chapter', attributes: [...CHAPTER_ATTRS], required: false },
                 { model: PostLike, as: 'likes', attributes: ['userId'], required: false },
-                {
-                    model: PostComment,
-                    as: 'comments',
-                    attributes: ['id'],
-                    required: false,
-                    paranoid: false,
-                },
+                { model: PostUpvote, as: 'upvotes', attributes: ['userId'], required: false },
+                { model: PostBookmark, as: 'bookmarks', attributes: ['userId'], required: false },
+                { model: PostComment, as: 'comments', attributes: ['id'], required: false, paranoid: false },
+                { model: Post, as: 'parentPost', required: false, include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }] }
             ],
         });
 
-        if (!post || !post.isPublished) {
-            throw new NotFoundException('Post not found.');
+        if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
+
+        let liked = false, upvoted = false, bookmarked = false;
+        if (viewer) {
+            const [l, u, b] = await Promise.all([
+                this.likeRepo.findOne({ where: { userId: viewer.id, postId } }),
+                this.upvoteRepo.findOne({ where: { userId: viewer.id, postId } }),
+                this.bookmarkRepo.findOne({ where: { userId: viewer.id, postId } }),
+            ]);
+            liked = !!l; upvoted = !!u; bookmarked = !!b;
         }
 
-        const myLike = await this.likeRepo.findOne({
-            where: { userId: viewer.id, postId },
-        });
-        const likedPostIds = new Set<string>(myLike ? [postId] : []);
-
-        return applyPremiumGate(post, viewer, likedPostIds);
+        return applyPremiumGate(
+            post, viewer, 
+            new Set(liked ? [postId] : []), 
+            new Set(upvoted ? [postId] : []), 
+            new Set(bookmarked ? [postId] : [])
+        );
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    //  CREATE POST
-    // ════════════════════════════════════════════════════════════════════════════
-
     async createPost(author: User, dto: CreatePostDto) {
-        // Restrict premium/announcement/resource post types
         if (dto.isPremium && !canCreatePremium(author)) {
-            throw new ForbiddenException(
-                'Only paid members (Ubuntu, Imani, Kiongozi) and org staff can create premium posts.',
-            );
+            throw new ForbiddenException('Only paid members and staff can create premium posts.');
         }
 
         const restrictedTypes = [PostType.ANNOUNCEMENT, PostType.RESOURCE];
         if (restrictedTypes.includes(dto.type) && !isStaff(author)) {
-            throw new ForbiddenException(
-                `Only org staff can create ${dto.type} posts.`,
-            );
+            throw new ForbiddenException(`Only staff can create ${dto.type} posts.`);
         }
 
-        // Load full author to get chapterId
-        const fullAuthor = await this.userRepo.findByPk(author.id, {
-            attributes: ['id', 'chapterId'],
-        });
-
+        const fullAuthor = await this.userRepo.findByPk(author.id, { attributes: ['id', 'chapterId'] });
         const format = dto.contentFormat ?? ContentFormat.PLAIN;
         const sanitizedContent = sanitizeContent(dto.content, format);
 
@@ -325,37 +311,25 @@ export class FeedService {
             isPremium: dto.isPremium ?? false,
             chapterId: fullAuthor?.chapterId ?? null,
             isPublished: true,
+            parentPostId: dto.parentPostId ?? null,
         });
 
         return { message: 'Post published successfully.', postId: post.id };
     }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    //  UPDATE POST
-    // ════════════════════════════════════════════════════════════════════════════
 
     async updatePost(viewer: User, postId: string, dto: UpdatePostDto) {
         const post = await this.postRepo.findByPk(postId);
         if (!post) throw new NotFoundException('Post not found.');
 
         const isOwner = post.authorId === viewer.id;
-        const isModerator = isStaff(viewer);
+        if (!isOwner && !isStaff(viewer)) throw new ForbiddenException('Not authorised.');
 
-        if (!isOwner && !isModerator) {
-            throw new ForbiddenException('You can only edit your own posts.');
-        }
-
-        // Only staff can set isPremium
         if (dto.isPremium === true && !canCreatePremium(viewer)) {
-            throw new ForbiddenException('Only paid members or org staff can mark posts as premium.');
+            throw new ForbiddenException('Not authorised to mark as premium.');
         }
 
-        // Sanitize content if provided
         const format = dto.contentFormat ?? post.contentFormat;
-        const sanitizedContent =
-            dto.content !== undefined
-                ? sanitizeContent(dto.content, format)
-                : undefined;
+        const sanitizedContent = dto.content !== undefined ? sanitizeContent(dto.content, format) : undefined;
 
         Object.assign(post, {
             ...(dto.title !== undefined && { title: dto.title }),
@@ -368,152 +342,104 @@ export class FeedService {
         });
 
         await post.save();
-        return { message: 'Post updated successfully.' };
+        return { message: 'Post updated.' };
     }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    //  DELETE POST
-    // ════════════════════════════════════════════════════════════════════════════
 
     async deletePost(viewer: User, postId: string) {
         const post = await this.postRepo.findByPk(postId);
         if (!post) throw new NotFoundException('Post not found.');
-
-        const isOwner = post.authorId === viewer.id;
-        const isModerator = isStaff(viewer);
-
-        if (!isOwner && !isModerator) {
-            throw new ForbiddenException('You can only delete your own posts.');
-        }
-
-        await post.destroy(); // soft delete
-        return { message: 'Post removed from feed.' };
+        if (post.authorId !== viewer.id && !isStaff(viewer)) throw new ForbiddenException('Not authorised.');
+        await post.destroy();
+        return { message: 'Post removed.' };
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    //  TOGGLE LIKE
-    // ════════════════════════════════════════════════════════════════════════════
-
     async toggleLike(viewer: User, postId: string) {
-        const post = await this.postRepo.findByPk(postId, { attributes: ['id', 'isPublished', 'isPremium'] });
+        const post = await this.postRepo.findByPk(postId);
         if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
+        if (post.authorId === viewer.id) throw new BadRequestException('You cannot like your own post.');
 
-        // Block free members from liking premium-locked posts they cannot see
-        if (post.isPremium && !canSeePremium(viewer)) {
-            throw new ForbiddenException(
-                'Upgrade your membership to interact with premium posts.',
-            );
-        }
+        if (post.isPremium && !canSeePremium(viewer)) throw new ForbiddenException('Upgrade required.');
 
-        const existing = await this.likeRepo.findOne({
-            where: { userId: viewer.id, postId },
-        });
-
-        if (existing) {
-            await existing.destroy();
-            return { liked: false, message: 'Post unliked.' };
-        }
+        const existing = await this.likeRepo.findOne({ where: { userId: viewer.id, postId } });
+        if (existing) { await existing.destroy(); return { liked: false, message: 'Post unliked.' }; }
 
         await this.likeRepo.create({ userId: viewer.id, postId });
         return { liked: true, message: 'Post liked.' };
     }
 
-    // ════════════════════════════════════════════════════════════════════════════
-    //  COMMENTS
-    // ════════════════════════════════════════════════════════════════════════════
+    async toggleUpvote(viewer: User, postId: string) {
+        const post = await this.postRepo.findByPk(postId);
+        if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
+        if (post.authorId === viewer.id) throw new BadRequestException('You cannot upvote your own post.');
+
+        const existing = await this.upvoteRepo.findOne({ where: { userId: viewer.id, postId } });
+        if (existing) { await existing.destroy(); return { upvoted: false }; }
+
+        await this.upvoteRepo.create({ userId: viewer.id, postId });
+        return { upvoted: true };
+    }
+
+    async toggleBookmark(viewer: User, postId: string) {
+        const post = await this.postRepo.findByPk(postId);
+        if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
+
+        const existing = await this.bookmarkRepo.findOne({ where: { userId: viewer.id, postId } });
+        if (existing) { await existing.destroy(); return { bookmarked: false, message: 'Bookmark removed.' }; }
+
+        await this.bookmarkRepo.create({ userId: viewer.id, postId });
+        return { bookmarked: true, message: 'Post bookmarked.' };
+    }
+
+    async reportPost(reporter: User, postId: string, dto: any) {
+        const post = await this.postRepo.findByPk(postId);
+        if (!post) throw new NotFoundException('Post not found.');
+
+        await this.reportRepo.create({
+            postId,
+            reporterId: reporter.id,
+            reason: dto.reason,
+            suggestedAction: dto.suggestedAction,
+        });
+
+        return { message: 'Report submitted.' };
+    }
 
     async getComments(viewer: User, postId: string, query: GetCommentsQueryDto) {
         const post = await this.postRepo.findByPk(postId, { attributes: ['id', 'isPublished', 'isPremium'] });
         if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
-
-        // Free members cannot read comments on premium-locked posts
-        if (post.isPremium && !canSeePremium(viewer)) {
-            throw new ForbiddenException('Upgrade your membership to read comments on premium posts.');
-        }
+        if (post.isPremium && !canSeePremium(viewer)) throw new ForbiddenException('Upgrade required.');
 
         const { page = 1, limit = 20 } = query;
         const offset = (page - 1) * limit;
 
-        // Fetch top-level comments with nested replies
         const { count, rows } = await this.commentRepo.findAndCountAll({
             where: { postId, parentId: null },
             include: [
-                {
-                    model: User,
-                    as: 'author',
-                    attributes: [...AUTHOR_ATTRS],
-                },
-                {
-                    // Eager-load one level of replies
-                    model: PostComment,
-                    as: 'replies',
-                    required: false,
-                    where: { deletedAt: null },
-                    include: [
-                        { model: User, as: 'author', attributes: [...AUTHOR_ATTRS] },
-                    ],
-                },
+                { model: User, as: 'author', attributes: [...AUTHOR_ATTRS] },
+                { model: PostComment, as: 'replies', required: false, where: { deletedAt: null }, include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }] },
             ],
             order: [['createdAt', 'DESC']],
-            limit,
-            offset,
-            distinct: true,
+            limit, offset, distinct: true,
         });
 
-        return {
-            data: rows,
-            meta: {
-                total: count,
-                page,
-                limit,
-                totalPages: Math.ceil(count / limit),
-            },
-        };
+        return { data: rows, meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) } };
     }
 
     async addComment(author: User, postId: string, dto: AddCommentDto) {
-        const post = await this.postRepo.findByPk(postId, { attributes: ['id', 'isPublished', 'isPremium'] });
+        const post = await this.postRepo.findByPk(postId);
         if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
+        if (post.authorId === author.id) throw new BadRequestException('You cannot comment on your own post.');
 
-        if (post.isPremium && !canSeePremium(author)) {
-            throw new ForbiddenException('Upgrade your membership to comment on premium posts.');
-        }
+        if (post.isPremium && !canSeePremium(author)) throw new ForbiddenException('Upgrade required.');
 
-        if (dto.parentId) {
-            const parent = await this.commentRepo.findByPk(dto.parentId);
-            if (!parent || parent.postId !== postId) {
-                throw new BadRequestException('Parent comment not found on this post.');
-            }
-            if (parent.parentId) {
-                throw new BadRequestException('Only one level of comment replies is supported.');
-            }
-        }
-
-        const comment = await this.commentRepo.create({
-            postId,
-            authorId: author.id,
-            content: dto.content,
-            parentId: dto.parentId ?? null,
-        });
-
+        const comment = await this.commentRepo.create({ postId, authorId: author.id, content: dto.content, parentId: dto.parentId ?? null });
         return { message: 'Comment added.', commentId: comment.id };
     }
 
     async deleteComment(viewer: User, commentId: string) {
-        const comment = await this.commentRepo.findByPk(commentId, {
-            include: [{ model: Post, as: 'post', attributes: ['authorId'] }],
-        });
-
+        const comment = await this.commentRepo.findByPk(commentId, { include: [{ model: Post, as: 'post', attributes: ['authorId'] }] });
         if (!comment) throw new NotFoundException('Comment not found.');
-
-        const isCommentOwner = comment.authorId === viewer.id;
-        const isPostOwner = comment.post?.authorId === viewer.id;
-        const isModerator = isStaff(viewer);
-
-        if (!isCommentOwner && !isPostOwner && !isModerator) {
-            throw new ForbiddenException('You are not authorised to delete this comment.');
-        }
-
+        if (comment.authorId !== viewer.id && comment.post?.authorId !== viewer.id && !isStaff(viewer)) throw new ForbiddenException('Not authorised.');
         await comment.destroy();
         return { message: 'Comment removed.' };
     }

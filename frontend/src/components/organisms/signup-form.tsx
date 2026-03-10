@@ -11,6 +11,8 @@ import { SignupField } from "@/components/molecules/signup-field";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 
+import { toast } from "react-hot-toast";
+
 const signupSchema = z.object({
   firstName: z.string().min(2, "First name is too short"),
   lastName: z.string().min(2, "Last name is too short"),
@@ -59,6 +61,10 @@ export function SignupForm() {
       });
 
       console.log("Signup success:", response.data);
+
+      if (response.data.message) {
+        toast.success(response.data.message);
+      }
 
       // If they chose volunteer, we could redirect them to a volunteer application form 
       // after they are logged in or just show a message.

@@ -24,6 +24,15 @@ export function NotificationDropdown() {
 
     const unreadCount = (notifications || []).filter(n => !n.readAt && !n.dismissedAt).length;
 
+    const fetchNotifications = async () => {
+        try {
+            const response = await api.get("/notifications");
+            setNotifications(response.data);
+        } catch (error) {
+            console.error("Failed to fetch notifications", error);
+        }
+    };
+
     useEffect(() => {
         fetchNotifications();
 
@@ -41,15 +50,6 @@ export function NotificationDropdown() {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
-    const fetchNotifications = async () => {
-        try {
-            const response = await api.get("/notifications");
-            setNotifications(response.data);
-        } catch (error) {
-            console.error("Failed to fetch notifications", error);
-        }
-    };
 
     const markAsRead = async (id: string) => {
         try {
@@ -69,14 +69,6 @@ export function NotificationDropdown() {
         }
     };
 
-    const deleteNotification = async (id: string) => {
-        try {
-            await api.delete(`/notifications/${id}`);
-            setNotifications(prev => prev.filter(n => n.id !== id));
-        } catch (error) {
-            console.error("Failed to delete notification", error);
-        }
-    };
 
     const getIcon = (type: NotificationType) => {
         switch (type) {
@@ -122,7 +114,7 @@ export function NotificationDropdown() {
         <div className="relative" ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`relative p-2 rounded-full transition-all duration-300 ${isOpen ? 'bg-tatt-lime/10 text-tatt-lime' : 'text-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-tatt-lime'}`}
+                className={`relative p-2 rounded-full transition-all duration-300 ${isOpen ? 'bg-tatt-lime/10 text-tatt-lime' : 'text-foreground hover:bg-black/5  hover:text-tatt-lime'}`}
             >
                 <Bell className="h-6 w-6" />
                 {unreadCount > 0 && (

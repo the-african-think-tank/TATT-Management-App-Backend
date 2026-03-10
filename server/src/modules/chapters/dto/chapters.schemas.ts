@@ -16,8 +16,17 @@ export class ChapterSchema {
     @ApiProperty({ type: [String], example: ['Nairobi', 'Kiambu', 'Machakos'] })
     cities: string[];
 
+    @ApiProperty({ example: 'Kenya', nullable: true })
+    country: string | null;
+
+    @ApiProperty({ example: 'Nairobi County', nullable: true })
+    stateRegion: string | null;
+
     @ApiProperty({ example: 'user-uuid-manager', format: 'uuid', nullable: true })
     regionalManagerId: string | null;
+
+    @ApiProperty({ example: 'user-uuid-associate', format: 'uuid', nullable: true })
+    associateRegionalDirectorId: string | null;
 
     @ApiProperty({ example: '2026-02-22T12:00:00.000Z' })
     createdAt: string;

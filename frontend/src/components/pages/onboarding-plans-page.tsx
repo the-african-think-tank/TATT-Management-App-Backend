@@ -41,7 +41,7 @@ export function OnboardingPlansPage() {
 
     const handleSelectPlan = (planId: string, price: number) => {
         if (price === 0) {
-            router.push("/onboarding/success?plan=COMMUNITY");
+            router.push("/onboarding/success?plan=FREE");
         } else {
             router.push(`/onboarding/payment?plan=${planId}&yearly=${isYearly}`);
         }

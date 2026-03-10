@@ -113,12 +113,9 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
             <div className="flex gap-3 sm:gap-4">
                 <div className="shrink-0">
                     {post.author.profilePicture ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                             src={post.author.profilePicture}
                             alt=""
-                            width={40}
-                            height={40}
                             className="rounded-full size-9 sm:size-10 object-cover border border-border"
                         />
                     ) : (

@@ -63,6 +63,16 @@ export class VolunteersController {
         return this.volunteersService.apply(req.user.id, dto);
     }
 
+    @ApiOperation({
+        summary: 'Get my volunteer applications',
+        description: 'Returns all volunteer applications submitted by the currently logged-in user.'
+    })
+    @ApiResponse({ status: 200, type: [VolunteerApplicationSchema] })
+    @Get('my-applications')
+    async getMyApplications(@Request() req) {
+        return this.volunteersService.getMyApplications(req.user.id);
+    }
+
     // ─── VOLUNTEER ENDPOINTS ───────────────────────────────────────────────────
 
     @ApiOperation({
@@ -96,6 +106,13 @@ export class VolunteersController {
     @Get('training')
     async getTraining() {
         return this.volunteersService.getTrainingResources();
+    }
+
+    @ApiOperation({ summary: 'Get volunteer stats' })
+    @ApiResponse({ status: 200, type: VolunteerStatSchema })
+    @Get('stats')
+    async getStats(@Request() req) {
+        return this.volunteersService.getStats(req.user.id);
     }
 
     // ─── VOLUNTEER ADMIN ENDPOINTS ─────────────────────────────────────────────

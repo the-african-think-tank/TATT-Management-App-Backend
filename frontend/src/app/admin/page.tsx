@@ -306,7 +306,7 @@ export default function AdminDashboardOverview() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button className="size-8 rounded-lg border border-border flex items-center justify-center text-tatt-gray hover:bg-tatt-black hover:text-white dark:hover:bg-white dark:hover:text-tatt-black transition-all shadow-sm">
+                                                    <button className="size-8 rounded-lg border border-border flex items-center justify-center text-tatt-gray hover:bg-tatt-black hover:text-white   transition-all shadow-sm">
                                                         <Eye size={14} />
                                                     </button>
                                                     <button className="size-8 rounded-lg bg-tatt-lime text-tatt-black flex items-center justify-center hover:brightness-110 transition-all shadow-sm shadow-tatt-lime/20">

@@ -9,10 +9,13 @@ import { PostType, ContentFormat } from '../entities/post.entity';
 
 // ─── FEED QUERY ──────────────────────────────────────────────────────────────
 
+// ─── FEED QUERY ──────────────────────────────────────────────────────────────
+
 export enum FeedFilter {
     ALL = 'ALL',
     CHAPTER = 'CHAPTER',
     PREMIUM = 'PREMIUM',
+    BOOKMARKS = 'BOOKMARKS',
 }
 
 export class FeedQueryDto {
@@ -22,18 +25,19 @@ export class FeedQueryDto {
         description:
             '`ALL` (default) — every published post; ' +
             '`CHAPTER` — only posts from members of your chapter; ' +
-            '`PREMIUM` — only premium resource posts (paid members only).',
+            '`PREMIUM` — only premium resource posts (paid members only); ' +
+            '`BOOKMARKS` — only posts bookmarked by the current user.',
     })
     @IsOptional()
     @IsEnum(FeedFilter)
-    filter?: FeedFilter = FeedFilter.ALL;
+    filter?: FeedFilter;
 
     @ApiPropertyOptional({ description: 'Page number (1-based). Defaults to 1.', example: 1, minimum: 1 })
     @IsOptional()
     @Type(() => Number)
     @IsInt()
     @Min(1)
-    page?: number = 1;
+    page?: number;
 
     @ApiPropertyOptional({ description: 'Posts per page (1–50). Defaults to 20.', example: 20, minimum: 1, maximum: 50 })
     @IsOptional()
@@ -41,7 +45,7 @@ export class FeedQueryDto {
     @IsInt()
     @Min(1)
     @Max(50)
-    limit?: number = 20;
+    limit?: number;
 }
 
 // ─── CREATE POST ─────────────────────────────────────────────────────────────
@@ -94,7 +98,7 @@ export class CreatePostDto {
     @IsOptional()
     @IsArray()
     @ArrayMaxSize(10, { message: 'A post may contain at most 10 media attachments.' })
-    @IsUrl({}, { each: true, message: 'Each media item must be a valid URL.' })
+    @IsString({ each: true }) // Using IsString instead of IsUrl to be more permissive for localhost/dev
     mediaUrls?: string[];
 
     @ApiPropertyOptional({
@@ -117,6 +121,14 @@ export class CreatePostDto {
     @IsOptional()
     @IsBoolean()
     isPremium?: boolean = false;
+
+    @ApiPropertyOptional({
+        description: 'Optional ID of the post being shared/reposted.',
+        format: 'uuid',
+    })
+    @IsOptional()
+    @IsString()
+    parentPostId?: string;
 }
 
 // ─── UPDATE POST ─────────────────────────────────────────────────────────────
@@ -146,7 +158,7 @@ export class UpdatePostDto {
     @IsOptional()
     @IsArray()
     @ArrayMaxSize(10)
-    @IsUrl({}, { each: true })
+    @IsString({ each: true })
     mediaUrls?: string[];
 
     @ApiPropertyOptional({ type: [String] })
@@ -202,4 +214,26 @@ export class GetCommentsQueryDto {
     @Min(1)
     @Max(100)
     limit?: number = 20;
+}
+
+// ─── REPORTING ───────────────────────────────────────────────────────────────
+
+import { ReportAction } from '../entities/post-report.entity';
+
+export class ReportPostDto {
+    @ApiProperty({
+        description: 'Reason for reporting the post.',
+        example: 'Inappropriate content or community guideline violation.',
+    })
+    @IsString()
+    @IsNotEmpty()
+    reason: string;
+
+    @ApiProperty({
+        enum: ReportAction,
+        default: ReportAction.LIMIT_RECOMMENDATION,
+        description: 'Member suggested action for the administrators.',
+    })
+    @IsEnum(ReportAction)
+    suggestedAction: ReportAction;
 }

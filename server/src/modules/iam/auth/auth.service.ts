@@ -299,7 +299,16 @@ export class AuthService {
     // ─── COMMUNITY SIGNUP ────────────────────────────────────────────────────
     async signupCommunityMember(dto: CommunitySignupDto) {
         const existingUser = await this.userRepository.findOne({ where: { email: dto.email } });
-        if (existingUser) throw new ConflictException('Email address already in use.');
+        if (existingUser) {
+            const isMatch = await bcrypt.compare(dto.password, existingUser.password);
+            if (isMatch) {
+                this.logger.log(`User ${dto.email} restarted signup. Logging them in and returning to onboarding.`);
+                const authResp = this.generateAuthResponse(existingUser) as any;
+                authResp.message = 'Registration resumed. Redirecting to plan selection.';
+                return authResp;
+            }
+            throw new ConflictException('Email address already in use. Please sign in or reset your password.');
+        }
 
         // Validate against password policy
         const policy = await this.securityPolicyService.getPolicy();

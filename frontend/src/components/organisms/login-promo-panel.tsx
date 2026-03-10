@@ -1,5 +1,4 @@
-const BRAND_PHOTO_SRC =
-  "https://www.figma.com/api/mcp/asset/91c32336-6bf8-4247-acef-615677c35381";
+const BRAND_PHOTO_SRC = "/assets/login_promo_brand.webp";
 const LOGO_ICON_SRC = "/assets/tattlogoIcon.svg";
 
 export function LoginPromoPanel() {

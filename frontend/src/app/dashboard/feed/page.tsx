@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
 import {
     Search,
     MoreHorizontal,
@@ -359,17 +358,22 @@ export default function FeedPage() {
                     {/* Post Composer Trigger */}
                     <div className="bg-surface rounded-2xl shadow-sm border border-border overflow-hidden">
                         <div className="p-4 flex gap-4">
-                            <div className="size-11 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center font-bold text-tatt-lime shrink-0">
-                                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                            <div className="size-11 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center font-bold text-tatt-lime shrink-0 overflow-hidden relative">
+                                {user?.profilePicture ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</span>
+                                )}
                             </div>
                             <button
                                 onClick={() => setIsPostWizardOpen(true)}
-                                className="flex-1 text-left bg-background hover:bg-black/5 dark:hover:bg-white/5 border border-border rounded-xl px-4 py-3 text-tatt-gray transition-colors"
+                                className="flex-1 text-left bg-background hover:bg-black/5  border border-border rounded-xl px-4 py-3 text-tatt-gray transition-colors"
                             >
                                 Share a strategic update, research, or poll...
                             </button>
                         </div>
-                        <div className="px-5 py-3 bg-black/5 dark:bg-white/5 border-t border-border flex items-center justify-between">
+                        <div className="px-5 py-3 bg-black/5  border-t border-border flex items-center justify-between">
                             <div className="flex items-center gap-1">
                                 <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Add Image">
                                     <ImageIcon className="h-5 w-5" />
@@ -438,7 +442,7 @@ export default function FeedPage() {
 
                         {!isLoadingPosts && posts.length === 0 && (
                             <div className="bg-surface rounded-2xl border border-border p-12 text-center">
-                                <div className="size-16 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <div className="size-16 bg-black/5  rounded-full flex items-center justify-center mx-auto mb-4">
                                     <TrendingUp className="h-8 w-8 text-tatt-gray" />
                                 </div>
                                 <h3 className="text-lg font-bold mb-2">No posts found</h3>
@@ -493,7 +497,8 @@ export default function FeedPage() {
                                                 <Link href={`/dashboard/network/${rec.member.id}`} className="block">
                                                     <div className="size-12 rounded-full border border-border overflow-hidden bg-background">
                                                         {rec.member.profilePicture ? (
-                                                            <Image src={rec.member.profilePicture} alt={rec.member.firstName} width={48} height={48} className="object-cover" />
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={rec.member.profilePicture} alt={rec.member.firstName} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="size-full flex items-center justify-center font-bold text-tatt-lime text-sm">
                                                                 {rec.member.firstName.charAt(0)}{rec.member.lastName.charAt(0)}
@@ -501,7 +506,7 @@ export default function FeedPage() {
                                                         )}
                                                     </div>
                                                 </Link>
-                                                <div className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white dark:border-black ${rec.member.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
+                                                <div className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white  ${rec.member.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
                                             </div>
                                             <div>
                                                 <Link href={`/dashboard/network/${rec.member.id}`}>
@@ -514,7 +519,7 @@ export default function FeedPage() {
                                             <button
                                                 onClick={() => handleConnect(rec.member)}
                                                 title="Connect"
-                                                className="size-9 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 transition-all border border-transparent hover:border-tatt-lime/30"
+                                                className="size-9 rounded-xl bg-black/5  flex items-center justify-center text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 transition-all border border-transparent hover:border-tatt-lime/30"
                                             >
                                                 <UserPlus className="h-4 w-4" />
                                             </button>
@@ -592,11 +597,11 @@ export default function FeedPage() {
             {isPostWizardOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsPostWizardOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                    <div className="relative bg-white  w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10">
                         <div className="p-8 border-b border-border bg-gradient-to-r from-tatt-lime/10 to-transparent">
                             <div className="flex items-center justify-between mb-2">
                                 <h2 className="text-2xl font-black tracking-tight text-foreground">Choose Post Type</h2>
-                                <button onClick={() => setIsPostWizardOpen(false)} className="size-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
+                                <button onClick={() => setIsPostWizardOpen(false)} className="size-10 rounded-full bg-black/5  flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
@@ -613,7 +618,7 @@ export default function FeedPage() {
                                     }}
                                     className="flex items-center gap-5 p-5 rounded-2xl border border-border hover:border-tatt-lime hover:bg-tatt-lime/5 transition-all text-left group"
                                 >
-                                    <div className="size-14 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-tatt-lime group-hover:text-black transition-all">
+                                    <div className="size-14 rounded-2xl bg-black/5  flex items-center justify-center group-hover:bg-tatt-lime group-hover:text-black transition-all">
                                         <type.icon className="h-7 w-7" />
                                     </div>
                                     <div className="flex-1">
@@ -632,7 +637,7 @@ export default function FeedPage() {
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsCreateModalOpen(false)} />
-                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
+                    <div className="relative bg-white  w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
                         {/* Header */}
                         <div className="p-6 border-b border-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -641,18 +646,28 @@ export default function FeedPage() {
                                         setIsCreateModalOpen(false);
                                         setIsPostWizardOpen(true);
                                     }}
-                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg text-tatt-gray"
+                                    className="p-2 hover:bg-black/5  rounded-lg text-tatt-gray"
                                 >
                                     <ChevronDown className="h-5 w-5 rotate-90" />
                                 </button>
                                 <div>
                                     <h2 className="text-lg font-bold">New {POST_TYPES.find(t => t.id === selectedPostType)?.name}</h2>
-                                    <p className="text-[10px] text-tatt-gray font-black uppercase tracking-widest flex items-center gap-1.5">
-                                        Authoring as <span className="text-tatt-lime">{user?.firstName} {user?.lastName}</span>
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="size-5 rounded-full overflow-hidden bg-tatt-lime/10 flex items-center justify-center text-[10px] font-bold text-tatt-lime shrink-0">
+                                            {user?.profilePicture ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                                            ) : (
+                                                <span>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-tatt-gray font-black uppercase tracking-widest flex items-center gap-1.5">
+                                            Authoring as <span className="text-tatt-lime">{user?.firstName} {user?.lastName}</span>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="size-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
+                            <button onClick={() => setIsCreateModalOpen(false)} className="size-10 rounded-full bg-black/5  flex items-center justify-center text-tatt-gray hover:text-foreground transition-all">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
@@ -678,7 +693,8 @@ export default function FeedPage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pb-4">
                                     {attachmentPreviews.map((preview, i) => (
                                         <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-border group">
-                                            <Image src={preview} alt="Attachment preview" fill className="object-cover" />
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={preview} alt="Attachment preview" className="w-full h-full object-cover" />
                                             <button
                                                 onClick={() => removeAttachment(i)}
                                                 className="absolute top-2 right-2 size-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -724,13 +740,13 @@ export default function FeedPage() {
                                     />
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="p-2.5 bg-black/5 dark:bg-white/5 hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
+                                        className="p-2.5 bg-black/5  hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
                                     >
                                         <ImageIcon className="h-5 w-5" />
                                     </button>
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="p-2.5 bg-black/5 dark:bg-white/5 hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
+                                        className="p-2.5 bg-black/5  hover:bg-tatt-lime/10 hover:text-tatt-lime rounded-xl transition-all"
                                     >
                                         <Paperclip className="h-5 w-5" />
                                     </button>
@@ -752,7 +768,7 @@ export default function FeedPage() {
             {connectModal.open && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setConnectModal({ open: false, member: null })} />
-                    <div className="relative bg-white dark:bg-[#121212] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                    <div className="relative bg-white  w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-white/10">
                         <div className="p-6 border-b border-border flex items-center justify-between bg-black/5">
                             <h3 className="font-bold">Connect with {connectModal.member?.firstName}</h3>
                             <button onClick={() => setConnectModal({ open: false, member: null })} className="p-2 hover:bg-black/5 rounded-full transition-colors">
@@ -764,7 +780,7 @@ export default function FeedPage() {
                             <textarea
                                 value={connectMessage}
                                 onChange={(e) => setConnectMessage(e.target.value)}
-                                className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
+                                className="w-full bg-black/5  border border-border rounded-xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
                                 placeholder="Write your message..."
                             />
                             <button
@@ -888,10 +904,49 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
         }
     };
 
+    const getPostTypeBadge = (type: string) => {
+        switch (type) {
+            case "ANNOUNCEMENT":
+                return {
+                    label: "Announcement",
+                    icon: Zap,
+                    className: "bg-tatt-yellow/20 text-tatt-bronze-dark border border-tatt-yellow/40",
+                };
+            case "RESOURCE":
+                return {
+                    label: "Resource",
+                    icon: Briefcase,
+                    className: "bg-tatt-lime-dark/10 text-tatt-lime-dark border border-tatt-lime-dark/30",
+                };
+            case "EVENT":
+                return {
+                    label: "Event",
+                    icon: Calendar,
+                    className: "bg-tatt-gray/10 text-tatt-gray border border-tatt-gray/30",
+                };
+            default: // GENERAL
+                return {
+                    label: "TATT-POST",
+                    icon: MessageSquare,
+                    className: "bg-tatt-bronze/10 text-tatt-bronze border border-tatt-bronze/30",
+                };
+        }
+    };
+
     return (
         <article className="bg-surface rounded-2xl border border-border shadow-sm hover:shadow-md transition-all overflow-hidden group">
-            {post.isPremium && (
-                <div className="bg-gradient-to-r from-tatt-lime/20 via-tatt-lime/5 to-transparent h-1" />
+            {/* Top accent strip — color-coded by post type */}
+            {post.type === "ANNOUNCEMENT" && (
+                <div className="bg-gradient-to-r from-tatt-yellow/50 via-tatt-yellow/10 to-transparent h-0.5" />
+            )}
+            {post.type === "RESOURCE" && (
+                <div className="bg-gradient-to-r from-tatt-lime-dark/40 via-tatt-lime-dark/10 to-transparent h-0.5" />
+            )}
+            {post.type === "EVENT" && (
+                <div className="bg-gradient-to-r from-tatt-gray/40 via-tatt-gray/10 to-transparent h-0.5" />
+            )}
+            {post.type === "GENERAL" && (
+                <div className="bg-gradient-to-r from-tatt-bronze/30 via-tatt-bronze/10 to-transparent h-0.5" />
             )}
 
             <div className="p-5">
@@ -902,7 +957,8 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                             <Link href={`/dashboard/network/${post.author.id}`} className="block">
                                 <div className="size-12 rounded-full border-2 border-border overflow-hidden bg-background">
                                     {post.author.profilePicture ? (
-                                        <Image src={post.author.profilePicture} alt={post.author.firstName} width={48} height={48} className="object-cover" />
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={post.author.profilePicture} alt={post.author.firstName} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="size-full flex items-center justify-center font-bold text-tatt-lime">
                                             {post.author.firstName.charAt(0)}{post.author.lastName.charAt(0)}
@@ -910,7 +966,7 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                     )}
                                 </div>
                             </Link>
-                            <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white dark:border-black shadow-sm ${post.author.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
+                            <div className={`absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-white  shadow-sm ${post.author.communityTier === 'KIONGOZI' ? 'bg-tatt-lime' : 'bg-tatt-gray'}`}></div>
                         </div>
                         <div>
                             <div className="flex flex-wrap items-center gap-2">
@@ -920,6 +976,18 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                 <span className={`${getTierColor(post.author.communityTier)} text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-[0.1em]`}>
                                     {post.author.communityTier}
                                 </span>
+                                {/* Post type badge */}
+                                {(() => {
+                                    const badge = getPostTypeBadge(post.type);
+                                    if (!badge) return null;
+                                    const BadgeIcon = badge.icon;
+                                    return (
+                                        <span className={`${badge.className} text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-[0.1em] flex items-center gap-1`}>
+                                            <BadgeIcon className="h-2.5 w-2.5" />
+                                            {badge.label}
+                                        </span>
+                                    );
+                                })()}
                                 {post.isPremium && (
                                     <span className="bg-tatt-lime/10 text-tatt-lime text-[9px] font-black px-2 py-0.5 rounded border border-tatt-lime/20 uppercase tracking-[0.1em] flex items-center gap-1">
                                         <Lock className="h-2 w-2" />
@@ -935,35 +1003,39 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                     <div className="relative">
                         <button
                             onClick={() => setShowOptions(!showOptions)}
-                            className="text-tatt-gray hover:text-tatt-lime p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                            className="text-tatt-gray hover:text-tatt-lime p-2 rounded-xl hover:bg-black/5  transition-all"
                         >
                             <MoreHorizontal className="h-5 w-5" />
                         </button>
                         {showOptions && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1a1a1a] border border-border rounded-2xl shadow-2xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200">
-                                <button onClick={handleBookmark} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
-                                    <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-tatt-lime text-tatt-lime' : ''}`} />
-                                    {isBookmarked ? 'Bookmarked' : 'Bookmark Post'}
-                                </button>
+                            <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-2xl shadow-2xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200">
+                                {post.author.id !== user?.id && (
+                                    <>
+                                        <button onClick={handleBookmark} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
+                                            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-tatt-lime text-tatt-lime' : ''}`} />
+                                            {isBookmarked ? 'Bookmarked' : 'Bookmark Post'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowOptions(false); setIsReporting(true); }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 transition-colors text-left"
+                                        >
+                                            <Flag className="h-4 w-4" />
+                                            Report Post
+                                        </button>
+                                    </>
+                                )}
                                 {(user?.systemRole === 'ADMIN' || user?.systemRole === 'SUPERADMIN' || user?.systemRole === 'MODERATOR' || user?.systemRole === 'REGIONAL_ADMIN') && (
-                                    <button onClick={handleHighlight} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left">
+                                    <button onClick={handleHighlight} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
                                         <Highlighter className={`h-4 w-4 ${isHighlighted ? 'text-tatt-lime' : ''}`} />
                                         {isHighlighted ? 'Remove Highlight' : 'Highlight in Chapter'}
                                     </button>
                                 )}
                                 <button
                                     onClick={() => { setShowOptions(false); setIsReposting(true); }}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left"
                                 >
                                     <Repeat2 className="h-4 w-4" />
                                     Repost
-                                </button>
-                                <button
-                                    onClick={() => { setShowOptions(false); setIsReporting(true); }}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-900/10 text-red-600 transition-colors text-left"
-                                >
-                                    <Flag className="h-4 w-4" />
-                                    Report Post
                                 </button>
                             </div>
                         )}
@@ -978,7 +1050,7 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                     )}
 
                     {post.isPremiumLocked ? (
-                        <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-8 border border-dashed border-border flex flex-col items-center text-center space-y-4">
+                        <div className="bg-black/5  rounded-2xl p-8 border border-dashed border-border flex flex-col items-center text-center space-y-4">
                             <div className="size-16 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center text-tatt-lime">
                                 <Lock className="size-8" />
                             </div>
@@ -1004,8 +1076,9 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                     {post.mediaUrls && post.mediaUrls.length > 0 && !post.isPremiumLocked && (
                         <div className={`grid gap-2 mt-4 overflow-hidden rounded-2xl border border-border ${post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {post.mediaUrls.map((url, i) => (
-                                <div key={i} className="relative aspect-video lg:aspect-auto lg:h-[400px]">
-                                    <Image src={url} alt="Post content" fill className="object-cover" />
+                                <div key={i} className="aspect-video lg:aspect-auto lg:h-[400px] overflow-hidden">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={url} alt="Post content" className="w-full h-full object-cover" />
                                 </div>
                             ))}
                         </div>
@@ -1013,11 +1086,12 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
 
                     {/* Original Post Preview (for reposts) */}
                     {post.parentPost && (
-                        <div className="mt-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-border space-y-3 cursor-pointer hover:border-border/60 transition-colors" onClick={() => window.location.href = `/dashboard/feed/${post.parentPost?.id}`}>
+                        <div className="mt-4 p-4 rounded-2xl bg-black/5  border border-border space-y-3 cursor-pointer hover:border-border/60 transition-colors" onClick={() => window.location.href = `/dashboard/feed/${post.parentPost?.id}`}>
                             <div className="flex items-center gap-3">
                                 <div className="size-8 rounded-full border border-border overflow-hidden bg-background">
                                     {post.parentPost.author.profilePicture ? (
-                                        <Image src={post.parentPost.author.profilePicture} alt={post.parentPost.author.firstName} width={32} height={32} className="object-cover" />
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={post.parentPost.author.profilePicture} alt={post.parentPost.author.firstName} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="size-full flex items-center justify-center text-[10px] font-bold text-tatt-lime">
                                             {post.parentPost.author.firstName.charAt(0)}{post.parentPost.author.lastName.charAt(0)}
@@ -1047,8 +1121,15 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                 <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">
                     <div className="flex gap-1">
                         <button
-                            onClick={onLike}
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${post.isLikedByMe ? 'bg-tatt-lime text-black' : 'text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10'}`}
+                            onClick={() => {
+                                if (post.author.id === user?.id) {
+                                    toast.error("You cannot like your own insight.");
+                                    return;
+                                }
+                                onLike();
+                            }}
+                            disabled={post.author.id === user?.id}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${post.isLikedByMe ? 'bg-tatt-lime text-black shadow-lg shadow-tatt-lime/20' : 'text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10'} ${post.author.id === user?.id ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                         >
                             <ThumbsUp className={`h-5 w-5 ${post.isLikedByMe ? 'fill-black' : ''}`} />
                             <span className="text-xs font-black">{post.likesCount > 0 ? post.likesCount : 'Like'}</span>
@@ -1061,8 +1142,15 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                             <span className="text-xs font-black">{localCommentsCount > 0 ? localCommentsCount : 'Comment'}</span>
                         </button>
                         <button
-                            onClick={handleUpvote}
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${isUpvoted ? 'bg-orange-500/10 text-orange-500' : 'text-tatt-gray hover:text-orange-500 hover:bg-orange-500/10'}`}
+                            onClick={() => {
+                                if (post.author.id === user?.id) {
+                                    toast.error("You cannot upvote your own insight.");
+                                    return;
+                                }
+                                handleUpvote();
+                            }}
+                            disabled={post.author.id === user?.id}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${isUpvoted ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'text-tatt-gray hover:text-orange-500 hover:bg-orange-500/10'} ${post.author.id === user?.id ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
                         >
                             <ArrowBigUp className={`h-5 w-5 ${isUpvoted ? 'fill-orange-500' : ''}`} />
                             <span className="text-xs font-black">{localUpvotesCount > 0 ? localUpvotesCount : 'Upvote'}</span>
@@ -1106,7 +1194,8 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                         <form onSubmit={handleAddComment} className="flex gap-4">
                             <div className="size-8 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center font-bold text-tatt-lime text-[10px] shrink-0 overflow-hidden relative">
                                 {user?.profilePicture ? (
-                                    <Image src={user.profilePicture} alt="Profile" fill className="object-cover" />
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
                                     <span>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</span>
                                 )}
@@ -1115,12 +1204,14 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                 <input
                                     value={newComment}
                                     onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Add a Strategic perspective..."
-                                    className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl pl-4 pr-12 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none"
+                                    placeholder={post.author.id === user?.id ? "You cannot comment on your own post" : "Add a Strategic perspective..."}
+                                    disabled={post.author.id === user?.id || isSubmittingComment}
+                                    className={`w-full bg-black/5 border border-border rounded-xl pl-4 pr-12 py-2 text-sm focus:ring-1 focus:ring-tatt-lime outline-none ${post.author.id === user?.id ? 'opacity-50 cursor-not-allowed italic' : ''}`}
                                 />
                                 <button
-                                    disabled={isSubmittingComment}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-tatt-lime hover:scale-110 disabled:opacity-50 transition-all font-bold text-xs px-2"
+                                    type="submit"
+                                    disabled={isSubmittingComment || !newComment.trim() || post.author.id === user?.id}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-tatt-lime hover:scale-110 disabled:opacity-50 disabled:grayscale transition-all font-bold text-xs px-2"
                                 >
                                     Post
                                 </button>
@@ -1138,7 +1229,8 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                     <div key={comment.id} className="flex gap-4 group">
                                         <div className="size-8 rounded-full border border-border overflow-hidden bg-background shrink-0">
                                             {comment.author.profilePicture ? (
-                                                <Image src={comment.author.profilePicture} alt={comment.author.firstName} width={32} height={32} className="object-cover" />
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={comment.author.profilePicture} alt={comment.author.firstName} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="size-full flex items-center justify-center font-bold text-tatt-lime text-[10px]">
                                                     {comment.author.firstName.charAt(0)}{comment.author.lastName.charAt(0)}
@@ -1146,7 +1238,7 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 border border-border">
+                                            <div className="bg-black/5  rounded-2xl p-4 border border-border">
                                                 <div className="flex justify-between items-start mb-1">
                                                     <div>
                                                         <span className="font-bold text-sm">{comment.author.firstName} {comment.author.lastName}</span>
@@ -1203,7 +1295,7 @@ function RepostModal({ post, onClose, onSuccess }: { post: Post, onClose: () => 
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white dark:bg-[#121212] w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
+            <div className="relative bg-white  w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
                 <div className="p-6 border-b border-border flex items-center justify-between bg-black/5">
                     <h3 className="font-bold flex items-center gap-2">
                         <Repeat2 className="h-5 w-5 text-tatt-lime" />
@@ -1217,7 +1309,7 @@ function RepostModal({ post, onClose, onSuccess }: { post: Post, onClose: () => 
                     <textarea
                         value={commentary}
                         onChange={(e) => setCommentary(e.target.value)}
-                        className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
+                        className="w-full bg-black/5  border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-tatt-lime outline-none min-h-[120px]"
                         placeholder="Add your strategic perspective to this insight..."
                     />
 
@@ -1225,8 +1317,9 @@ function RepostModal({ post, onClose, onSuccess }: { post: Post, onClose: () => 
                         <div className="flex items-center gap-3 mb-2">
                             <div className="size-6 rounded-full border border-border overflow-hidden bg-background">
                                 {post.author.profilePicture ? (
-                                    <Image src={post.author.profilePicture} alt={post.author.firstName} width={24} height={24} className="object-cover" />
-                                ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={post.author.profilePicture} alt={post.author.firstName} className="w-full h-full object-cover" />
+                            ) : (
                                     <div className="size-full flex items-center justify-center text-[8px] font-bold text-tatt-lime">
                                         {post.author.firstName.charAt(0)}{post.author.lastName.charAt(0)}
                                     </div>
@@ -1287,7 +1380,7 @@ function ReportModal({ post, onClose }: { post: Post, onClose: () => void }) {
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white dark:bg-[#121212] w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
+            <div className="relative bg-white  w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-300">
                 <div className="p-6 border-b border-border flex items-center justify-between bg-red-500/5">
                     <h3 className="font-bold flex items-center gap-2 text-red-500">
                         <Flag className="h-5 w-5" />
@@ -1303,7 +1396,7 @@ function ReportModal({ post, onClose }: { post: Post, onClose: () => void }) {
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
-                            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-red-500 outline-none min-h-[120px]"
+                            className="w-full bg-black/5  border border-border rounded-2xl p-4 text-sm focus:ring-1 focus:ring-red-500 outline-none min-h-[120px]"
                             placeholder="Please describe why this post violates community guidelines..."
                         />
                     </div>

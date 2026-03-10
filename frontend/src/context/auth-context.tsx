@@ -52,33 +52,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const verifyAuth = async () => {
-            const storedToken = localStorage.getItem('token');
-            const storedUser = localStorage.getItem('user');
+            try {
+                const storedToken = localStorage.getItem('token');
+                const storedUser = localStorage.getItem('user');
 
-            if (storedToken && storedUser) {
-                // Optimistically set state
-                setToken(storedToken);
-                setUser(JSON.parse(storedUser));
+                if (storedToken && storedUser) {
+                    // Optimistically set state
+                    setToken(storedToken);
+                    try {
+                        setUser(JSON.parse(storedUser));
+                    } catch (e) {
+                         console.warn("Could not parse stored user", e);
+                    }
 
-                // Verify with backend to prevent local-storage tampering
-                try {
-                    const response = await api.get('/auth/me');
-                    const realUser = response.data;
-                    setUser(realUser);
-                    localStorage.setItem('user', JSON.stringify(realUser));
-                } catch (error) {
-                    console.error("Auth verification failed:", error);
-                    // Token is invalid or user was deleted
+                    // Verify with backend to prevent local-storage tampering
+                    try {
+                        const response = await api.get('/auth/me');
+                        const realUser = response.data;
+                        setUser(realUser);
+                        localStorage.setItem('user', JSON.stringify(realUser));
+                    } catch (error) {
+                        console.error("Auth verification failed:", error);
+                        // Token is invalid or user was deleted
+                        setToken(null);
+                        setUser(null);
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                    }
+                } else {
                     setToken(null);
                     setUser(null);
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                 }
-            } else {
-                setToken(null);
-                setUser(null);
+            } catch (err) {
+                console.error("verifyAuth encountered a top-level error:", err);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         verifyAuth();
@@ -96,7 +105,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        window.location.href = '/';
     };
+
+    // Auto-logout after 30 minutes of inactivity
+    useEffect(() => {
+        if (!token) return;
+
+        let inactivityTimer: NodeJS.Timeout;
+
+        const resetTimer = () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                console.log("Logged out due to inactivity");
+                logout();
+            }, 30 * 60 * 1000); // 30 minutes
+        };
+
+        const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+
+        events.forEach(event => window.addEventListener(event, resetTimer));
+        resetTimer(); // Initialize on mount
+
+        return () => {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            events.forEach(event => window.removeEventListener(event, resetTimer));
+        };
+    }, [token]);
 
     return (
         <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, isLoading }}>

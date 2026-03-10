@@ -13,6 +13,7 @@ import {
     FeedQueryDto, FeedFilter,
     CreatePostDto, UpdatePostDto,
     AddCommentDto, GetCommentsQueryDto,
+    ReportPostDto,
 } from './dto/feed.dto';
 import {
     PostCardSchema, PostAuthorSchema, PostChapterSchema,
@@ -22,6 +23,7 @@ import {
     CreatePostResponseSchema, CreateCommentResponseSchema, FeedMessageResponseSchema,
 } from './dto/feed.schemas';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('TATT Feed')
 @ApiBearerAuth()
@@ -33,7 +35,7 @@ import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
     ToggleLikeResponseSchema,
     CommentSchema, CommentReplySchema, CommentAuthorSchema, CommentsResponseSchema,
     CreatePostResponseSchema, CreateCommentResponseSchema, FeedMessageResponseSchema,
-    CreatePostDto, UpdatePostDto, AddCommentDto,
+    CreatePostDto, UpdatePostDto, AddCommentDto, ReportPostDto,
 )
 @Controller('feed')
 export class FeedController {
@@ -137,6 +139,7 @@ export class FeedController {
         },
     })
     @ApiResponse({ status: 401, description: 'Missing or invalid Bearer token.' })
+    @Public()
     @Get(':postId')
     async getPost(
         @Request() req,
@@ -439,5 +442,61 @@ export class FeedController {
         @Param('commentId', ParseUUIDPipe) commentId: string,
     ) {
         return this.feedService.deleteComment(req.user, commentId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  UPVOTES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @ApiOperation({
+        summary: 'Toggle upvote on a post',
+        description: 'Toggles a standard upvote. Users cannot upvote their own posts.',
+    })
+    @ApiParam({ name: 'postId', format: 'uuid' })
+    @Post(':postId/upvote')
+    @HttpCode(HttpStatus.OK)
+    async toggleUpvote(
+        @Request() req,
+        @Param('postId', ParseUUIDPipe) postId: string,
+    ) {
+        return this.feedService.toggleUpvote(req.user, postId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  BOOKMARKS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @ApiOperation({
+        summary: 'Toggle bookmark on a post',
+        description: 'Saves the post to the user\'s private bookmarks list.',
+    })
+    @ApiParam({ name: 'postId', format: 'uuid' })
+    @Post(':postId/bookmark')
+    @HttpCode(HttpStatus.OK)
+    async toggleBookmark(
+        @Request() req,
+        @Param('postId', ParseUUIDPipe) postId: string,
+    ) {
+        return this.feedService.toggleBookmark(req.user, postId);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  REPORTING
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @ApiOperation({
+        summary: 'Report a post for review',
+        description: 'Flags a post for administrator review due to community guideline violations.',
+    })
+    @ApiParam({ name: 'postId', format: 'uuid' })
+    @ApiBody({ type: ReportPostDto })
+    @Post(':postId/report')
+    @HttpCode(HttpStatus.CREATED)
+    async reportPost(
+        @Request() req,
+        @Param('postId', ParseUUIDPipe) postId: string,
+        @Body() dto: ReportPostDto,
+    ) {
+        return this.feedService.reportPost(req.user, postId, dto);
     }
 }

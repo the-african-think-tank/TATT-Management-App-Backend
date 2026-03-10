@@ -83,6 +83,11 @@ export class UsersService {
             delete (profileData as any).businessProfileLink;
         }
 
+        // Convert empty chapterId to null for database compatibility
+        if (profileData.chapterId === '') {
+            profileData.chapterId = null as any;
+        }
+
         await user.update(profileData);
 
         if (interests) {

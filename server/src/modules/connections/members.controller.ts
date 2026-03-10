@@ -53,7 +53,7 @@ export class MembersController {
     })
     @Get()
     async findAll(@Request() req, @Query() query: MemberSearchQueryDto) {
-        return this.connectionsService.getAllMembers(query, req.user?.id);
+        return this.connectionsService.getAllMembers(query, req.user);
     }
 
     @ApiOperation({

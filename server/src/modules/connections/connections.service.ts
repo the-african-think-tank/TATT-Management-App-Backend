@@ -11,6 +11,8 @@ import { Connection, ConnectionStatus } from './entities/connection.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
+import { ProfessionalInterest } from '../interests/entities/interest.entity';
+import { Post } from '../feed/entities/post.entity';
 import { SendConnectionRequestDto, RespondToConnectionDto } from './dto/connection.dto';
 import { MailService } from '../../common/mail/mail.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
@@ -292,31 +294,62 @@ export class ConnectionsService {
     }
 
     // ─── GET ALL MEMBERS (DIRECTORY) ─────────────────────────────────────────────
-    async getAllMembers(query: any, excludeUserId?: string) {
+    async getAllMembers(query: any, currentUser?: User) {
         const { search, chapterId, industry, page = 1, limit = 10 } = query;
         const offset = (page - 1) * limit;
 
-        const where: any = {
-            isActive: true,
-            // Exclude the requesting user from their own directory view
-            ...(excludeUserId ? { id: { [Op.ne]: excludeUserId } } : {}),
-        };
+        const requestingUserId = currentUser?.id;
+        const requestingUserChapterId = currentUser?.chapterId;
+
+        const andConditions: any[] = [];
+        
+        // Hide users with NO_CONNECTIONS or who have set CHAPTER_ONLY but don't share the viewer's chapter
+        andConditions.push({
+            [Op.and]: [
+                {
+                    connectionPreference: {
+                        [Op.ne]: 'NO_CONNECTIONS',
+                    },
+                },
+                {
+                    [Op.or]: [
+                        { connectionPreference: 'OPEN' },
+                        { connectionPreference: null },
+                        ...(requestingUserChapterId ? [{
+                            connectionPreference: 'CHAPTER_ONLY',
+                            chapterId: requestingUserChapterId,
+                        }] : []),
+                    ],
+                },
+            ],
+        });
 
         if (chapterId) {
-            where.chapterId = chapterId;
+            andConditions.push({ chapterId });
         }
 
         if (industry) {
-            where.industry = industry;
+            andConditions.push({ industry });
         }
 
         if (search) {
-            where[Op.or] = [
-                { firstName: { [Op.iLike]: `%${search}%` } },
-                { lastName: { [Op.iLike]: `%${search}%` } },
-                { professionTitle: { [Op.iLike]: `%${search}%` } },
-                { companyName: { [Op.iLike]: `%${search}%` } },
-            ];
+            andConditions.push({
+                [Op.or]: [
+                    { firstName: { [Op.iLike]: `%${search}%` } },
+                    { lastName: { [Op.iLike]: `%${search}%` } },
+                    { professionTitle: { [Op.iLike]: `%${search}%` } },
+                    { companyName: { [Op.iLike]: `%${search}%` } },
+                ],
+            });
+        }
+
+        const where: any = {
+            isActive: true,
+            ...(requestingUserId ? { id: { [Op.ne]: requestingUserId } } : {}),
+        };
+
+        if (andConditions.length > 0) {
+            where[Op.and] = andConditions;
         }
 
         const { rows: members, count: total } = await this.userRepo.findAndCountAll({
@@ -352,7 +385,9 @@ export class ConnectionsService {
             attributes: [
                 'id', 'firstName', 'lastName', 'profilePicture', 'professionTitle',
                 'companyName', 'location', 'tattMemberId', 'communityTier', 'industry',
-                'chapterId', 'professionalHighlight',
+                'chapterId', 'professionalHighlight', 'isActive', 'linkedInProfileUrl',
+                'connectionPreference', 'expertise', 'businessName', 'businessRole',
+                'businessProfileLink', 'createdAt'
             ],
             include: [
                 {
@@ -360,6 +395,21 @@ export class ConnectionsService {
                     as: 'chapter',
                     attributes: ['id', 'name', 'code'],
                     required: false,
+                },
+                {
+                    model: ProfessionalInterest,
+                    as: 'interests',
+                    attributes: ['name'],
+                    through: { attributes: [] },
+                    required: false,
+                },
+                {
+                    model: Post,
+                    as: 'posts',
+                    required: false,
+                    attributes: ['id', 'content', 'createdAt'],
+                    limit: 5,
+                    order: [['createdAt', 'DESC']]
                 }
             ],
         });
@@ -368,6 +418,17 @@ export class ConnectionsService {
             throw new NotFoundException('Member not found.');
         }
 
-        return member;
+        const connectionCount = await this.connectionRepo.count({
+            where: {
+                [Op.or]: [{ requesterId: memberId }, { recipientId: memberId }],
+                status: ConnectionStatus.ACCEPTED
+            }
+        });
+
+        const memberData = member.toJSON();
+        return {
+            ...memberData,
+            connectionCount
+        };
     }
 }

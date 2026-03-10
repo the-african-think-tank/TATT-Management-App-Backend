@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import AdminGuard from "@/components/AdminGuard";
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
@@ -24,7 +24,8 @@ import {
     Bell,
     Settings,
     Menu,
-    X
+    X,
+    User as UserIcon
 } from "lucide-react";
 
 interface MenuItem {
@@ -48,6 +49,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
 
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const userHasAccess = (requiredFlag?: string) => {
         if (!requiredFlag) return true; // No specific flag needed
         if (!user) return false;
@@ -65,7 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {
             group: "Community", items: [
                 { icon: <Users size={20} />, label: "Org Management", href: "/admin/org-management", badge: "NEW", flag: "CAN_ACCESS_ORG_MANAGEMENT" },
-                { icon: <Globe size={20} />, label: "Regional Chapters", href: "#", flag: "CAN_ACCESS_REGIONAL_CHAPTERS" },
+                { icon: <Globe size={20} />, label: "Regional Chapters", href: "/admin/regional-chapters", flag: "CAN_ACCESS_REGIONAL_CHAPTERS" },
                 { icon: <MessageSquare size={20} />, label: "Forum Moderation", href: "#", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
                 { icon: <Heart size={20} />, label: "Volunteer Center", href: "#", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
                 { icon: <Calendar size={20} />, label: "Events & Mixers", href: "/admin/events", flag: "CAN_ACCESS_EVENTS" },
@@ -194,20 +208,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </button>
                             </div>
                             <div className="h-8 w-px bg-border hidden sm:block"></div>
-                            <div className="flex items-center gap-3 cursor-pointer group">
-                                <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-bold text-foreground line-clamp-1">{user?.firstName} {user?.lastName}</p>
-                                    <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-widest">{user?.systemRole?.replace('_', ' ')}</p>
+                            <div className="relative group" ref={dropdownRef}>
+                                <div
+                                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                >
+                                    <div className="text-right hidden sm:block">
+                                        <p className="text-sm font-bold text-foreground line-clamp-1">{user?.firstName} {user?.lastName}</p>
+                                        <p className="text-[10px] font-bold text-tatt-gray uppercase tracking-widest">{user?.systemRole?.replace('_', ' ')}</p>
+                                    </div>
+                                    <div className="size-10 rounded-full border-2 border-tatt-lime flex items-center justify-center overflow-hidden shrink-0 bg-background select-none">
+                                        {user?.profilePicture ? (
+                                            <Image src={user.profilePicture} alt="Admin" width={40} height={40} className="object-cover" />
+                                        ) : (
+                                            <div className="size-full bg-tatt-lime/20 flex items-center justify-center text-tatt-lime font-bold">
+                                                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="size-10 rounded-full border-2 border-tatt-lime flex items-center justify-center overflow-hidden shrink-0">
-                                    {user?.profilePicture ? (
-                                        <Image src={user.profilePicture} alt="Admin" width={40} height={40} className="object-cover" />
-                                    ) : (
-                                        <div className="size-full bg-tatt-lime/20 flex items-center justify-center text-tatt-lime font-bold">
-                                            {user?.firstName?.charAt(0)}
-                                        </div>
-                                    )}
-                                </div>
+
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 mt-3 w-48 bg-white  rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                        <Link
+                                            href="#"
+                                            className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5  transition-colors"
+                                            onClick={() => setDropdownOpen(false)}
+                                        >
+                                            <UserIcon className="h-4 w-4" />
+                                            Go to Profile
+                                        </Link>
+                                        <button
+                                            onClick={() => {
+                                                setDropdownOpen(false);
+                                                logout();
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50  transition-colors text-left"
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            Logout
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </header>

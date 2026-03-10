@@ -20,6 +20,10 @@ export enum PostType {
     ANNOUNCEMENT = 'ANNOUNCEMENT', // Org-wide announcement (admin-authored)
 }
 
+import { PostUpvote } from './post-upvote.entity';
+import { PostBookmark } from './post-bookmark.entity';
+import { PostReport } from './post-report.entity';
+
 @Table({
     tableName: 'posts',
     timestamps: true,
@@ -112,10 +116,27 @@ export class Post extends Model<Post> {
     @Column(DataType.BOOLEAN)
     isPublished: boolean;
 
+    // ─── REPOSTING ────────────────────────────────────────────────────────────
+    @ForeignKey(() => Post)
+    @Column({ type: DataType.UUID, allowNull: true })
+    parentPostId?: string;
+
+    @BelongsTo(() => Post, 'parentPostId')
+    parentPost?: Post;
+
     // ─── ASSOCIATIONS ─────────────────────────────────────────────────────────
     @HasMany(() => PostLike, 'postId')
     likes: PostLike[];
 
     @HasMany(() => PostComment, 'postId')
     comments: PostComment[];
+
+    @HasMany(() => PostUpvote, 'postId')
+    upvotes: PostUpvote[];
+
+    @HasMany(() => PostBookmark, 'postId')
+    bookmarks: PostBookmark[];
+
+    @HasMany(() => PostReport, 'postId')
+    reports: PostReport[];
 }

@@ -9,7 +9,7 @@ import { LoginField } from "@/components/molecules/login-field";
 import api from "@/services/api";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Lock } from "lucide-react";
+import { CheckCircle2, Lock, Eye } from "lucide-react";
 
 const resetPasswordSchema = z.object({
     newPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -20,9 +20,6 @@ const resetPasswordSchema = z.object({
 });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
-const PASSWORD_ICON_SRC = "https://www.figma.com/api/mcp/asset/8db218ed-1ede-4e79-aadf-f23871c4566e";
-const EYE_ICON_SRC = "https://www.figma.com/api/mcp/asset/13680719-0fcf-4541-a246-4b5375b0d4ef";
 
 export function ResetPasswordForm() {
     const [isLoading, setIsLoading] = useState(false);
@@ -125,8 +122,8 @@ export function ResetPasswordForm() {
                     label="New Password"
                     placeholder="••••••••••••"
                     type="password"
-                    leftIconSrc={PASSWORD_ICON_SRC}
-                    rightIconSrc={EYE_ICON_SRC}
+                    leftIcon={<Lock className="h-4 w-4" />}
+                    rightIcon={<Eye className="h-4 w-4" />}
                     error={errors.newPassword?.message}
                     {...register("newPassword")}
                 />
@@ -136,7 +133,7 @@ export function ResetPasswordForm() {
                     label="Confirm New Password"
                     placeholder="••••••••••••"
                     type="password"
-                    leftIconSrc={PASSWORD_ICON_SRC}
+                    leftIcon={<Lock className="h-4 w-4" />}
                     error={errors.confirmPassword?.message}
                     {...register("confirmPassword")}
                 />

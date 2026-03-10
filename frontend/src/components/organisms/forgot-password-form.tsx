@@ -8,15 +8,13 @@ import { AuthButton } from "@/components/atoms/auth-button";
 import { LoginField } from "@/components/molecules/login-field";
 import api from "@/services/api";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 const forgotPasswordSchema = z.object({
     email: z.string().email("Invalid email address"),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-
-const EMAIL_ICON_SRC = "https://www.figma.com/api/mcp/asset/46f35b83-8281-44fe-bcbb-f5c959d2af9f";
 
 export function ForgotPasswordForm() {
     const [isLoading, setIsLoading] = useState(false);
@@ -91,7 +89,7 @@ export function ForgotPasswordForm() {
                     label="Email Address"
                     placeholder="m.garvey@africanthinktank.org"
                     type="email"
-                    leftIconSrc={EMAIL_ICON_SRC}
+                    leftIcon={<Mail className="h-4 w-4" />}
                     error={errors.email?.message}
                     {...register("email")}
                 />

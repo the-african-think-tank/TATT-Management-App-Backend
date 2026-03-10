@@ -17,14 +17,7 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-const EMAIL_ICON_SRC =
-  "https://www.figma.com/api/mcp/asset/46f35b83-8281-44fe-bcbb-f5c959d2af9f";
-const PASSWORD_ICON_SRC =
-  "https://www.figma.com/api/mcp/asset/8db218ed-1ede-4e79-aadf-f23871c4566e";
-const EYE_ICON_SRC =
-  "https://www.figma.com/api/mcp/asset/13680719-0fcf-4541-a246-4b5375b0d4ef";
-const TRUST_ICON_SRC =
-  "https://www.figma.com/api/mcp/asset/f800d29c-afcd-4e2c-9b94-afe68a17f191";
+import { Mail, Lock, Eye, ShieldCheck } from "lucide-react";
 
 export function LoginForm() {
   const { login: authLogin } = useAuth();
@@ -92,7 +85,7 @@ export function LoginForm() {
           label="Email Address"
           placeholder="m.garvey@africanthinktank.org"
           type="email"
-          leftIconSrc={EMAIL_ICON_SRC}
+          leftIcon={<Mail className="h-4 w-4" />}
           error={errors.email?.message}
           {...register("email")}
         />
@@ -101,8 +94,8 @@ export function LoginForm() {
           label="Password"
           placeholder="••••••••••••"
           type="password"
-          leftIconSrc={PASSWORD_ICON_SRC}
-          rightIconSrc={EYE_ICON_SRC}
+          leftIcon={<Lock className="h-4 w-4" />}
+          rightIcon={<Eye className="h-4 w-4" />}
           error={errors.password?.message}
           {...register("password")}
         />
@@ -130,7 +123,7 @@ export function LoginForm() {
       </div>
 
       <div className="mt-8 flex items-center justify-center gap-2 pt-2">
-        <img src={TRUST_ICON_SRC} alt="" className="h-3 w-[10px]" aria-hidden="true" />
+        <ShieldCheck className="h-4 w-4 text-tatt-lime" aria-hidden="true" />
         <p className="text-center text-xs font-bold uppercase tracking-[1.2px] text-tatt-gray">
           Secure NGO Member Portal
         </p>
