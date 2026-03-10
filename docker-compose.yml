@@ -29,6 +29,13 @@ services:
       dockerfile: Dockerfile
     container_name: tatt-api
     restart: always
+    # Run as root briefly to fix bind-mount ownership, then exec as node
+    user: root
+    command: >
+      sh -c "chown -R node:node /app/uploads
+      && mkdir -p /app/uploads/image /app/uploads/video /app/uploads/audio /app/uploads/document
+      && chown -R node:node /app/uploads
+      && exec su-exec node npm run start"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,10 +64,18 @@ services:
       MAIL_USER: ${MAIL_USER}
       MAIL_PASS: ${MAIL_PASS}
       MAIL_FROM: ${MAIL_FROM}
+      MAIL_FROM: ${MAIL_FROM}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
       API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
+      UPLOAD_DIR: /app/uploads
+      UPLOAD_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001,https://community.theafricanthinktank.com}
+      DEFAULT_ADMIN_EMAIL: ${DEFAULT_ADMIN_EMAIL}
+      DEFAULT_ADMIN_PASS: ${DEFAULT_ADMIN_PASS}
+      DEFAULT_ADMIN_FIRSTNAME: ${DEFAULT_ADMIN_FIRSTNAME:-TATT}
+      DEFAULT_ADMIN_LASTNAME: ${DEFAULT_ADMIN_LASTNAME:-Admin}
     volumes:
-      - ./server/uploads:/app/uploads
+      - uploads_data:/app/uploads
     networks:
       - tatt-network
 
@@ -100,3 +115,6 @@ networks:
 
 volumes:
   postgres_data:
+  # Named volume for uploads — Docker manages ownership correctly,
+  # avoiding the EACCES permission issue with bind mounts.
+  uploads_data:
