@@ -58,6 +58,10 @@ export class UpdateProfileDto {
     @IsString() @IsOptional()
     profilePicture?: string;
 
+    @ApiProperty({ required: false })
+    @IsString() @IsOptional()
+    chapterId?: string;
+
     @ApiProperty({ enum: ConnectionPreference, required: false })
     @IsEnum(ConnectionPreference)
     @IsOptional()

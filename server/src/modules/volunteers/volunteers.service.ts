@@ -66,6 +66,14 @@ export class VolunteersService {
         return this.applicationModel.create({ ...dto, userId });
     }
 
+    async getMyApplications(userId: string) {
+        return this.applicationModel.findAll({
+            where: { userId },
+            include: [{ model: VolunteerRole }],
+            order: [['createdAt', 'DESC']],
+        });
+    }
+
     async getApplications(adminId: string, roleId?: string) {
         const where: any = {};
         if (roleId) where.roleId = roleId;
@@ -187,5 +195,13 @@ export class VolunteersService {
 
     async getTrainingResources() {
         return this.trainingModel.findAll({ order: [['createdAt', 'DESC']] });
+    }
+
+    async getStats(userId: string) {
+        const [pendingActivities, neededRoles] = await Promise.all([
+            this.activityModel.count({ where: { assignedToId: userId, status: ActivityStatus.ASSIGNED } }),
+            this.roleModel.count({ where: { isActive: true, openUntil: { [Op.gt]: new Date() } } })
+        ]);
+        return { pendingActivities, neededRoles };
     }
 }

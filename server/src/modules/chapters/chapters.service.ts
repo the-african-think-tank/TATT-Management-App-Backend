@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Chapter } from './entities/chapter.entity';
@@ -15,7 +15,9 @@ const ACTIVITY_AUTHOR_ATTRS = ['id', 'firstName', 'lastName', 'profilePicture', 
 const POST_AUTHOR_ATTRS = ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'communityTier', 'tattMemberId'] as const;
 
 @Injectable()
-export class ChaptersService {
+export class ChaptersService implements OnApplicationBootstrap {
+    private readonly logger = new Logger(ChaptersService.name);
+
     constructor(
         @InjectModel(Chapter) private chapterRepository: typeof Chapter,
         @InjectModel(ChapterActivity) private activityRepository: typeof ChapterActivity,
@@ -24,6 +26,26 @@ export class ChaptersService {
         @InjectModel(PostLike) private likeRepository: typeof PostLike,
         @InjectModel(PostComment) private commentRepository: typeof PostComment,
     ) { }
+
+    async onApplicationBootstrap() {
+        const count = await this.chapterRepository.count();
+        if (count === 0) {
+            this.logger.log('Seeding initial Regional Chapters...');
+            const regions = [
+                { name: 'Nairobi Chapter', code: 'NBO', country: 'Kenya', stateRegion: 'Nairobi', cities: ['Nairobi'], description: 'TATT Hub for East Africa and Kenya.' },
+                { name: 'Lagos Chapter', code: 'LOS', country: 'Nigeria', stateRegion: 'Lagos', cities: ['Lagos'], description: 'Strategic hub for Nigeria and West Africa.' },
+                { name: 'Johannesburg Chapter', code: 'JNB', country: 'South Africa', stateRegion: 'Gauteng', cities: ['Johannesburg'], description: 'Regional base for Southern African operations.' },
+                { name: 'Accra Chapter', code: 'ACC', country: 'Ghana', stateRegion: 'Greater Accra', cities: ['Accra'], description: 'Key West African center for development.' },
+                { name: 'London Diaspora Chapter', code: 'LDN', country: 'UK', stateRegion: 'London', cities: ['London'], description: 'Major Diaspora hub connect in the United Kingdom.' },
+                { name: 'Atlanta Diaspora Chapter', code: 'ATL', country: 'USA', stateRegion: 'Georgia', cities: ['Atlanta'], description: 'Primary Diaspora network starting point in North America.' }
+            ];
+
+            for (const chap of regions) {
+                await this.chapterRepository.create(chap as any);
+            }
+            this.logger.log(`Successfully seeded ${regions.length} regional chapters.`);
+        }
+    }
 
     async createChapter(dto: CreateChapterDto) {
         const existingCode = await this.chapterRepository.findOne({ where: { code: dto.code } });

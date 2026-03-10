@@ -1,12 +1,14 @@
 import { FormInput } from "@/components/atoms/form-input";
 import { FormLabel } from "@/components/atoms/form-label";
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 type LoginFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   id: string;
   label: string;
   leftIconSrc?: string;
   rightIconSrc?: string;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
   error?: string | undefined;
 };
 
@@ -17,6 +19,8 @@ export function LoginField({
   type = "text",
   leftIconSrc,
   rightIconSrc,
+  leftIcon,
+  rightIcon,
   error,
   ...props
 }: LoginFieldProps) {
@@ -29,6 +33,8 @@ export function LoginField({
         type={type}
         leftIconSrc={leftIconSrc}
         rightIconSrc={rightIconSrc}
+        leftIcon={leftIcon}
+        rightIcon={rightIcon}
         {...props}
       />
       {error && <p className="text-xs text-red-500">{error}</p>}

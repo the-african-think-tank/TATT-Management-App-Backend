@@ -83,14 +83,14 @@ interface ChapterPost {
 
 const ACTIVITY_TYPE_CONFIG = {
   ANNOUNCEMENT: { label: "Announcement", icon: Megaphone, color: "text-tatt-lime bg-tatt-lime/10 border-tatt-lime/20" },
-  EVENT: { label: "Event", icon: Calendar, color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700" },
-  INITIATIVE: { label: "Initiative", icon: Lightbulb, color: "text-amber-600 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700" },
-  NEWS: { label: "News", icon: Newspaper, color: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700" },
+  EVENT: { label: "Event", icon: Calendar, color: "text-blue-600 bg-blue-50  border-blue-200 " },
+  INITIATIVE: { label: "Initiative", icon: Lightbulb, color: "text-amber-600 bg-amber-50  border-amber-200 " },
+  NEWS: { label: "News", icon: Newspaper, color: "text-purple-600 bg-purple-50  border-purple-200 " },
 };
 
 const TIER_BADGES: Record<string, { label: string; classes: string }> = {
   KIONGOZI: { label: "Kiongozi", classes: "bg-tatt-lime text-tatt-black" },
-  IMANI: { label: "Imani", classes: "bg-slate-200 dark:bg-slate-700 text-foreground" },
+  IMANI: { label: "Imani", classes: "bg-slate-200  text-foreground" },
   UBUNTU: { label: "Ubuntu", classes: "bg-background border border-border text-tatt-gray" },
   FREE: { label: "Free", classes: "bg-background border border-border text-tatt-gray" },
 };
@@ -437,7 +437,7 @@ export default function MyChapterPage() {
                           {isAdmin && (
                             <button
                               onClick={() => handleDeleteActivity(activity.id)}
-                              className="ml-auto p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-tatt-gray hover:text-red-500 transition-colors"
+                              className="ml-auto p-1.5 rounded-lg hover:bg-red-50  text-tatt-gray hover:text-red-500 transition-colors"
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -666,7 +666,7 @@ export default function MyChapterPage() {
 
             <Link
               href="/dashboard/events"
-              className="mt-6 w-full flex items-center justify-center gap-2 py-3 bg-tatt-black text-white dark:bg-white dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
+              className="mt-6 w-full flex items-center justify-center gap-2 py-3 bg-tatt-black text-white   rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
             >
               Explore Mixers & Workshops <ArrowRight className="size-3" />
             </Link>

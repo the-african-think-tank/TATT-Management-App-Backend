@@ -234,7 +234,7 @@ export default function EventsPage() {
                                         </div>
                                         <Link
                                             href={`/dashboard/events/${event.id}`}
-                                            className="bg-tatt-black text-white dark:bg-white dark:text-black size-12 rounded-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                            className="bg-tatt-black text-white   size-12 rounded-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg"
                                         >
                                             <ArrowRight className="size-5" />
                                         </Link>
@@ -246,24 +246,6 @@ export default function EventsPage() {
                 </div>
             )}
 
-            {/* Perks Promo */}
-            {!loading && user?.communityTier === "FREE" && (
-                <div className="mt-12 bg-tatt-lime p-8 rounded-[40px] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-tatt-lime/20 overflow-hidden relative">
-                    <div className="absolute -right-20 -top-20 size-64 bg-white/20 rounded-full blur-3xl"></div>
-                    <div className="relative z-10 flex-1">
-                        <h2 className="text-3xl font-black text-tatt-black leading-tight mb-2">Want free access?</h2>
-                        <p className="text-tatt-black/70 font-bold max-w-xl">
-                            Unlock free workshop passes and exclusive mixer discounts by upgrading to a premium membership tier today.
-                        </p>
-                    </div>
-                    <Link
-                        href="/dashboard/membership"
-                        className="relative z-10 bg-tatt-black text-tatt-lime px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all"
-                    >
-                        View Tiers
-                    </Link>
-                </div>
-            )}
         </div>
     );
 }

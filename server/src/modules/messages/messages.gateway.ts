@@ -41,21 +41,29 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
      * Authenticate Socket connection using JWT
      */
     async handleConnection(client: Socket) {
+        this.logger.log(`Incoming connection attempt: socket ${client.id}`);
         try {
             const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.split(' ')[1];
             if (!token) {
-                this.logger.warn(`No token provided for socket ${client.id}`);
+                this.logger.warn(`No token provided for socket ${client.id}. Handshake auth: ${JSON.stringify(client.handshake.auth)}`);
                 client.disconnect();
                 return;
             }
 
+            this.logger.log(`Authenticating socket ${client.id} with token...`);
             const payload = await this.jwtService.verifyAsync(token);
             const userId = payload.sub;
+
+            if (!userId) {
+                this.logger.error(`Token verified but no sub/userId found in payload: ${JSON.stringify(payload)}`);
+                client.disconnect();
+                return;
+            }
 
             this.connectedUsers.set(userId, client.id);
             client.data.userId = userId;
 
-            this.logger.log(`User ${userId} connected as socket ${client.id}`);
+            this.logger.log(`User ${userId} successfully authenticated for socket ${client.id}`);
         } catch (error) {
             this.logger.error(`Authentication failed for socket ${client.id}: ${error.message}`);
             client.disconnect();

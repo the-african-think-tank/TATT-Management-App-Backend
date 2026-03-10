@@ -16,11 +16,14 @@ import {
     Eye,
     Send,
     AlertCircle,
+    Zap,
+    Lock,
+    ArrowRight,
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
-import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Chapter {
     id: string;
@@ -57,6 +60,7 @@ const TIER_BADGES: Record<string, { label: string; classes: string }> = {
 
 export default function NetworkPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -74,6 +78,20 @@ export default function NetworkPage() {
     const [connectMessage, setConnectMessage] = useState("");
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
+
+    // Free-tier upgrade prompt
+    const [upgradePromptOpen, setUpgradePromptOpen] = useState(false);
+    const [paidPlans, setPaidPlans] = useState<{ name: string; tier: string; monthlyPrice: number }[]>([]);
+
+    // Fetch plans once for the upgrade prompt
+    useEffect(() => {
+        api.get("/billing/plans")
+            .then((r) => {
+                const plans = Array.isArray(r.data) ? r.data : [];
+                setPaidPlans(plans.filter((p: any) => p.monthlyPrice > 0));
+            })
+            .catch(() => {});
+    }, []);
 
     const industries = [
         "Technology", "Finance", "Healthcare", "Education", "Real Estate",
@@ -158,6 +176,11 @@ export default function NetworkPage() {
 
     // ── Modal ────────────────────────────────────────────────────
     const openModal = (member: Member) => {
+        // Free members cannot connect — show upgrade prompt instead
+        if (!user?.communityTier || user.communityTier === "FREE") {
+            setUpgradePromptOpen(true);
+            return;
+        }
         setModal({ open: true, member });
         setConnectMessage("");
         setSendError(null);
@@ -288,7 +311,8 @@ export default function NetworkPage() {
                                             <div className="relative mb-4">
                                                 <div className="size-24 rounded-full overflow-hidden border-4 border-tatt-lime/30 ring-4 ring-tatt-lime/10 bg-tatt-lime/5 flex items-center justify-center relative">
                                                     {member.profilePicture ? (
-                                                        <Image src={member.profilePicture} alt={member.firstName} fill className="object-cover" />
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img src={member.profilePicture} alt={member.firstName} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <span className="text-2xl font-black text-tatt-lime-dark">
                                                             {member.firstName.charAt(0)}{member.lastName.charAt(0)}
@@ -356,7 +380,7 @@ export default function NetworkPage() {
                                             {/* View Profile */}
                                             <Link
                                                 href={`/dashboard/network/${member.id}`}
-                                                className="flex items-center justify-center gap-1.5 bg-background border border-border text-foreground font-black py-2.5 rounded-xl text-[11px] uppercase tracking-wide hover:bg-tatt-black hover:text-white dark:hover:bg-white dark:hover:text-tatt-black transition-all"
+                                                className="flex items-center justify-center gap-1.5 bg-background border border-border text-foreground font-black py-2.5 rounded-xl text-[11px] uppercase tracking-wide hover:bg-tatt-black hover:text-white   transition-all"
                                             >
                                                 <Eye className="h-3.5 w-3.5" /> Profile
                                             </Link>
@@ -402,7 +426,8 @@ export default function NetworkPage() {
                             <div className="relative mb-6">
                                 <div className="size-24 rounded-full overflow-hidden border-4 border-[#1a1a15] ring-4 ring-tatt-lime bg-tatt-lime/10 flex items-center justify-center relative">
                                     {modal.member.profilePicture ? (
-                                        <Image src={modal.member.profilePicture} alt={modal.member.firstName} fill className="object-cover" />
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={modal.member.profilePicture} alt={modal.member.firstName} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-4xl font-black text-tatt-lime">
                                             {modal.member.firstName.charAt(0)}{modal.member.lastName.charAt(0)}
@@ -425,13 +450,13 @@ export default function NetworkPage() {
                         {/* Modal Body */}
                         <div className="p-8 flex flex-col gap-6 bg-surface">
                             <div className="flex flex-col gap-3">
-                                <label className="text-[15px] font-bold text-black dark:text-white" htmlFor="connect-msg">
+                                <label className="text-[15px] font-bold text-black " htmlFor="connect-msg">
                                     Add a personalized message
                                 </label>
                                 <textarea
                                     id="connect-msg"
                                     rows={4}
-                                    className="w-full p-5 bg-[#f5f5f5] dark:bg-white/5 border border-border dark:border-white/10 rounded-2xl text-black dark:text-white placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none shadow-inner"
+                                    className="w-full p-5 bg-[#f5f5f5]  border border-border  rounded-2xl text-black  placeholder:text-gray-500 text-[15px] focus:ring-2 focus:ring-tatt-lime outline-none transition-all resize-none shadow-inner"
                                     placeholder={`Hi ${modal.member.firstName}, I'd love to discuss your latest work on policy frameworks...`}
                                     value={connectMessage}
                                     onChange={(e) => { setConnectMessage(e.target.value); setSendError(null); }}
@@ -441,9 +466,9 @@ export default function NetworkPage() {
 
 
                             {sendError && (
-                                <div className="flex items-start gap-4 p-5 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">
+                                <div className="flex items-start gap-4 p-5 bg-red-50  rounded-2xl border border-red-200 ">
                                     <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">{sendError}</p>
+                                    <p className="text-sm text-red-600  font-medium">{sendError}</p>
                                 </div>
                             )}
 
@@ -460,11 +485,77 @@ export default function NetworkPage() {
                                 <button
                                     onClick={closeModal}
                                     disabled={sending}
-                                    className="flex-1 py-4 bg-[#fcfcfc] dark:bg-white/5 text-black dark:text-white text-[13px] font-black rounded-xl uppercase tracking-widest border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/10 transition-all"
+                                    className="flex-1 py-4 bg-[#fcfcfc]  text-black  text-[13px] font-black rounded-xl uppercase tracking-widest border border-gray-200  hover:bg-gray-50  transition-all"
                                 >
                                     Cancel
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Free-Tier Upgrade Prompt ───────────────────────────────── */}
+            {upgradePromptOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) setUpgradePromptOpen(false); }}
+                >
+                    <div className="bg-tatt-black w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-tatt-lime/20">
+                        {/* Header */}
+                        <div className="relative pt-10 pb-8 px-8 text-center">
+                            <button
+                                onClick={() => setUpgradePromptOpen(false)}
+                                className="absolute top-5 right-5 text-white/30 hover:text-white transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+
+                            {/* Icon */}
+                            <div className="size-16 rounded-full bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center mx-auto mb-5">
+                                <Lock className="h-7 w-7 text-tatt-lime" />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-white tracking-tight">
+                                Members-Only Feature
+                            </h3>
+                            <p className="text-white/50 text-sm font-medium mt-2 leading-relaxed">
+                                Connecting with other members is exclusive to paid plan holders. Upgrade your membership to start building your network.
+                            </p>
+                        </div>
+
+                        {/* Plans teaser — from backend */}
+                        <div className="mx-8 mb-6 rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+                            {paidPlans.length === 0 ? (
+                                <p className="text-white/40 text-xs text-center">Loading plans...</p>
+                            ) : (
+                                paidPlans.map((plan) => (
+                                    <div key={plan.tier} className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Zap className="h-3.5 w-3.5 text-tatt-lime shrink-0" />
+                                            <span className="text-white font-bold text-sm">{plan.name}</span>
+                                        </div>
+                                        <span className="text-tatt-lime text-xs font-black">${plan.monthlyPrice}/mo</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* CTAs */}
+                        <div className="px-8 pb-8 flex flex-col gap-3">
+                            <button
+                                onClick={() => { setUpgradePromptOpen(false); router.push("/dashboard/upgrade"); }}
+                                className="flex items-center justify-center gap-2 w-full py-4 bg-tatt-lime text-tatt-black font-black text-sm uppercase tracking-widest rounded-2xl hover:brightness-105 transition-all"
+                            >
+                                View Plans & Upgrade
+                                <ArrowRight className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setUpgradePromptOpen(false)}
+                                className="w-full py-3 text-white/40 font-bold text-sm hover:text-white transition-colors"
+                            >
+                                Maybe Later
+                            </button>
                         </div>
                     </div>
                 </div>

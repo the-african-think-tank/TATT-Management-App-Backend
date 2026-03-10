@@ -50,7 +50,12 @@ export default function SharePostPage() {
             }
         };
 
-        if (postId) fetchPost();
+        if (postId) {
+            fetchPost();
+        } else {
+            // Next.js params hydration or invalid path
+            setIsLoading(false);
+        }
     }, [postId]);
 
     // If already authenticated, redirect to the dashboard feed (maybe scroll to that post)
@@ -99,20 +104,18 @@ export default function SharePostPage() {
                     <div className="p-8 lg:p-12">
                         {/* Author Header */}
                         <div className="flex items-center gap-5 mb-10">
-                            <div className="size-16 rounded-full border-2 border-tatt-lime/30 overflow-hidden bg-background p-1">
-                                <div className="size-full rounded-full overflow-hidden relative">
-                                    {post.author.profilePicture ? (
-                                        <Image src={post.author.profilePicture} alt={post.author.firstName} fill className="object-cover" />
-                                    ) : (
-                                        <div className="size-full flex items-center justify-center font-black text-tatt-lime bg-black/5 text-xl">
-                                            {post.author.firstName.charAt(0)}{post.author.lastName.charAt(0)}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-3">
-                                    <h3 className="text-xl font-black">{post.author.firstName} {post.author.lastName}</h3>
+                                    <div className="relative size-10 rounded-full bg-surface border-2 border-background shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+                                        {post.author?.profilePicture ? (
+                                            <img src={post.author.profilePicture} alt={post.author.firstName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-sm font-black text-tatt-lime-dark">
+                                                {(post.author?.firstName || "U").charAt(0)}{(post.author?.lastName || "U").charAt(0)}
+                                            </span>
+                                        )}
+                                    </div>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-black">{post.author?.firstName} {post.author?.lastName}</h3>
                                     <span className="bg-tatt-lime/10 text-tatt-lime text-[10px] font-black px-2.5 py-1 rounded border border-tatt-lime/20 uppercase tracking-widest">
                                         {post.author.communityTier}
                                     </span>
@@ -135,7 +138,7 @@ export default function SharePostPage() {
                                         {post.content ? post.content : "The strategic wisdom contained in this insight is reserved for the TATT community elite..."}
                                     </div>
 
-                                    <div className="bg-black/5 dark:bg-white/5 rounded-[2rem] p-10 border border-dashed border-border flex flex-col items-center text-center space-y-6 relative overflow-hidden group">
+                                    <div className="bg-black/5  rounded-[2rem] p-10 border border-dashed border-border flex flex-col items-center text-center space-y-6 relative overflow-hidden group">
                                         <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                                             <Lock className="size-32 rotate-12" />
                                         </div>
@@ -152,7 +155,7 @@ export default function SharePostPage() {
                                             <Link href="/signup" className="bg-tatt-lime text-black font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-tatt-lime/20 flex items-center justify-center gap-2 whitespace-nowrap">
                                                 <UserPlus className="h-4 w-4" /> Join TATT Community
                                             </Link>
-                                            <Link href="/" className="bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/20 text-foreground font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                                            <Link href="/" className="bg-white/10  backdrop-blur-md border border-white/20 text-foreground font-black px-10 py-4 rounded-2xl text-sm uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
                                                 <LogIn className="h-4 w-4" /> Members Sign In
                                             </Link>
                                         </div>

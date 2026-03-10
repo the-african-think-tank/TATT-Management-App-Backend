@@ -73,8 +73,8 @@ interface DirectMessage {
 
 const TIER_BADGES: Record<string, { label: string; classes: string }> = {
     KIONGOZI: { label: "Kiongozi", classes: "bg-tatt-lime text-tatt-black" },
-    IMANI: { label: "Imani", classes: "bg-slate-200 text-neutral-700 dark:bg-slate-700 dark:text-slate-200" },
-    UBUNTU: { label: "Ubuntu", classes: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+    IMANI: { label: "Imani", classes: "bg-slate-200 text-neutral-700  " },
+    UBUNTU: { label: "Ubuntu", classes: "bg-orange-100 text-orange-700  " },
     FREE: { label: "Free", classes: "bg-neutral-100 border border-border text-tatt-gray" },
 };
 
@@ -239,7 +239,7 @@ export default function CommunicationsPage() {
         };
 
         const fetchUser = async () => {
-            const userStr = localStorage.getItem("tatt_user");
+            const userStr = localStorage.getItem("user");
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
@@ -490,7 +490,7 @@ export default function CommunicationsPage() {
                                             <button onClick={() => handleRespondRequest(req.id, "ACCEPTED")} className="flex-1 bg-tatt-lime text-tatt-black text-xs font-bold py-2 rounded-lg hover:brightness-110 shadow shadow-tatt-lime/10 transition-all">
                                                 Accept
                                             </button>
-                                            <button onClick={() => handleRespondRequest(req.id, "DECLINED")} className="flex-1 bg-background border border-border text-foreground text-xs font-bold py-2 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                                            <button onClick={() => handleRespondRequest(req.id, "DECLINED")} className="flex-1 bg-background border border-border text-foreground text-xs font-bold py-2 rounded-lg hover:bg-black hover:text-white   transition-all">
                                                 Ignore
                                             </button>
                                         </div>
@@ -641,7 +641,7 @@ export default function CommunicationsPage() {
                                             </div>
                                             <div className="flex items-center gap-1 mt-0.5">
                                                 {req.type === "INCOMING" ? (
-                                                    <span className="text-[10px] font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-1.5 rounded uppercase">Incoming</span>
+                                                    <span className="text-[10px] font-bold text-red-500 bg-red-100  px-1.5 rounded uppercase">Incoming</span>
                                                 ) : (
                                                     <span className="text-[10px] font-bold text-tatt-gray bg-background border px-1.5 rounded uppercase">Sent</span>
                                                 )}
@@ -812,7 +812,7 @@ export default function CommunicationsPage() {
                             <div className="absolute bottom-full right-4 z-50 shadow-2xl border border-border rounded-xl overflow-hidden">
                                 <Picker
                                     onEmojiClick={handleEmojiClick}
-                                    theme={typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' as any : 'light' as any}
+                                    theme={'light' as any}
                                     width={300}
                                     height={400}
                                 />
@@ -836,7 +836,7 @@ export default function CommunicationsPage() {
                             <button
                                 type="submit"
                                 disabled={sendingMessage || !newMessage.trim()}
-                                className="bg-tatt-black text-white dark:bg-white dark:text-black h-11 px-5 rounded-xl flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 shadow-md"
+                                className="bg-tatt-black text-white   h-11 px-5 rounded-xl flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 shadow-md"
                             >
                                 {sendingMessage ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
                             </button>
@@ -903,7 +903,7 @@ export default function CommunicationsPage() {
                         <div className="flex flex-wrap gap-2">
                             {member.industry && <span className="px-3 py-1.5 bg-background text-foreground text-xs font-medium rounded-full border border-border">{member.industry}</span>}
                             {member.location && <span className="px-3 py-1.5 bg-background text-foreground text-xs font-medium rounded-full border border-border">{member.location}</span>}
-                            <span className="px-3 py-1.5 bg-tatt-lime/10 text-tatt-lime-dark dark:text-tatt-lime text-xs font-bold rounded-full border border-tatt-lime/20 uppercase tracking-tight">Verified Member</span>
+                            <span className="px-3 py-1.5 bg-tatt-lime/10 text-tatt-lime-dark  text-xs font-bold rounded-full border border-tatt-lime/20 uppercase tracking-tight">Verified Member</span>
                         </div>
                         <p className="mt-4 text-xs text-tatt-gray italic border-t border-border pt-4">
                             Details verified by TATT Network Operations. Visit their full profile to learn more.

@@ -26,7 +26,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
             <div className="flex items-center gap-4 flex-1">
                 <button
                     onClick={onMenuClick}
-                    className="lg:hidden p-2 -ml-2 text-tatt-gray hover:text-foreground rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                    className="lg:hidden p-2 -ml-2 text-tatt-gray hover:text-foreground rounded-lg hover:bg-black/5 "
                 >
                     <Menu className="h-6 w-6" />
                 </button>
@@ -49,18 +49,28 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                     >
                         <div className="text-right hidden sm:block">
                             <p className="text-sm font-bold leading-none">{user?.firstName} {user?.lastName}</p>
-                            <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">{user?.systemRole?.replace('_', ' ') || user?.communityTier || "—"} Member</p>
+                            <p className="text-[11px] text-tatt-gray font-medium uppercase mt-1">{user?.systemRole?.replace('_MEMBER', '').replace('_', ' ') || user?.communityTier || "—"}</p>
                         </div>
                         <div className="size-10 rounded-full border-2 border-tatt-lime overflow-hidden bg-background flex items-center justify-center font-bold text-tatt-lime select-none">
-                            {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                            {user?.profilePicture ? (
+                                <img
+                                    src={user.profilePicture}
+                                    alt={`${user.firstName} ${user.lastName}`}
+                                    className="size-full object-cover"
+                                />
+                            ) : (
+                                <span className="text-sm">
+                                    {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                                </span>
+                            )}
                         </div>
                     </div>
 
                     {dropdownOpen && (
-                        <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="absolute right-0 mt-3 w-48 bg-white  rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
                             <Link
                                 href="/dashboard/settings"
-                                className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5  transition-colors"
                                 onClick={() => setDropdownOpen(false)}
                             >
                                 <UserIcon className="h-4 w-4" />
@@ -71,7 +81,7 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                                     setDropdownOpen(false);
                                     logout();
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50  transition-colors text-left"
                             >
                                 <LogOut className="h-4 w-4" />
                                 Logout

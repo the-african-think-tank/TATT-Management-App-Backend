@@ -17,7 +17,10 @@ import {
     X,
     Loader2,
     CheckCircle2,
-    AlertCircle
+    AlertCircle,
+    HeartHandshake,
+    Settings,
+    MessageSquare
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth, User } from "@/context/auth-context";
@@ -385,77 +388,83 @@ export function AdminRegionalChaptersPage() {
 
                         <form onSubmit={handleCreateChapter}>
                             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                                {/* Section: Identity */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
-                                        <Info className="h-3 w-3" />
-                                        Chapter Identity
+                                {/* Section: Chapter Identity */}
+                                <section className="bg-surface  p-8 rounded-xl shadow-sm border border-border">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="bg-tatt-lime/10 p-2 rounded-lg text-tatt-lime">
+                                            <Info className="h-5 w-5" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-foreground">Chapter Identity</h3>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Chapter Name</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground placeholder-tatt-gray/40 transition-all font-medium"
-                                            placeholder="e.g. Accra Collective Hub"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Section: Location */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
-                                        <MapPin className="h-3 w-3" />
-                                        Detailed Location
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Country</label>
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-sm font-semibold text-tatt-gray">Chapter Name</label>
                                             <input
                                                 required
                                                 type="text"
-                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
+                                                className="rounded-lg border border-border focus:border-tatt-lime focus:ring-tatt-lime bg-background-light/30   h-12 px-4"
+                                                placeholder="e.g., Accra Hub, Berlin Collective"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
+                                {/* Section: Detailed Location */}
+                                <section className="bg-surface  p-8 rounded-xl shadow-sm border border-border mt-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="bg-tatt-lime/10 p-2 rounded-lg text-tatt-lime">
+                                            <MapPin className="h-5 w-5" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-foreground">Detailed Location</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-sm font-semibold text-tatt-gray">Country</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                className="rounded-lg border border-border focus:border-tatt-lime focus:ring-tatt-lime bg-background-light/30   h-12 px-4"
                                                 placeholder="e.g. Ghana"
                                                 value={formData.country}
                                                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">State / Region</label>
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-sm font-semibold text-tatt-gray">State / Region</label>
                                             <input
                                                 required
                                                 type="text"
-                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
+                                                className="rounded-lg border border-border focus:border-tatt-lime focus:ring-tatt-lime bg-background-light/30   h-12 px-4"
                                                 placeholder="e.g. Greater Accra"
                                                 value={formData.stateRegion}
                                                 onChange={(e) => setFormData({ ...formData, stateRegion: e.target.value })}
                                             />
                                         </div>
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-sm font-semibold text-tatt-gray">Primary Cities (Comma Separated)</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                className="rounded-lg border border-border focus:border-tatt-lime focus:ring-tatt-lime bg-background-light/30   h-12 px-4"
+                                                placeholder="Accra, Tema, Kumasi"
+                                                value={formData.cities}
+                                                onChange={(e) => setFormData({ ...formData, cities: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Primary Cities (Comma Separated)</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground transition-all"
-                                            placeholder="Accra, Tema, Kumasi"
-                                            value={formData.cities}
-                                            onChange={(e) => setFormData({ ...formData, cities: e.target.value })}
-                                        />
+                                </section>
+                                {/* Section: Leadership Assignment */}
+                                <section className="bg-surface  p-8 rounded-xl shadow-sm border border-border mt-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="bg-tatt-lime/10 p-2 rounded-lg text-tatt-lime">
+                                            <Users className="h-5 w-5" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-foreground">Leadership Assignment</h3>
                                     </div>
-                                </div>
-
-                                {/* Section: Leadership */}
-                                <div className="space-y-4 pt-2 border-t border-border/50">
-                                    <div className="flex items-center gap-2 text-tatt-lime font-bold text-[10px] uppercase tracking-widest">
-                                        <Users className="h-3 w-3" />
-                                        Leadership Directives
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Regional Director</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-semibold text-tatt-gray">Regional Director</label>
                                             <select
                                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
                                                 value={formData.regionalManagerId}
@@ -467,8 +476,8 @@ export function AdminRegionalChaptersPage() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-tatt-gray mb-1.5 uppercase tracking-wide">Associate Director</label>
+                                        <div className="space-y-4">
+                                            <label className="text-sm font-semibold text-tatt-gray">Associate Regional Director</label>
                                             <select
                                                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
                                                 value={formData.associateRegionalDirectorId}
@@ -481,25 +490,64 @@ export function AdminRegionalChaptersPage() {
                                             </select>
                                         </div>
                                     </div>
+                                </section>
+                                {/* Section: Chapter Features */}
+                                <section className="bg-surface  p-8 rounded-xl shadow-sm border border-border mt-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="bg-tatt-lime/10 p-2 rounded-lg text-tatt-lime">
+                                            <Settings className="h-5 w-5" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-foreground">Chapter Features</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Volunteers Program Toggle */}
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-background-light/50  border border-border gap-4">
+                                            <div className="flex gap-4">
+                                                <HeartHandshake className="text-tatt-gray h-5 w-5 shrink-0" />
+                                                <div>
+                                                    <p className="font-bold text-sm text-foreground">Volunteers Program</p>
+                                                    <p className="text-xs text-tatt-gray">Enable local volunteer recruitment</p>
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <input type="checkbox" className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer  peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all  peer-checked:bg-tatt-lime" />
+                                            </label>
+                                        </div>
+                                        {/* Local Forum Toggle */}
+                                        <div className="flex items-center justify-between p-4 rounded-xl bg-background-light/50  border border-border gap-4">
+                                            <div className="flex gap-4">
+                                                <MessageSquare className="text-tatt-gray h-5 w-5 shrink-0" />
+                                                <div>
+                                                    <p className="font-bold text-sm text-foreground">Local Forum</p>
+                                                    <p className="text-xs text-tatt-gray">Activate chapter discussion board</p>
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <input type="checkbox" className="sr-only peer" />
+                                                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer  peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all  peer-checked:bg-tatt-lime" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </section>
+                                {/* Form Actions */}
+                                <div className="flex flex-col md:flex-row items-center justify-end gap-4 py-8 border-t border-border mt-6">
+                                    <button
+                                        type="button"
+                                        className="w-full md:w-auto px-8 py-3 rounded-lg text-sm font-bold text-tatt-gray hover:bg-surface transition-colors"
+                                        onClick={() => setIsCreateModalOpen(false)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="w-full md:w-auto bg-tatt-lime text-background-dark px-10 py-3 rounded-lg text-sm font-bold shadow-xl shadow-tatt-lime/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                        Create Regional Chapter
+                                    </button>
                                 </div>
-                            </div>
-
-                            <div className="p-6 bg-background border-t border-border flex flex-col-reverse sm:flex-row justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCreateModalOpen(false)}
-                                    className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-foreground bg-surface border border-border hover:bg-background transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="w-full sm:w-auto px-10 py-3 rounded-xl text-sm font-black text-tatt-black bg-tatt-lime hover:brightness-105 transition-all shadow-xl shadow-tatt-lime/10 flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                                    Create Regional Chapter
-                                </button>
                             </div>
                         </form>
                     </div>
