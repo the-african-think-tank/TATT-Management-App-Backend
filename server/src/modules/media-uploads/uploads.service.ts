@@ -67,7 +67,17 @@ export class UploadsService {
                 const filename = `${crypto.randomUUID()}${ext}`;
                 const destPath = path.join(destDir, filename);
 
-                fs.renameSync(file.path, destPath); // atomic move within same FS
+                try {
+                    fs.renameSync(file.path, destPath);
+                } catch (err: any) {
+                    if (err.code === 'EXDEV') {
+                        // Fallback for cross-device move (common in Docker volumes)
+                        fs.copyFileSync(file.path, destPath);
+                        fs.unlinkSync(file.path);
+                    } else {
+                        throw err;
+                    }
+                }
 
                 const relativePath = path.join(category, dateDir, filename).replace(/\\/g, '/');
                 const publicUrl = `${basePublicUrl.replace(/\/$/, '')}/uploads/${relativePath}`;
