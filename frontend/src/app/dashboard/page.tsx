@@ -3,13 +3,16 @@
 import { useAuth } from "@/context/auth-context";
 import api from "@/services/api";
 import {
+    Calendar as CalendarIcon,
     Users,
     Eye,
-    UserSearch,
-    PiggyBank,
+    Megaphone,
+    Search,
+    UserCheck,
+    Mail,
+    ClipboardList,
     GraduationCap,
     Ticket,
-    Megaphone,
     Shield,
     FileText,
     Award,
@@ -26,8 +29,16 @@ export default function DashboardPage() {
     const { user } = useAuth();
     const [connectionCount, setConnectionCount] = useState<number | null>(null);
     const [networkLoading, setNetworkLoading] = useState(true);
-    const [dashboardEvents, setDashboardEvents] = useState<any[]>([]);
     const [eventsLoading, setEventsLoading] = useState(true);
+    const [dashboardEvents, setDashboardEvents] = useState<any[]>([]);
+    const [stats, setStats] = useState({
+        upcomingChapterEvents: 0,
+        pendingConnections: 0,
+        unreadMessages: 0,
+        volunteerValue: 0,
+        isVolunteer: false,
+    });
+    const [statsLoading, setStatsLoading] = useState(true);
 
     const safeDate = (dateStr: string) => {
         try {
@@ -51,30 +62,59 @@ export default function DashboardPage() {
         };
         if (user?.id) fetchNetwork();
 
-        const fetchEvents = async () => {
+        const fetchStats = async () => {
             try {
-                const { data } = await api.get("/events");
-                // Filter for upcoming events and limit to 2
-                const upcoming = (data || [])
-                    .filter((e: any) => new Date(e.dateTime) > new Date())
-                    .sort((a: any, b: any) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-                    .slice(0, 2);
-                setDashboardEvents(upcoming);
+                const [eventsRes, connectionsRes, messagesRes, volunteersRes] = await Promise.all([
+                    api.get("/events?upcoming=true"),
+                    api.get("/connections/requests/incoming"),
+                    api.get("/messages/unread-count"),
+                    api.get("/volunteers/stats")
+                ]);
+
+                const allUpcoming: any[] = (eventsRes.data || []).sort(
+                    (a: any, b: any) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+                );
+
+                // Filter to chapter if user has one, otherwise use all upcoming
+                const chapterEvents = user?.chapterId
+                    ? allUpcoming.filter((e: any) =>
+                        e.locations?.some((l: any) => l.chapterId === user.chapterId)
+                    )
+                    : allUpcoming;
+
+                // If no chapter events found, fall back to all upcoming for sidebar
+                const eventsToShow = chapterEvents.length > 0 ? chapterEvents : allUpcoming;
+                setDashboardEvents(eventsToShow.slice(0, 2));
+
+                const pendingConnectionsCount = Array.isArray(connectionsRes.data) ? connectionsRes.data.length : 0;
+                const unreadMessagesCount = messagesRes.data.count || 0;
+
+                const isUserVolunteer = user?.flags?.includes("VOLUNTEER") ||
+                                       ["ADMIN", "SUPERADMIN", "VOLUNTEER_ADMIN"].includes(user?.systemRole || "");
+
+                setStats({
+                    upcomingChapterEvents: chapterEvents.length,
+                    pendingConnections: pendingConnectionsCount,
+                    unreadMessages: unreadMessagesCount,
+                    volunteerValue: isUserVolunteer ? volunteersRes.data.pendingActivities : volunteersRes.data.neededRoles,
+                    isVolunteer: isUserVolunteer
+                });
             } catch (err) {
-                console.error("Dashboard events error:", err);
+                console.error("Dashboard stats error:", err);
             } finally {
+                setStatsLoading(false);
                 setEventsLoading(false);
             }
         };
-        fetchEvents();
-    }, [user?.id]);
+        if (user?.id) fetchStats();
+    }, [user?.id, user?.chapterId, user?.flags, user?.systemRole]);
 
     const firstName = user?.firstName || "Member";
     const tier = user?.communityTier || "FREE";
     const displayTierName =
         tier === "KIONGOZI"
-            ? "Kiongozi Business Member"
-            : `${tier.charAt(0)}${tier.slice(1).toLowerCase()} Member`;
+            ? "Kiongozi Business"
+            : `${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
     const chapterName = user?.chapterName || "—";
     const memberId = user?.tattMemberId || (user?.id ? `MEM-2024-${user.id.slice(0, 4)}` : "MEM-2024-0000");
     const initials = user?.firstName && user?.lastName
@@ -95,11 +135,11 @@ export default function DashboardPage() {
                         <span className="px-3 py-1 bg-tatt-lime text-tatt-black text-xs font-black uppercase rounded shadow-sm">
                             {displayTierName}
                         </span>
-                        <span className="text-tatt-gray text-sm font-medium">• {chapterName} Chapter</span>
+                        <span className="text-tatt-gray text-sm font-medium">• {chapterName}</span>
                     </div>
                 </div>
                 <Link
-                    href="/dashboard/profile"
+                    href={`/dashboard/network/${user?.id || ""}`}
                     className="px-6 py-2.5 bg-foreground text-background rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
                 >
                     <Users className="h-4 w-4" />
@@ -133,19 +173,21 @@ export default function DashboardPage() {
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
-                            <Eye className="h-5 w-5" />
+                            <CalendarIcon className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">+12%</span>
+                        <span className="text-xs font-bold text-green-600 bg-green-50  px-2 py-1 rounded">Soon</span>
                     </div>
-                    <p className="text-tatt-gray text-sm font-medium">Business Impressions</p>
-                    <p className="text-3xl font-black text-foreground">12,482</p>
+                    <p className="text-tatt-gray text-sm font-medium">Chapter Events</p>
+                    <p className="text-3xl font-black text-foreground">
+                        {statsLoading ? "—" : stats.upcomingChapterEvents}
+                    </p>
                 </div>
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
                             <Users className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-green-600 bg-green-50  px-2 py-1 rounded">
                             {networkLoading ? "…" : "+5%"}
                         </span>
                     </div>
@@ -157,22 +199,28 @@ export default function DashboardPage() {
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
-                            <UserSearch className="h-5 w-5" />
+                            <Mail className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">+18%</span>
+                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">Action Needed</span>
                     </div>
-                    <p className="text-tatt-gray text-sm font-medium">Talent Applications</p>
-                    <p className="text-3xl font-black text-foreground">156</p>
+                    <p className="text-tatt-gray text-sm font-medium">Pending Connections & Messages</p>
+                    <p className="text-3xl font-black text-foreground">
+                        {statsLoading ? "—" : stats.pendingConnections + stats.unreadMessages}
+                    </p>
                 </div>
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm bg-gradient-to-br from-surface to-tatt-lime/5">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
-                            <PiggyBank className="h-5 w-5" />
+                            <ClipboardList className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">DBU Saver</span>
+                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">Volunteer Feed</span>
                     </div>
-                    <p className="text-tatt-gray text-sm font-medium">Workforce Savings</p>
-                    <p className="text-3xl font-black text-foreground">$2,400</p>
+                    <p className="text-tatt-gray text-sm font-medium">
+                        {stats.isVolunteer ? "Pending Activities" : "Needed Volunteer Roles"}
+                    </p>
+                    <p className="text-3xl font-black text-foreground">
+                        {statsLoading ? "—" : stats.volunteerValue}
+                    </p>
                 </div>
             </div>
 
@@ -191,7 +239,7 @@ export default function DashboardPage() {
                                     <p className="text-sm text-tatt-gray font-medium">Employee Upskilling & Licensing</p>
                                 </div>
                             </div>
-                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold rounded-full">Active Portal</span>
+                            <span className="px-3 py-1 bg-green-100  text-green-700  text-xs font-bold rounded-full">Active Portal</span>
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">

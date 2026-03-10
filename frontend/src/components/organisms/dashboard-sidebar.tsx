@@ -19,7 +19,8 @@ import {
     ShieldCheck,
     Menu,
     X,
-    Trello
+    Trello,
+    Zap
 } from "lucide-react";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
@@ -27,7 +28,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
     const { user } = useAuth();
 
     const communityTier = user?.communityTier || "FREE";
-    const displayTierName = communityTier.charAt(0).toUpperCase() + communityTier.slice(1).toLowerCase() + " Member";
+    const displayTierName = communityTier.charAt(0).toUpperCase() + communityTier.slice(1).toLowerCase();
 
     const closeSidebar = () => setIsOpen(false);
 
@@ -41,6 +42,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
         { name: "Job Board", href: "/dashboard/jobs", icon: Briefcase },
         { name: "Volunteers", href: "/dashboard/volunteers", icon: HeartHandshake },
         { name: "My Chapter", href: "/dashboard/chapter", icon: Building2 },
+        ...(communityTier !== "KIONGOZI" ? [{ name: "Upgrade", href: "/dashboard/upgrade", icon: Zap, highlight: true }] : []),
         ...(communityTier === "KIONGOZI" ? [{ name: "My Business", href: "/dashboard/business", icon: Store }] : []),
     ];
 
@@ -89,20 +91,27 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
                     {mainLinks.map((link) => {
                         const Icon = link.icon;
                         const isActive = pathname === link.href;
+                        const isHighlight = (link as any).highlight;
                         return (
                             <Link
                                 key={link.name}
                                 href={link.href}
                                 onClick={closeSidebar}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm
-                                    ${isActive
-                                        ? "bg-black/20 border-l-4 border-tatt-lime text-tatt-lime font-semibold"
-                                        : "text-white/70 hover:bg-black/10 hover:text-white"
+                                    ${
+                                        isActive
+                                            ? "bg-black/20 border-l-4 border-tatt-lime text-tatt-lime font-semibold"
+                                            : isHighlight
+                                            ? "text-tatt-lime/80 hover:bg-tatt-lime/10 hover:text-tatt-lime border border-tatt-lime/20"
+                                            : "text-white/70 hover:bg-black/10 hover:text-white"
                                     }
                                 `}
                             >
                                 <Icon className="h-5 w-5 shrink-0" />
                                 <span>{link.name}</span>
+                                {isHighlight && !isActive && (
+                                    <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-tatt-lime text-tatt-black px-1.5 py-0.5 rounded-full">New</span>
+                                )}
                             </Link>
                         );
                     })}

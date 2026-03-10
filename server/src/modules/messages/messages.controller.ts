@@ -68,6 +68,14 @@ export class MessagesController {
         return this.messagesService.getConversations(req.user.id);
     }
 
+    @ApiOperation({ summary: 'Get total unread messages count' })
+    @ApiResponse({ status: 200, schema: { properties: { count: { type: 'number' } } } })
+    @Get('unread-count')
+    async getUnreadCount(@Request() req) {
+        const count = await this.messagesService.getUnreadCount(req.user.id);
+        return { count };
+    }
+
     @ApiOperation({
         summary: 'Get message history for a conversation',
         description: 'Returns paginated message history for a specific connection.',

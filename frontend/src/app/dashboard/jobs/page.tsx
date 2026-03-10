@@ -137,13 +137,15 @@ export default function JobsPage() {
                 <Bookmark className="h-4 w-4" />
                 Saved Roles
               </Link>
-              <Link
-                href="/dashboard/jobs/post"
-                className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg font-bold bg-tatt-lime text-tatt-black hover:brightness-95 transition-colors text-sm"
-              >
-                <Plus className="h-4 w-4" />
-                Post a Listing
-              </Link>
+              {user?.communityTier === "KIONGOZI" && (
+                <Link
+                  href="/dashboard/jobs/post"
+                  className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg font-bold bg-tatt-lime text-tatt-black hover:brightness-95 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Post a Listing
+                </Link>
+              )}
             </div>
           </div>
         </div>

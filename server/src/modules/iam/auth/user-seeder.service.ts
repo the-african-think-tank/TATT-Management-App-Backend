@@ -18,6 +18,44 @@ export class UserSeederService implements OnApplicationBootstrap {
     async onApplicationBootstrap() {
         this.logger.log('Starting User Seeding process...');
         await this.seedDefaultAdmin();
+        await this.seedDefaultTestUser();
+    }
+
+    private async seedDefaultTestUser() {
+        const email = this.configService.get<string>('TEST_USER_EMAIL');
+        const password = this.configService.get<string>('TEST_USER_PASSWORD', 'TestUser@123!');
+        const firstName = 'Test';
+        const lastName = 'Member';
+
+        if (!email) {
+            this.logger.debug('Test user email not set. Skipping test user seeding.');
+            return;
+        }
+
+        try {
+            const existingUser = await this.userRepository.findOne({
+                where: { email },
+            });
+
+            if (!existingUser) {
+                this.logger.log(`Seeding default test user: ${email}`);
+                const hashedPassword = await bcrypt.hash(password, 12);
+                await this.userRepository.create({
+                    email,
+                    password: hashedPassword,
+                    firstName,
+                    lastName,
+                    systemRole: SystemRole.COMMUNITY_MEMBER,
+                    communityTier: CommunityTier.FREE,
+                    isActive: true,
+                    isApproved: true,
+                    passwordChangedAt: new Date(),
+                } as any);
+                this.logger.log('Default test user created successfully.');
+            }
+        } catch (error) {
+            this.logger.error('Failed to seed default test user:', error.message);
+        }
     }
 
 

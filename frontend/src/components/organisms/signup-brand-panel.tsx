@@ -1,5 +1,4 @@
-const BRAND_PHOTO_SRC =
-  "https://www.figma.com/api/mcp/asset/b05d3435-7057-4579-84d0-eb84841fdcb7";
+const BRAND_PHOTO_SRC = "/assets/signup_brand_diaspora.webp";
 const LOGO_SRC = "/assets/tattlogoIcon.svg";
 
 export function SignupBrandPanel() {

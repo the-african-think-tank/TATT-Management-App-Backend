@@ -114,12 +114,18 @@ export class EventsService {
         this.logger.log(`Queued notifications for ${users.length} members for event: ${event.title}`);
     }
 
-    async getEvents(viewer: User) {
+    async getEvents(viewer: User, upcoming?: boolean) {
         // Optionally filter by membership if we want to hide restricted events from the list
         // Requirement says "it should show up in the events and workshops page", implying it might be visible but maybe locked?
         // Usually restricted events are only visible to those who can join.
         // Let's allow everyone to see them for now, but restrict registration.
+        const where: any = {};
+        if (upcoming) {
+            where.dateTime = { [Op.gt]: new Date() };
+        }
+
         return this.eventRepo.findAll({
+            where,
             include: [
                 { model: EventChapter, as: 'locations', include: [{ model: Chapter, as: 'chapter' }] },
                 { model: User, as: 'featuredGuests', attributes: ['id', 'firstName', 'lastName', 'profilePicture'], through: { attributes: [] } },

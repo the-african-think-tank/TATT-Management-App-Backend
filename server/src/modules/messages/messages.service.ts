@@ -300,6 +300,18 @@ export class MessagesService {
         return this.formatPartner(partner);
     }
 
+    async getUnreadCount(userId: string) {
+        return this.messageRepo.count({
+            where: {
+                receiverId: userId,
+                [Op.or]: [
+                    { status: { [Op.ne]: MessageStatus.READ } },
+                    { isManuallyUnread: true },
+                ],
+            },
+        });
+    }
+
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     private formatPartner(user: User) {

@@ -229,10 +229,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
 
                                 {dropdownOpen && (
-                                    <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                    <div className="absolute right-0 mt-3 w-48 bg-white  rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
                                         <Link
                                             href="#"
-                                            className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                            className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5  transition-colors"
                                             onClick={() => setDropdownOpen(false)}
                                         >
                                             <UserIcon className="h-4 w-4" />
@@ -243,7 +243,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                 setDropdownOpen(false);
                                                 logout();
                                             }}
-                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left"
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50  transition-colors text-left"
                                         >
                                             <LogOut className="h-4 w-4" />
                                             Logout

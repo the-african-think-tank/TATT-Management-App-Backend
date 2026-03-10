@@ -222,17 +222,28 @@ export default function SettingsPage() {
         });
     };
 
+    const cleanPayload = (data: any) => {
+        const cleaned = { ...data };
+        Object.keys(cleaned).forEach(key => {
+            if (cleaned[key] === "") cleaned[key] = null;
+        });
+        return cleaned;
+    };
+
     const handleSave = async () => {
         setLoading(true);
         try {
-            const response = await api.patch("/account/profile", {
-                ...formData,
-                companyName: formData.employer // Map back to backend field
+            const { employer, ...payload } = formData;
+            const cleanedPayload = cleanPayload({
+                ...payload,
+                companyName: employer
             });
+
+            const response = await api.patch("/account/profile", cleanedPayload);
 
             // Update auth context with new user data
             login(localStorage.getItem('token') || "", response.data);
-            toast.success("Profile updated successfully!");
+            toast.success("Profile settings saved securely!");
         } catch (error) {
             console.error("Failed to update profile", error);
             toast.error("Failed to update profile. Please try again.");
@@ -249,13 +260,30 @@ export default function SettingsPage() {
         uploadFormData.append("files", file);
 
         try {
-            toast.loading("Uploading image...", { id: 'upload' });
+            toast.loading("Updating profile picture...", { id: 'upload' });
+            
+            // 1. Upload the image
             const response = await api.post("/uploads/media", uploadFormData);
             const imageUrl = response.data.files[0].url;
+            
+            // 2. Update the user profile immediately for a live feel
+            const { employer, ...payload } = formData;
+            const cleanedPayload = cleanPayload({
+                ...payload,
+                profilePicture: imageUrl,
+                companyName: employer 
+            });
+
+            const profileRes = await api.patch("/account/profile", cleanedPayload);
+
+            // 3. Update both local state and auth context
             setFormData(prev => ({ ...prev, profilePicture: imageUrl }));
-            toast.success("Image uploaded!", { id: 'upload' });
+            login(localStorage.getItem('token') || "", profileRes.data);
+            
+            toast.success("Profile picture updated!", { id: 'upload' });
         } catch (error) {
-            toast.error("Failed to upload image.", { id: 'upload' });
+            console.error("Failed to update profile picture", error);
+            toast.error("Failed to update profile picture.", { id: 'upload' });
         }
     };
 

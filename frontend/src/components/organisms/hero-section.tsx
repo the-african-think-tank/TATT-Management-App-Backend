@@ -1,5 +1,4 @@
 import { Button } from "@/components/atoms/button";
-import { ThemeToggle } from "@/components/atoms/theme-toggle";
 import { FeatureCard } from "@/components/molecules/feature-card";
 
 const features = [
@@ -34,7 +33,6 @@ export function HeroSection() {
         <div className="flex items-center gap-3">
           <Button>Get Started</Button>
           <Button variant="secondary">Explore Features</Button>
-          <ThemeToggle />
         </div>
       </header>
 

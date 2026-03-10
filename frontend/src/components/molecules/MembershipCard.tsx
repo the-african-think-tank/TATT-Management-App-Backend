@@ -59,7 +59,7 @@ const MembershipCard: React.FC<MembershipCardProps> = ({ member, isCurrentUser }
     const displayTierName =
         tier === "KIONGOZI"
             ? "Kiongozi Business"
-            : `${tier.charAt(0)}${tier.slice(1).toLowerCase()} Member`;
+            : `${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
 
     const joinedDate = member.createdAt ? format(new Date(member.createdAt), 'yyyy') : '2024';
 
@@ -90,7 +90,7 @@ const MembershipCard: React.FC<MembershipCardProps> = ({ member, isCurrentUser }
                             <h4 className="text-2xl font-black tracking-tight leading-none mb-1 uppercase truncate">
                                 {member.firstName} {member.lastName}
                             </h4>
-                            <p className="text-[11px] text-tatt-lime font-black uppercase tracking-[0.2em] truncate">
+                            <p className="text-[11px] text-tatt-lime font-black uppercase tracking-[0.2em] break-words whitespace-normal line-clamp-2">
                                 {member.professionTitle || "Professional Member"}
                             </p>
                         </div>
@@ -109,7 +109,7 @@ const MembershipCard: React.FC<MembershipCardProps> = ({ member, isCurrentUser }
                                 </div>
                                 <div className="flex flex-col">
                                     <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Member Since {joinedDate}</p>
-                                    <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Chapter: {member.chapterName || "Global"}</p>
+                                    <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">{member.chapterName || "Global"}</p>
                                 </div>
                             </div>
 

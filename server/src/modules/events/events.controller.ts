@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { RegisterEventDto } from './dto/register-event.dto';
@@ -23,8 +23,8 @@ export class EventsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'List all published events and workshops' })
-    async findAll(@Req() req: any) {
-        return this.eventsService.getEvents(req.user);
+    async findAll(@Req() req: any, @Query('upcoming') upcoming?: string) {
+        return this.eventsService.getEvents(req.user, upcoming === 'true');
     }
 
     @Get(':id')

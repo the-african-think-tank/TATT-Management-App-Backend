@@ -12,6 +12,9 @@ import { EmailOtp } from '../../modules/security/entities/email-otp.entity';
 import { Post } from '../../modules/feed/entities/post.entity';
 import { PostLike } from '../../modules/feed/entities/post-like.entity';
 import { PostComment } from '../../modules/feed/entities/post-comment.entity';
+import { PostBookmark } from '../../modules/feed/entities/post-bookmark.entity';
+import { PostUpvote } from '../../modules/feed/entities/post-upvote.entity';
+import { PostReport } from '../../modules/feed/entities/post-report.entity';
 import { DirectMessage } from '../../modules/messages/entities/direct-message.entity';
 import { Resource } from '../../modules/resources/entities/resource.entity';
 import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
@@ -45,7 +48,7 @@ import { VolunteerTrainingResource } from '../../modules/volunteers/entities/vol
                 models: [
                     User, Chapter, ProfessionalInterest, UserInterest, Connection,
                     SecurityPolicy, PasswordHistory, EmailOtp,
-                    Post, PostLike, PostComment, DirectMessage,
+                    Post, PostLike, PostComment, PostUpvote, PostBookmark, PostReport, DirectMessage,
                     Resource, ResourceInteraction, Notification,
                     MembershipPlan,
                     Event, EventChapter, EventGuest, EventRegistration,
