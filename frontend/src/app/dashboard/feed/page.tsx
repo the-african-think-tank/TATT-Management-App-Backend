@@ -34,7 +34,8 @@ import {
     Link2,
     ArrowBigUp,
     Flag,
-    Eye
+    Eye,
+    Trash2
 } from "lucide-react";
 import Link from "next/link";
 import api from "@/services/api";
@@ -431,7 +432,14 @@ export default function FeedPage() {
                     {/* Post List */}
                     <div className="space-y-6">
                         {posts.map(post => (
-                            <PostCard key={post.id} post={post} onLike={() => handleLike(post.id)} />
+                            <PostCard 
+                                key={post.id} 
+                                post={post} 
+                                onLike={() => handleLike(post.id)} 
+                                onPostDeleted={() => {
+                                    setPosts(prev => prev.filter(p => p.id !== post.id));
+                                }}
+                            />
                         ))}
 
                         {isLoadingPosts && (
@@ -799,7 +807,7 @@ export default function FeedPage() {
     );
 }
 
-function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
+function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => void, onPostDeleted: () => void }) {
     const { user } = useAuth();
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -852,6 +860,20 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
         } catch (error) {
             toast.error("Failed to upvote");
         }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this strategic insight? This action cannot be undone.")) return;
+        
+        const loadingToast = toast.loading("Removing post...");
+        try {
+            await api.delete(`/feed/${post.id}`);
+            toast.success("Post successfully removed from the TATT Feed.", { id: loadingToast });
+            onPostDeleted();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to delete post", { id: loadingToast });
+        }
+        setShowOptions(false);
     };
 
 
@@ -1037,6 +1059,15 @@ function PostCard({ post, onLike }: { post: Post, onLike: () => void }) {
                                     <Repeat2 className="h-4 w-4" />
                                     Repost
                                 </button>
+                                {(post.author.id === user?.id || (user?.systemRole && user.systemRole !== 'COMMUNITY_MEMBER')) && (
+                                    <button 
+                                        onClick={handleDelete} 
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 transition-colors text-left"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete Post
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

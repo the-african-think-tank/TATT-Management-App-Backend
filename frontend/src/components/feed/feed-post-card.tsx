@@ -9,6 +9,8 @@ import {
     Lock,
     Send,
     Loader2,
+    MoreVertical,
+    Trash2
 } from "lucide-react";
 import type { FeedPost } from "@/types/feed";
 
@@ -16,6 +18,7 @@ type FeedPostCardProps = {
     post: FeedPost;
     onLikeToggle: () => void;
     onCommentAdded: () => void;
+    onDelete?: () => void;
 };
 
 function formatDate(iso: string) {
@@ -36,8 +39,9 @@ function formatDate(iso: string) {
     }
 }
 
-export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCardProps) {
+export function FeedPostCard({ post, onLikeToggle, onCommentAdded, onDelete }: FeedPostCardProps) {
     const [liking, setLiking] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<Array<{
         id: string;
@@ -99,7 +103,16 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
             setSubmittingComment(false);
         }
     };
-
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this post?")) return;
+        try {
+            await api.delete(`/feed/${post.id}`);
+            if (onDelete) onDelete();
+        } catch {
+            // handle error
+        }
+        setShowOptions(false);
+    };
     const handleToggleComments = () => {
         const next = !showComments;
         setShowComments(next);
@@ -139,6 +152,26 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
                             </Link>
                         )}
                         <span className="text-tatt-gray text-xs ml-auto shrink-0">{formatDate(post.createdAt)}</span>
+                        
+                        <div className="relative ml-2">
+                            <button
+                                onClick={() => setShowOptions(!showOptions)}
+                                className="p-1 hover:bg-background rounded-full transition-colors"
+                            >
+                                <MoreVertical className="h-4 w-4 text-tatt-gray" />
+                            </button>
+                            {showOptions && (
+                                <div className="absolute right-0 mt-1 w-32 bg-background border border-border rounded-lg shadow-lg z-10 py-1">
+                                    <button
+                                        onClick={handleDelete}
+                                        className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     {post.isPremium && (
                         <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold text-tatt-lime">
