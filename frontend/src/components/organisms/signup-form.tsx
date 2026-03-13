@@ -1,9 +1,9 @@
 "use client";
 
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthButton } from "@/components/atoms/auth-button";
 import { JoinAsSelector } from "@/components/molecules/join-as-selector";
@@ -11,25 +11,26 @@ import { SignupField } from "@/components/molecules/signup-field";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 import { toast } from "react-hot-toast";
-import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, XCircle, AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
+import { useHibpCheck } from "@/hooks/use-hibp-check";
 
-// ─── Password validation rules ──────────────────────────────────────────────
+// ─── Password validation rules ───────────────────────────────────────────────
 const PASSWORD_RULES = [
-  { id: "length",    label: "At least 8 characters",          test: (p: string) => p.length >= 8 },
-  { id: "uppercase", label: "At least one uppercase letter",   test: (p: string) => /[A-Z]/.test(p) },
-  { id: "lowercase", label: "At least one lowercase letter",   test: (p: string) => /[a-z]/.test(p) },
-  { id: "number",    label: "At least one number",             test: (p: string) => /\d/.test(p) },
-  { id: "special",   label: "At least one special character",  test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  { id: "length",    label: "At least 8 characters",         test: (p: string) => p.length >= 8 },
+  { id: "uppercase", label: "At least one uppercase letter",  test: (p: string) => /[A-Z]/.test(p) },
+  { id: "lowercase", label: "At least one lowercase letter",  test: (p: string) => /[a-z]/.test(p) },
+  { id: "number",    label: "At least one number",            test: (p: string) => /\d/.test(p) },
+  { id: "special",   label: "At least one special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-function getPasswordStrength(password: string): { score: number; label: string; color: string; barColor: string } {
+function getPasswordStrength(password: string) {
   if (!password) return { score: 0, label: "", color: "text-transparent", barColor: "bg-transparent" };
   const passed = PASSWORD_RULES.filter((r) => r.test(password)).length;
-  if (passed <= 1) return { score: 1, label: "Very Weak", color: "text-red-500", barColor: "bg-red-500" };
-  if (passed === 2) return { score: 2, label: "Weak",      color: "text-orange-500", barColor: "bg-orange-400" };
-  if (passed === 3) return { score: 3, label: "Fair",      color: "text-yellow-500", barColor: "bg-yellow-400" };
-  if (passed === 4) return { score: 4, label: "Strong",    color: "text-tatt-lime", barColor: "bg-tatt-lime" };
-  return              { score: 5, label: "Very Strong", color: "text-green-600",  barColor: "bg-green-500" };
+  if (passed <= 1) return { score: 1, label: "Very Weak",   color: "text-red-500",    barColor: "bg-red-500" };
+  if (passed === 2) return { score: 2, label: "Weak",       color: "text-orange-500", barColor: "bg-orange-400" };
+  if (passed === 3) return { score: 3, label: "Fair",       color: "text-yellow-500", barColor: "bg-yellow-400" };
+  if (passed === 4) return { score: 4, label: "Strong",     color: "text-tatt-lime",  barColor: "bg-tatt-lime" };
+  return             { score: 5, label: "Very Strong", color: "text-green-600",  barColor: "bg-green-500" };
 }
 
 // ─── Password strength meter component ───────────────────────────────────────
@@ -39,7 +40,6 @@ function PasswordStrengthMeter({ password }: { password: string }) {
 
   return (
     <div className="mt-2 space-y-2">
-      {/* Strength bar */}
       <div className="flex items-center gap-2">
         <div className="flex-1 flex gap-1">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -55,12 +55,16 @@ function PasswordStrengthMeter({ password }: { password: string }) {
           {strength.label}
         </span>
       </div>
-      {/* Rule checklist */}
       <ul className="grid grid-cols-1 gap-0.5">
         {PASSWORD_RULES.map((rule) => {
           const passed = rule.test(password);
           return (
-            <li key={rule.id} className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors ${passed ? "text-green-600" : "text-gray-400"}`}>
+            <li
+              key={rule.id}
+              className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors ${
+                passed ? "text-green-600" : "text-gray-400"
+              }`}
+            >
               {passed
                 ? <CheckCircle className="size-3 shrink-0" />
                 : <XCircle className="size-3 shrink-0" />
@@ -74,7 +78,59 @@ function PasswordStrengthMeter({ password }: { password: string }) {
   );
 }
 
-// ─── Zod schema ─────────────────────────────────────────────────────────────
+// ─── HIBP Status banner component ────────────────────────────────────────────
+function HibpBanner({ status, count }: { status: string; count: number }) {
+  if (status === "checking") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-[11px] text-gray-500 font-medium">
+        <Loader2 className="size-3 animate-spin shrink-0" />
+        Checking password against known data breaches…
+      </div>
+    );
+  }
+
+  if (status === "pwned") {
+    const formattedCount = count.toLocaleString();
+    return (
+      <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-3 space-y-1">
+        <div className="flex items-center gap-2 text-red-700">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span className="text-[12px] font-black uppercase tracking-wide">
+            Password Found in Data Breaches
+          </span>
+        </div>
+        <p className="text-[11px] text-red-600 leading-relaxed">
+          This password has appeared in{" "}
+          <span className="font-bold">{formattedCount} known data breach{count === 1 ? "" : "es"}</span>{" "}
+          and is commonly exploited by attackers. Please choose a different, unique password
+          that you have not used on any other site.
+        </p>
+        <a
+          href="https://haveibeenpwned.com/Passwords"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-[10px] text-red-500 underline hover:text-red-700 transition-colors"
+        >
+          Learn more about Have I Been Pwned →
+        </a>
+      </div>
+    );
+  }
+
+  if (status === "safe") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-[11px] text-green-700 font-medium">
+        <ShieldCheck className="size-3.5 shrink-0" />
+        Password not found in any known data breach. ✓
+      </div>
+    );
+  }
+
+  // "error" or "idle" — render nothing
+  return null;
+}
+
+// ─── Zod schema ──────────────────────────────────────────────────────────────
 const signupSchema = z.object({
   firstName: z
     .string()
@@ -112,7 +168,7 @@ const signupSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 export function SignupForm() {
   const router = useRouter();
   const { login: authLogin } = useAuth();
@@ -120,6 +176,9 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // HIBP breach check
+  const hibp = useHibpCheck();
 
   const {
     control,
@@ -135,7 +194,22 @@ export function SignupForm() {
 
   const passwordValue = watch("password") || "";
 
+  // Trigger HIBP check whenever the password field changes
+  useEffect(() => {
+    hibp.check(passwordValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passwordValue]);
+
   const onSubmit = async (data: SignupFormData) => {
+    // Warn (soft-block) if the password is known to be pwned
+    if (hibp.status === "pwned") {
+      toast.error(
+        "Your password has been found in a data breach. Please choose a different password before continuing.",
+        { duration: 5000 }
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -228,7 +302,7 @@ export function SignupForm() {
             {...register("email")}
           />
 
-          {/* Password */}
+          {/* Password with strength meter + HIBP check */}
           <div className="space-y-1.5">
             <label htmlFor="password" className="block text-sm font-medium leading-5 text-tatt-black">
               Password
@@ -254,8 +328,14 @@ export function SignupForm() {
             {errors.password && (
               <p className="text-xs text-red-500">{errors.password.message}</p>
             )}
-            {/* Strength meter — shown as you type */}
+
+            {/* Strength meter */}
             <PasswordStrengthMeter password={passwordValue} />
+
+            {/* HIBP breach check banner */}
+            {passwordValue.length >= 8 && (
+              <HibpBanner status={hibp.status} count={hibp.count} />
+            )}
           </div>
 
           {/* Confirm password */}
@@ -288,7 +368,7 @@ export function SignupForm() {
         </div>
 
         {/* Terms & Privacy */}
-        <label className="flex items-start gap-3 py-2 text-sm leading-5 text-tatt-gray cursor-pointer group">
+        <label className="flex items-start gap-3 py-2 text-sm leading-5 text-tatt-gray cursor-pointer">
           <input
             type="checkbox"
             required
@@ -318,10 +398,14 @@ export function SignupForm() {
         </label>
 
         <AuthButton
-          disabled={isLoading}
+          disabled={isLoading || hibp.status === "checking"}
           className="shadow-[0_10px_15px_-3px_rgba(159,204,0,0.2),0_4px_6px_-4px_rgba(159,204,0,0.2)]"
         >
-          {isLoading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
+          {isLoading
+            ? "CREATING ACCOUNT..."
+            : hibp.status === "checking"
+            ? "CHECKING PASSWORD..."
+            : "CREATE ACCOUNT"}
         </AuthButton>
 
         <p className="text-center text-sm text-tatt-gray">
