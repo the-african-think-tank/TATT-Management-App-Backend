@@ -116,10 +116,8 @@ export default function CommunicationsPage() {
     }, [selectedConversation]);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) {
-            const socket = initiateSocket(token);
-            socketRef.current = socket;
+        const socket = initiateSocket();
+        socketRef.current = socket;
 
             socket.on("new_message", (message: DirectMessage) => {
                 const currentConv = selectedConversationRef.current;
@@ -193,8 +191,6 @@ export default function CommunicationsPage() {
                     return m;
                 }));
             });
-        }
-
         return () => {
             disconnectSocket();
         };
@@ -238,16 +234,10 @@ export default function CommunicationsPage() {
             }
         };
 
-        const fetchUser = async () => {
-            const userStr = localStorage.getItem("user");
-            if (userStr) {
-                try {
-                    const user = JSON.parse(userStr);
-                    setAuthUserId(user.id);
-                } catch (e) { }
-            }
+        // Get auth user ID directly from the auth context
+        if (authUser?.id) {
+            setAuthUserId(authUser.id);
         }
-        fetchUser();
         fetchAllData();
     }, []);
 

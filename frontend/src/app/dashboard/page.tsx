@@ -1,11 +1,16 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import api from "@/services/api";
+import {
+    useConnections,
+    useConnectionRequests,
+    useUpcomingEvents,
+    useUnreadMessageCount,
+    useVolunteerStats,
+} from "@/hooks/use-queries";
 import {
     Calendar as CalendarIcon,
     Users,
-    Eye,
     Megaphone,
     Search,
     UserCheck,
@@ -21,94 +26,57 @@ import {
     ChevronDown,
     Loader2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import MembershipCard from "@/components/molecules/MembershipCard";
 
+const safeDate = (dateStr: string) => {
+    try {
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? new Date() : d;
+    } catch {
+        return new Date();
+    }
+};
+
 export default function DashboardPage() {
     const { user } = useAuth();
-    const [connectionCount, setConnectionCount] = useState<number | null>(null);
-    const [networkLoading, setNetworkLoading] = useState(true);
-    const [eventsLoading, setEventsLoading] = useState(true);
-    const [dashboardEvents, setDashboardEvents] = useState<any[]>([]);
-    const [stats, setStats] = useState({
-        upcomingChapterEvents: 0,
-        pendingConnections: 0,
-        unreadMessages: 0,
-        volunteerValue: 0,
-        isVolunteer: false,
-    });
-    const [statsLoading, setStatsLoading] = useState(true);
 
-    const safeDate = (dateStr: string) => {
-        try {
-            const d = new Date(dateStr);
-            return isNaN(d.getTime()) ? new Date() : d;
-        } catch {
-            return new Date();
-        }
+    // ── TanStack Query hooks ────────────────────────────────────────────────
+    const { data: connectionData, isLoading: networkLoading } = useConnections();
+    const { data: connectionRequests, isLoading: requestsLoading } = useConnectionRequests();
+    const { data: eventsData, isLoading: eventsLoading } = useUpcomingEvents(true);
+    const { data: unreadCount, isLoading: messagesLoading } = useUnreadMessageCount();
+    const { data: volunteerData, isLoading: volunteerLoading } = useVolunteerStats();
+
+    const statsLoading = requestsLoading || messagesLoading || eventsLoading || volunteerLoading;
+    const connectionCount = Array.isArray(connectionData) ? connectionData.length : 0;
+    const pendingConnectionsCount = Array.isArray(connectionRequests) ? connectionRequests.length : 0;
+
+    const allUpcoming = Array.isArray(eventsData)
+        ? [...eventsData].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+        : [];
+
+    const chapterEvents = user?.chapterId
+        ? allUpcoming.filter((e) => e.locations?.some((l: any) => l.chapterId === user.chapterId))
+        : allUpcoming;
+
+    const dashboardEvents = (chapterEvents.length > 0 ? chapterEvents : allUpcoming).slice(0, 2);
+
+    const isUserVolunteer =
+        user?.flags?.includes("VOLUNTEER") ||
+        ["ADMIN", "SUPERADMIN", "VOLUNTEER_ADMIN"].includes(user?.systemRole || "");
+
+    const stats = {
+        upcomingChapterEvents: chapterEvents.length,
+        pendingConnections: pendingConnectionsCount,
+        unreadMessages: unreadCount ?? 0,
+        volunteerValue: isUserVolunteer
+            ? volunteerData?.pendingActivities ?? 0
+            : volunteerData?.neededRoles ?? 0,
+        isVolunteer: isUserVolunteer,
     };
 
-    useEffect(() => {
-        const fetchNetwork = async () => {
-            try {
-                const { data } = await api.get<Array<{ connectionId: string; member: unknown }>>("/connections/network");
-                setConnectionCount(Array.isArray(data) ? data.length : 0);
-            } catch {
-                setConnectionCount(0);
-            } finally {
-                setNetworkLoading(false);
-            }
-        };
-        if (user?.id) fetchNetwork();
-
-        const fetchStats = async () => {
-            try {
-                const [eventsRes, connectionsRes, messagesRes, volunteersRes] = await Promise.all([
-                    api.get("/events?upcoming=true"),
-                    api.get("/connections/requests/incoming"),
-                    api.get("/messages/unread-count"),
-                    api.get("/volunteers/stats")
-                ]);
-
-                const allUpcoming: any[] = (eventsRes.data || []).sort(
-                    (a: any, b: any) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
-                );
-
-                // Filter to chapter if user has one, otherwise use all upcoming
-                const chapterEvents = user?.chapterId
-                    ? allUpcoming.filter((e: any) =>
-                        e.locations?.some((l: any) => l.chapterId === user.chapterId)
-                    )
-                    : allUpcoming;
-
-                // If no chapter events found, fall back to all upcoming for sidebar
-                const eventsToShow = chapterEvents.length > 0 ? chapterEvents : allUpcoming;
-                setDashboardEvents(eventsToShow.slice(0, 2));
-
-                const pendingConnectionsCount = Array.isArray(connectionsRes.data) ? connectionsRes.data.length : 0;
-                const unreadMessagesCount = messagesRes.data.count || 0;
-
-                const isUserVolunteer = user?.flags?.includes("VOLUNTEER") ||
-                                       ["ADMIN", "SUPERADMIN", "VOLUNTEER_ADMIN"].includes(user?.systemRole || "");
-
-                setStats({
-                    upcomingChapterEvents: chapterEvents.length,
-                    pendingConnections: pendingConnectionsCount,
-                    unreadMessages: unreadMessagesCount,
-                    volunteerValue: isUserVolunteer ? volunteersRes.data.pendingActivities : volunteersRes.data.neededRoles,
-                    isVolunteer: isUserVolunteer
-                });
-            } catch (err) {
-                console.error("Dashboard stats error:", err);
-            } finally {
-                setStatsLoading(false);
-                setEventsLoading(false);
-            }
-        };
-        if (user?.id) fetchStats();
-    }, [user?.id, user?.chapterId, user?.flags, user?.systemRole]);
-
+    // ── Display values ─────────────────────────────────────────────────────
     const firstName = user?.firstName || "Member";
     const tier = user?.communityTier || "FREE";
     const displayTierName =
@@ -117,11 +85,11 @@ export default function DashboardPage() {
             : `${tier.charAt(0)}${tier.slice(1).toLowerCase()}`;
     const chapterName = user?.chapterName || "—";
     const memberId = user?.tattMemberId || (user?.id ? `MEM-2024-${user.id.slice(0, 4)}` : "MEM-2024-0000");
-    const initials = user?.firstName && user?.lastName
-        ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
-        : "M";
+    const initials =
+        user?.firstName && user?.lastName
+            ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`
+            : "M";
     const companyName = user?.companyName || "—";
-    const professionTitle = user?.professionTitle || "—";
 
     return (
         <div className="p-4 lg:p-8 space-y-8 animate-in fade-in duration-500">
@@ -152,11 +120,14 @@ export default function DashboardPage() {
                 <div className="bg-tatt-lime/10 border border-tatt-lime/30 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                         <h3 className="font-black text-foreground text-lg flex items-center gap-2">
-                            <span className="bg-tatt-lime text-tatt-black p-1 rounded-full"><Award className="h-4 w-4" /></span>
+                            <span className="bg-tatt-lime text-tatt-black p-1 rounded-full">
+                                <Award className="h-4 w-4" />
+                            </span>
                             Welcome to the community!
                         </h3>
                         <p className="text-tatt-gray text-sm font-medium mt-1">
-                            Your profile is currently incomplete. Take a moment to add your profession, company, and location to get the most out of your TATT experience.
+                            Your profile is currently incomplete. Take a moment to add your profession, company, and
+                            location to get the most out of your TATT experience.
                         </p>
                     </div>
                     <Link
@@ -168,58 +139,65 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Key metrics */}
+            {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
                             <CalendarIcon className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-green-600 bg-green-50  px-2 py-1 rounded">Soon</span>
+                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Soon</span>
                     </div>
                     <p className="text-tatt-gray text-sm font-medium">Chapter Events</p>
                     <p className="text-3xl font-black text-foreground">
                         {statsLoading ? "—" : stats.upcomingChapterEvents}
                     </p>
                 </div>
+
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
                             <Users className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-green-600 bg-green-50  px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
                             {networkLoading ? "…" : "+5%"}
                         </span>
                     </div>
                     <p className="text-tatt-gray text-sm font-medium">Network Connections</p>
                     <p className="text-3xl font-black text-foreground">
-                        {networkLoading ? "—" : connectionCount ?? 0}
+                        {networkLoading ? "—" : connectionCount}
                     </p>
                 </div>
+
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
                             <Mail className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">Action Needed</span>
+                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">
+                            Action Needed
+                        </span>
                     </div>
                     <p className="text-tatt-gray text-sm font-medium">Pending Connections & Messages</p>
                     <p className="text-3xl font-black text-foreground">
                         {statsLoading ? "—" : stats.pendingConnections + stats.unreadMessages}
                     </p>
                 </div>
+
                 <div className="bg-surface p-6 rounded-xl border border-border shadow-sm bg-gradient-to-br from-surface to-tatt-lime/5">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-tatt-lime bg-tatt-lime/10 p-2 rounded-lg">
                             <ClipboardList className="h-5 w-5" />
                         </span>
-                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">Volunteer Feed</span>
+                        <span className="text-xs font-bold text-tatt-lime bg-tatt-lime/10 px-2 py-1 rounded">
+                            Volunteer Feed
+                        </span>
                     </div>
                     <p className="text-tatt-gray text-sm font-medium">
                         {stats.isVolunteer ? "Pending Activities" : "Needed Volunteer Roles"}
                     </p>
                     <p className="text-3xl font-black text-foreground">
-                        {statsLoading ? "—" : stats.volunteerValue}
+                        {volunteerLoading ? "—" : stats.volunteerValue}
                     </p>
                 </div>
             </div>
@@ -239,7 +217,9 @@ export default function DashboardPage() {
                                     <p className="text-sm text-tatt-gray font-medium">Employee Upskilling & Licensing</p>
                                 </div>
                             </div>
-                            <span className="px-3 py-1 bg-green-100  text-green-700  text-xs font-bold rounded-full">Active Portal</span>
+                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                                Active Portal
+                            </span>
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -251,11 +231,17 @@ export default function DashboardPage() {
                                     <div className="w-full bg-background h-3 rounded-full overflow-hidden">
                                         <div className="bg-tatt-lime h-full w-[80%] rounded-full" />
                                     </div>
-                                    <p className="text-xs text-tatt-gray mt-3 italic">"You are saving $400 per license compared to retail rates."</p>
+                                    <p className="text-xs text-tatt-gray mt-3 italic">
+                                        "You are saving $400 per license compared to retail rates."
+                                    </p>
                                 </div>
                                 <div className="bg-background p-4 rounded-lg flex flex-col items-center justify-center text-center">
-                                    <p className="text-xs font-black uppercase text-tatt-gray mb-1">Exclusive Kiongozi Offer</p>
-                                    <p className="text-2xl font-black text-foreground mb-3">$99<span className="text-sm font-medium">/year per license</span></p>
+                                    <p className="text-xs font-black uppercase text-tatt-gray mb-1">
+                                        Exclusive Kiongozi Offer
+                                    </p>
+                                    <p className="text-2xl font-black text-foreground mb-3">
+                                        $99<span className="text-sm font-medium">/year per license</span>
+                                    </p>
                                     <button className="w-full bg-tatt-lime text-tatt-black font-black py-2 rounded-lg hover:brightness-105 transition-all text-sm shadow-sm">
                                         Purchase More Licenses
                                     </button>
@@ -282,11 +268,16 @@ export default function DashboardPage() {
                             <div className="flex-1">
                                 <h4 className="font-black text-foreground">{companyName} Spotlight</h4>
                                 <p className="text-sm text-tatt-gray mt-1 leading-relaxed">
-                                    Your business can be featured across the TATT network. Ensure your media kit is ready.
+                                    Your business can be featured across the TATT network. Ensure your media kit is
+                                    ready.
                                 </p>
                                 <div className="flex gap-4 mt-4">
-                                    <button className="px-4 py-2 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90">Manage Spotlight Content</button>
-                                    <button className="px-4 py-2 border border-border rounded-lg text-xs font-bold hover:bg-background transition-colors">Preview Feature</button>
+                                    <button className="px-4 py-2 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90">
+                                        Manage Spotlight Content
+                                    </button>
+                                    <button className="px-4 py-2 border border-border rounded-lg text-xs font-bold hover:bg-background transition-colors">
+                                        Preview Feature
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -321,9 +312,9 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Right: Digital ID card + Quick Resources */}
+                {/* Right column */}
                 <div className="space-y-8">
-                    {/* Digital Business ID Card */}
+                    {/* Digital Membership Card */}
                     {user && (
                         <MembershipCard
                             member={{
@@ -333,7 +324,7 @@ export default function DashboardPage() {
                                 lastName: user.lastName || "",
                                 communityTier: user.communityTier || "FREE",
                                 chapterName: user.chapterName || "Global",
-                                createdAt: user.createdAt || new Date().toISOString()
+                                createdAt: user.createdAt || new Date().toISOString(),
                             }}
                             isCurrentUser={true}
                         />
@@ -343,7 +334,9 @@ export default function DashboardPage() {
                     <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h4 className="font-bold text-foreground">Upcoming Gatherings</h4>
-                            <Link href="/dashboard/events" className="text-[10px] font-black text-tatt-lime hover:underline uppercase">View All</Link>
+                            <Link href="/dashboard/events" className="text-[10px] font-black text-tatt-lime hover:underline uppercase">
+                                View All
+                            </Link>
                         </div>
                         <div className="space-y-4">
                             {eventsLoading ? (
@@ -353,16 +346,24 @@ export default function DashboardPage() {
                             ) : dashboardEvents.length === 0 ? (
                                 <p className="text-xs text-tatt-gray italic">No upcoming events found.</p>
                             ) : (
-                                dashboardEvents.map(event => (
+                                dashboardEvents.map((event) => (
                                     <Link key={event.id} href="/dashboard/events" className="block group">
                                         <div className="flex gap-3">
                                             <div className="size-10 rounded-lg bg-tatt-black flex flex-col items-center justify-center shrink-0 border border-white/5">
-                                                <span className="text-[7px] font-black text-white/50 uppercase leading-none">{safeDate(event.dateTime).toLocaleDateString("en-US", { month: "short" })}</span>
-                                                <span className="text-sm font-black text-white leading-none mt-1">{safeDate(event.dateTime).getDate()}</span>
+                                                <span className="text-[7px] font-black text-white/50 uppercase leading-none">
+                                                    {safeDate(event.dateTime).toLocaleDateString("en-US", { month: "short" })}
+                                                </span>
+                                                <span className="text-sm font-black text-white leading-none mt-1">
+                                                    {safeDate(event.dateTime).getDate()}
+                                                </span>
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h5 className="text-xs font-bold text-foreground group-hover:text-tatt-lime transition-colors truncate">{event.title}</h5>
-                                                <p className="text-[10px] text-tatt-gray mt-0.5">{event.type} • {event.locations?.[0]?.chapter?.name || "Global"}</p>
+                                                <h5 className="text-xs font-bold text-foreground group-hover:text-tatt-lime transition-colors truncate">
+                                                    {event.title}
+                                                </h5>
+                                                <p className="text-[10px] text-tatt-gray mt-0.5">
+                                                    {event.type} • {event.locations?.[0]?.chapter?.name || "Global"}
+                                                </p>
                                             </div>
                                         </div>
                                     </Link>

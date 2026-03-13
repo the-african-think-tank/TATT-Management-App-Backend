@@ -139,7 +139,7 @@ const ConfirmationModal = ({
 };
 
 export default function SettingsPage() {
-    const { user, login } = useAuth();
+    const { user, updateUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
@@ -242,7 +242,7 @@ export default function SettingsPage() {
             const response = await api.patch("/account/profile", cleanedPayload);
 
             // Update auth context with new user data
-            login(localStorage.getItem('token') || "", response.data);
+            updateUser(response.data);
             toast.success("Profile settings saved securely!");
         } catch (error) {
             console.error("Failed to update profile", error);
@@ -278,7 +278,7 @@ export default function SettingsPage() {
 
             // 3. Update both local state and auth context
             setFormData(prev => ({ ...prev, profilePicture: imageUrl }));
-            login(localStorage.getItem('token') || "", profileRes.data);
+            updateUser(profileRes.data);
             
             toast.success("Profile picture updated!", { id: 'upload' });
         } catch (error) {
@@ -295,7 +295,7 @@ export default function SettingsPage() {
 
             // Refresh user profile
             const meRes = await api.get("/auth/me");
-            login(localStorage.getItem('token') || "", meRes.data);
+            updateUser(meRes.data);
             setIsConfirmModalOpen(false);
         } catch (error) {
             toast.error("Failed to schedule deletion.");
@@ -312,7 +312,7 @@ export default function SettingsPage() {
 
             // Refresh user profile
             const meRes = await api.get("/auth/me");
-            login(localStorage.getItem('token') || "", meRes.data);
+            updateUser(meRes.data);
         } catch (error) {
             toast.error("Failed to cancel deletion.");
         } finally {
