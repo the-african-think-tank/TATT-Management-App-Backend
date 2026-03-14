@@ -18,9 +18,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 router.push('/');
             } else if (user && user.systemRole !== 'COMMUNITY_MEMBER') {
                 router.push('/admin');
+            } else if (user && user.systemRole === 'COMMUNITY_MEMBER' && !user.flags?.includes('ONBOARDING_COMPLETED')) {
+                // If they are a member but haven't finished the plans selection,
+                // kick them back to onboarding.
+                router.push('/onboarding/plans');
             }
+
         }
     }, [isAuthenticated, isLoading, user, router]);
+
 
     if (isLoading) {
         return (

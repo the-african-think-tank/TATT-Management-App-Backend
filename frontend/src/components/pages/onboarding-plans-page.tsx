@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import api from "@/services/api";
+import { useAuth } from "@/context/auth-context";
+
 
 interface Plan {
     id: string;
@@ -17,13 +19,22 @@ interface Plan {
     features: string[];
     isPopular: boolean;
     hasYearlyDiscount: boolean;
+    activeDiscount?: {
+        code: string;
+        name: string;
+        value: number;
+        type: 'percentage' | 'fixed';
+        validUntil?: string;
+    };
 }
 
 export function OnboardingPlansPage() {
-    const [isYearly, setIsYearly] = useState(true);
+    const [isYearly, setIsYearly] = useState(false);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+    const { updateUser } = useAuth();
+
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -39,9 +50,25 @@ export function OnboardingPlansPage() {
         fetchPlans();
     }, []);
 
-    const handleSelectPlan = (planId: string, price: number) => {
-        if (price === 0) {
-            router.push("/onboarding/success?plan=FREE");
+    const handleSelectPlan = async (planId: string, price: number) => {
+        if (planId === "FREE") {
+            try {
+                // Call subscribe for FREE plan to record onboarding completion
+                const resp = await api.post("/billing/subscribe", {
+                    communityTier: "FREE",
+                    billingCycle: "MONTHLY"
+                });
+                if (resp.data.user) {
+                    updateUser(resp.data.user);
+                }
+                router.push("/onboarding/success?plan=FREE");
+            } catch (err: any) {
+                console.error("Failed to join free tier", err);
+                // If it's a 404, we might be in a dev env where the route isn't updated, 
+                // but let's try to proceed to success anyway if the user is already partially logged in
+                // The dashboard layout will handle re-kicking them if really needed
+                router.push("/onboarding/success?plan=FREE");
+            }
         } else {
             router.push(`/onboarding/payment?plan=${planId}&yearly=${isYearly}`);
         }
@@ -57,16 +84,17 @@ export function OnboardingPlansPage() {
 
             <main className="relative z-10 flex-1 flex flex-col items-center px-4 py-12 lg:py-20">
                 {/* Hero Text */}
-                <div className="max-w-3xl text-center mb-16">
-                    <span className="inline-block px-4 py-1 rounded-full bg-tatt-lime/20 text-tatt-lime-dark text-xs font-bold uppercase tracking-wider mb-4">
+                <div className="max-w-3xl text-center mb-10 sm:mb-16">
+                    <span className="inline-block px-4 py-1 rounded-full bg-tatt-lime/20 text-tatt-lime-dark text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4">
                         Membership Onboarding
                     </span>
-                    <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4 sm:mb-6 px-2">
                         Empowering the Diaspora through Education, Authority, and Capital.
                     </h2>
-                    <p className="text-tatt-gray text-lg max-w-2xl mx-auto">
+                    <p className="text-tatt-gray text-base sm:text-lg max-w-2xl mx-auto px-4">
                         Join a collective of visionaries building the infrastructure for African economic excellence. Select the plan that matches your current growth stage.
                     </p>
+
 
                     {/* Billing Toggle */}
                     <div className="flex items-center justify-center mt-10 gap-4">
@@ -97,9 +125,10 @@ export function OnboardingPlansPage() {
                         plans.map((plan) => (
                             <div
                                 key={plan.id}
-                                className={`flex flex-col border rounded-xl p-8 shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${plan.isPopular ? 'border-2 border-tatt-lime bg-white scale-105 z-20' : 'bg-white border-border'
+                                className={`flex flex-col border rounded-xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${plan.isPopular ? 'border-2 border-tatt-lime bg-white sm:scale-105 z-20' : 'bg-white border-border'
                                     }`}
                             >
+
                                 {plan.isPopular && (
                                     <div className="absolute top-0 right-0 bg-tatt-lime text-tatt-black text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-lg">
                                         Most Popular
@@ -114,9 +143,27 @@ export function OnboardingPlansPage() {
                                     <h3 className={`text-2xl font-black mb-2 ${plan.tier === 'FREE' ? 'text-gray-500' : ''}`}>{plan.name}</h3>
                                     <p className="text-tatt-gray text-sm leading-relaxed mb-6">{plan.tagline}</p>
                                     <div className="flex items-baseline gap-1">
-                                        <span className={`text-4xl font-black ${plan.tier === 'FREE' ? 'text-gray-400' : plan.isPopular ? 'text-tatt-lime' : ''}`}>
-                                            ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
-                                        </span>
+                                        {plan.activeDiscount ? (
+                                            <div className="flex flex-col">
+                                                <div className="flex items-baseline gap-2">
+                                                    <span className={`text-4xl font-black ${plan.tier === 'FREE' ? 'text-gray-400' : plan.isPopular ? 'text-tatt-lime' : ''}`}>
+                                                        ${isYearly 
+                                                            ? (plan.activeDiscount.type === 'percentage' ? plan.yearlyPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, plan.yearlyPrice - plan.activeDiscount.value / 100))
+                                                            : (plan.activeDiscount.type === 'percentage' ? plan.monthlyPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, plan.monthlyPrice - plan.activeDiscount.value / 100))
+                                                        }
+                                                    </span>
+                                                    <span className="text-sm font-black text-tatt-gray line-through decoration-red-500/50">${isYearly ? plan.yearlyPrice : plan.monthlyPrice}</span>
+                                                </div>
+                                                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-1">
+                                                    {plan.activeDiscount.name} Applied 
+                                                    {plan.activeDiscount.validUntil && ` • Ends ${new Date(plan.activeDiscount.validUntil).toLocaleDateString()}`}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className={`text-4xl font-black ${plan.tier === 'FREE' ? 'text-gray-400' : plan.isPopular ? 'text-tatt-lime' : ''}`}>
+                                                ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
+                                            </span>
+                                        )}
                                         <span className="text-tatt-gray font-bold">/{isYearly ? 'yr' : 'mo'}</span>
                                     </div>
                                 </div>

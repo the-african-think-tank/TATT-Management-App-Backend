@@ -25,7 +25,10 @@ import {
     Download,
     ChevronDown,
     Loader2,
+    Lock
 } from "lucide-react";
+
+
 import Link from "next/link";
 import MembershipCard from "@/components/molecules/MembershipCard";
 
@@ -76,8 +79,12 @@ export default function DashboardPage() {
         isVolunteer: isUserVolunteer,
     };
 
+    const isStaff = !!(user?.systemRole && user.systemRole !== "COMMUNITY_MEMBER");
+    const isProfileComplete = isStaff || !!(user?.flags && Array.isArray(user.flags) && user.flags.includes("PROFILE_COMPLETED"));
+
     // ── Display values ─────────────────────────────────────────────────────
     const firstName = user?.firstName || "Member";
+
     const tier = user?.communityTier || "FREE";
     const displayTierName =
         tier === "KIONGOZI"
@@ -108,33 +115,38 @@ export default function DashboardPage() {
                 </div>
                 <Link
                     href={`/dashboard/network/${user?.id || ""}`}
-                    className="px-6 py-2.5 bg-foreground text-background rounded-lg font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2"
+                    className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-sm ${
+                        isProfileComplete 
+                            ? "bg-foreground text-background hover:scale-[1.02] active:scale-95" 
+                            : "bg-surface border border-border text-tatt-gray hover:bg-black/5"
+                    }`}
                 >
-                    <Users className="h-4 w-4" />
-                    View Public Profile
+                    {isProfileComplete ? <Users className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    {isProfileComplete ? "View Public Profile" : "Profile Setup Pending"}
                 </Link>
+
             </div>
 
             {/* Profile Setup Banner for New Members */}
-            {(!user?.professionTitle || !companyName || companyName === "—") && (
+            {!isProfileComplete && (
                 <div className="bg-tatt-lime/10 border border-tatt-lime/30 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                         <h3 className="font-black text-foreground text-lg flex items-center gap-2">
                             <span className="bg-tatt-lime text-tatt-black p-1 rounded-full">
                                 <Award className="h-4 w-4" />
                             </span>
-                            Welcome to the community!
+                            Complete your profile!
                         </h3>
                         <p className="text-tatt-gray text-sm font-medium mt-1">
-                            Your profile is currently incomplete. Take a moment to add your profession, company, and
-                            location to get the most out of your TATT experience.
+                            Your profile is currently missing some key information like your profession, bio, or interests. 
+                            Complete these details to unlock your public profile and connect with the community.
                         </p>
                     </div>
                     <Link
                         href="/dashboard/settings"
                         className="shrink-0 px-6 py-2.5 bg-tatt-lime text-tatt-black font-black uppercase text-xs rounded-lg hover:brightness-105 transition-all shadow-sm"
                     >
-                        Setup My Profile
+                        Complete Profile
                     </Link>
                 </div>
             )}

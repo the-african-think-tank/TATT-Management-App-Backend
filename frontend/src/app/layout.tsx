@@ -34,6 +34,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from 'react-hot-toast';
 import QueryProvider from "@/context/query-provider";
+import { CartProvider } from "@/context/cart-context";
 
 export default function RootLayout({
   children,
@@ -48,7 +49,9 @@ export default function RootLayout({
         <Toaster position="top-right" />
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <CartProvider>
+              {children}
+            </CartProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

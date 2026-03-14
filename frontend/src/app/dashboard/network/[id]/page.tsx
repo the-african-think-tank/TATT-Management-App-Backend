@@ -22,8 +22,11 @@ import {
     FileText,
     MessageSquare,
     ThumbsUp,
-    MessageCircle
+    MessageCircle,
+    UserCircle,
+    Lock
 } from "lucide-react";
+
 import api from "@/services/api";
 import MembershipCard from "@/components/molecules/MembershipCard";
 import { useAuth } from "@/context/auth-context";
@@ -81,7 +84,13 @@ export default function MemberProfilePage() {
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState<string | null>(null);
 
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
     const openModal = () => {
+        if (user?.communityTier === 'FREE') {
+            setIsUpgradeModalOpen(true);
+            return;
+        }
         setModalOpen(true);
         setConnectMessage("");
         setSendError(null);
@@ -136,7 +145,76 @@ export default function MemberProfilePage() {
         }
     }, [id]);
 
+    const isStaff = user?.systemRole !== "COMMUNITY_MEMBER";
+    const isProfileComplete = isStaff || user?.flags?.includes("PROFILE_COMPLETED");
+    const isOwner = user?.id === id;
+
+    if (isOwner && !isProfileComplete) {
+        return (
+            <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-background p-6">
+                <div className="max-w-2xl w-full text-center space-y-10 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="relative mx-auto size-32">
+                        <div className="absolute inset-0 bg-tatt-lime/20 rounded-[32px] blur-2xl animate-pulse" />
+                        <div className="relative size-full bg-surface border border-tatt-lime/20 rounded-[32px] flex items-center justify-center shadow-2xl">
+                            <UserCircle className="h-16 w-16 text-tatt-lime" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h1 className="text-4xl font-black text-foreground tracking-tight">Your Professional Identity is Hidden</h1>
+                        <p className="text-tatt-gray text-lg max-w-lg mx-auto font-medium leading-relaxed">
+                            To activate your public profile and start connecting with global leaders, we require a completed professional background.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-md mx-auto">
+                        <div className="bg-surface p-4 rounded-2xl border border-border flex items-center gap-3">
+                            <div className="size-8 rounded-lg bg-tatt-lime/10 flex items-center justify-center shrink-0">
+                                <Briefcase className="h-4 w-4 text-tatt-lime" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground">Profession & Industry</span>
+                        </div>
+                        <div className="bg-surface p-4 rounded-2xl border border-border flex items-center gap-3">
+                            <div className="size-8 rounded-lg bg-tatt-lime/10 flex items-center justify-center shrink-0">
+                                <MapPin className="h-4 w-4 text-tatt-lime" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground">Location Profile</span>
+                        </div>
+                        <div className="bg-surface p-4 rounded-2xl border border-border flex items-center gap-3">
+                            <div className="size-8 rounded-lg bg-tatt-lime/10 flex items-center justify-center shrink-0">
+                                <FileText className="h-4 w-4 text-tatt-lime" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground">Professional Bio</span>
+                        </div>
+                        <div className="bg-surface p-4 rounded-2xl border border-border flex items-center gap-3">
+                            <div className="size-8 rounded-lg bg-tatt-lime/10 flex items-center justify-center shrink-0">
+                                <Lightbulb className="h-4 w-4 text-tatt-lime" />
+                            </div>
+                            <span className="text-sm font-bold text-foreground">Strategic Interests</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                        <Link 
+                            href="/dashboard/settings"
+                            className="px-10 py-4 bg-tatt-lime text-tatt-black font-black uppercase tracking-widest text-xs rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                        >
+                            Complete Setup Now
+                        </Link>
+                        <button 
+                            onClick={() => router.push('/dashboard/feed')}
+                            className="px-10 py-4 bg-surface text-foreground font-black uppercase tracking-widest text-xs rounded-2xl border border-border hover:bg-black/5 transition-all"
+                        >
+                            Return to Feed
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (loading) {
+
         return (
             <div className="flex h-[calc(100vh-80px)] w-full flex-col items-center justify-center bg-background">
                 <Loader2 className="h-12 w-12 text-tatt-lime animate-spin mb-4" />
@@ -171,7 +249,7 @@ export default function MemberProfilePage() {
         <div className="min-h-screen bg-surface flex flex-col min-w-0">
             {/* Hero Section */}
             <div className="relative w-full h-64 bg-gray-200">
-                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80')" }}></div>
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/assets/tatt_profile_banner.png')" }}></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 <div className="absolute top-6 left-6 z-10">
                     <button onClick={() => router.back()} className="flex items-center gap-2 text-white bg-black/40 hover:bg-black/60 px-4 py-2 rounded-full backdrop-blur-md transition-colors text-sm font-bold">
@@ -264,17 +342,19 @@ export default function MemberProfilePage() {
 
                         {/* Key Information Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
-                                <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
-                                    <Award className="h-6 w-6" />
+                            {member.tattMemberId && member.communityTier !== "FREE" && (
+                                <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
+                                    <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
+                                        <Award className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Member ID</p>
+                                        <p className="text-sm md:text-base font-bold text-foreground break-words">
+                                            {user?.id === member.id ? member.tattMemberId : '••••••••'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Member ID</p>
-                                    <p className="text-sm md:text-base font-bold text-foreground break-words">
-                                        {user?.id === member.id ? (member.tattMemberId || 'N/A') : '••••••••'}
-                                    </p>
-                                </div>
-                            </div>
+                            )}
                             
                             <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
                                 <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
@@ -485,6 +565,36 @@ export default function MemberProfilePage() {
                                     Cancel
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Upgrade Required Modal */}
+            {isUpgradeModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsUpgradeModalOpen(false)} />
+                    <div className="relative bg-tatt-black w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-white/10 text-center p-8 sm:p-10">
+                        <div className="size-20 bg-tatt-lime/10 rounded-[24px] flex items-center justify-center mx-auto mb-6">
+                            <Lock className="h-10 w-10 text-tatt-lime" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white mb-4">Strategic Connection Locked</h2>
+                        <p className="text-white/60 text-sm leading-relaxed mb-8">
+                            Expanding your professional network is a premium TATT feature. Upgrade to Ubuntu, Imani, or Kiongozi to send connection requests and build your circle.
+                        </p>
+                        
+                        <div className="flex flex-col gap-3">
+                            <Link 
+                                href="/dashboard/upgrade"
+                                className="w-full bg-tatt-lime text-black font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                            >
+                                View Plans & Upgrade
+                            </Link>
+                            <button 
+                                onClick={() => setIsUpgradeModalOpen(false)}
+                                className="w-full py-4 text-xs font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                            >
+                                Maybe Later
+                            </button>
                         </div>
                     </div>
                 </div>

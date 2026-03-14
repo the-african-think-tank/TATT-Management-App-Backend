@@ -35,8 +35,11 @@ import {
     ArrowBigUp,
     Flag,
     Eye,
-    Trash2
+    Trash2,
+    ChevronRight,
+    AlertCircle
 } from "lucide-react";
+
 import Link from "next/link";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
@@ -63,7 +66,7 @@ interface PostChapter {
 
 interface Post {
     id: string;
-    type: "GENERAL" | "RESOURCE" | "EVENT" | "ANNOUNCEMENT";
+    type: "GENERAL" | "RESOURCE" | "EVENT" | "ANNOUNCEMENT" | "JOB";
     isPremium: boolean;
     isPremiumLocked: boolean;
     title: string | null;
@@ -84,6 +87,9 @@ interface Post {
     createdAt: string;
     updatedAt: string;
     parentPost?: Post;
+    jobLink?: string;
+    jobLocation?: string;
+    jobCompany?: string;
 }
 
 interface Comment {
@@ -145,6 +151,7 @@ const POST_TYPES = [
     { id: "EVENT", name: "Event or Workshop", icon: Calendar, description: "Promote a chapter event, webinar, or workshop.", minTier: "FREE", staffOnly: false },
     { id: "RESOURCE", name: "Strategic Resource", icon: Briefcase, description: "Share reports, whitepapers, or strategic frameworks.", minTier: "FREE", staffOnly: true },
     { id: "ANNOUNCEMENT", name: "Organization Announcement", icon: Zap, description: "Official TATT news and major updates.", minTier: "FREE", staffOnly: true },
+    { id: "JOB", name: "Job Announcement", icon: Briefcase, description: "Share available career opportunities with the network.", minTier: "UBUNTU", staffOnly: false },
 ];
 
 export default function FeedPage() {
@@ -163,11 +170,16 @@ export default function FeedPage() {
     const [isPremiumPost, setIsPremiumPost] = useState(false);
     const [attachments, setAttachments] = useState<File[]>([]);
     const [attachmentPreviews, setAttachmentPreviews] = useState<string[]>([]);
+    const [jobLink, setJobLink] = useState("");
+    const [jobLocation, setJobLocation] = useState("");
+    const [jobCompany, setJobCompany] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isLoadingPosts, setIsLoadingPosts] = useState(true);
     const [connectModal, setConnectModal] = useState<{ open: boolean; member: any }>({ open: false, member: null });
     const [connectMessage, setConnectMessage] = useState("");
     const [isSendingConnect, setIsSendingConnect] = useState(false);
+    const [isProfilePromptOpen, setIsProfilePromptOpen] = useState(false);
+
 
     // Sidebar loading
     const [isLoadingSidebar, setIsLoadingSidebar] = useState(true);
@@ -293,7 +305,10 @@ export default function FeedPage() {
                 type: selectedPostType,
                 isPremium: isPremiumPost,
                 mediaUrls: uploadedMediaUrls,
-                contentFormat: "PLAIN"
+                contentFormat: "PLAIN",
+                jobLink: selectedPostType === "JOB" ? jobLink : undefined,
+                jobLocation: selectedPostType === "JOB" ? jobLocation : undefined,
+                jobCompany: selectedPostType === "JOB" ? jobCompany : undefined,
             });
 
             toast.success("Post successfully shared to the TATT Feed!", { id: loadingToast });
@@ -303,6 +318,9 @@ export default function FeedPage() {
             setIsPremiumPost(false);
             setAttachments([]);
             setAttachmentPreviews([]);
+            setJobLink("");
+            setJobLocation("");
+            setJobCompany("");
             fetchFeed(1, filter, true); // Refresh feed
         } catch (error: any) {
 
@@ -310,7 +328,13 @@ export default function FeedPage() {
         }
     };
 
+    const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
+
     const handleConnect = (member: any) => {
+        if (user?.communityTier === 'FREE') {
+            setIsUpgradePromptOpen(true);
+            return;
+        }
         setConnectModal({ open: true, member });
         setConnectMessage(`Hi ${member.firstName}, I saw your profile in my elite recommendations and would love to connect and share strategic insights.`);
     };
@@ -334,9 +358,19 @@ export default function FeedPage() {
 
     const isStaff = user?.systemRole !== "COMMUNITY_MEMBER";
     const isPaid = user?.communityTier && user.communityTier !== "FREE";
+    const isProfileComplete = isStaff || user?.flags?.includes("PROFILE_COMPLETED");
+
+    const handleCreatePostTrigger = () => {
+        if (!isProfileComplete) {
+            setIsProfilePromptOpen(true);
+            return;
+        }
+        setIsPostWizardOpen(true);
+    };
 
     const allowedPostTypes = POST_TYPES.filter(t => {
         if (t.staffOnly) return isStaff;
+        if (t.minTier === "UBUNTU") return isPaid || isStaff;
         return true;
     });
 
@@ -368,32 +402,68 @@ export default function FeedPage() {
                                 )}
                             </div>
                             <button
-                                onClick={() => setIsPostWizardOpen(true)}
+                                onClick={handleCreatePostTrigger}
                                 className="flex-1 text-left bg-background hover:bg-black/5  border border-border rounded-xl px-4 py-3 text-tatt-gray transition-colors"
                             >
-                                Share a strategic update, research, or poll...
+                                {isProfileComplete 
+                                    ? "Share a strategic update, research, or poll..." 
+                                    : "Complete your professional profile to start posting..."}
                             </button>
                         </div>
                         <div className="px-5 py-3 bg-black/5  border-t border-border flex items-center justify-between">
                             <div className="flex items-center gap-1">
-                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Add Image">
+                                <button 
+                                    onClick={handleCreatePostTrigger}
+                                    className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Add Image"
+                                >
                                     <ImageIcon className="h-5 w-5" />
                                 </button>
-                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Create Poll">
+                                <button 
+                                    onClick={handleCreatePostTrigger}
+                                    className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Create Poll"
+                                >
                                     <BarChart2 className="h-5 w-5" />
                                 </button>
-                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Attach Document">
+                                <button 
+                                    onClick={handleCreatePostTrigger}
+                                    className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all" title="Attach Document"
+                                >
                                     <Paperclip className="h-5 w-5" />
                                 </button>
                             </div>
                             <button
-                                onClick={() => setIsPostWizardOpen(true)}
-                                className="bg-tatt-lime text-black font-bold px-6 py-2.5 rounded-xl text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-tatt-lime/10"
+                                onClick={handleCreatePostTrigger}
+                                className={`font-bold px-6 py-2.5 rounded-xl text-sm transition-all shadow-lg ${
+                                    isProfileComplete 
+                                        ? "bg-tatt-lime text-black hover:scale-[1.02] active:scale-95 shadow-tatt-lime/10" 
+                                        : "bg-tatt-gray/20 text-tatt-gray cursor-not-allowed"
+                                }`}
                             >
                                 Post Update
                             </button>
                         </div>
                     </div>
+
+                    {!isProfileComplete && (
+                        <div className="bg-gradient-to-r from-tatt-lime/20 to-transparent border border-tatt-lime/30 rounded-2xl p-5 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="size-10 rounded-xl bg-tatt-lime/20 flex items-center justify-center shrink-0">
+                                <AlertCircle className="h-5 w-5 text-tatt-lime" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-sm font-bold text-foreground">Identity Verification Required</h4>
+                                <p className="text-xs text-tatt-gray mt-1 leading-relaxed">
+                                    To maintain the integrity of our strategic network, we require all members to complete their professional background (Title, Industry, Bio, and Interests) before posting or commenting.
+                                </p>
+                                <Link 
+                                    href="/dashboard/settings" 
+                                    className="inline-flex items-center gap-1.5 mt-3 text-[10px] font-black uppercase tracking-widest text-tatt-lime hover:gap-2 transition-all"
+                                >
+                                    Complete Profile Now <ChevronRight className="h-3 w-3" />
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
 
                     {/* Feed Filters */}
                     <div className="flex border-b border-border sticky top-16 z-30 bg-background/80 backdrop-blur-md pt-2 px-1 gap-6 lg:gap-8 overflow-x-auto no-scrollbar">
@@ -685,9 +755,50 @@ export default function FeedPage() {
                             <input
                                 value={newPostTitle}
                                 onChange={(e) => setNewPostTitle(e.target.value)}
-                                placeholder="Post Title (Optional)"
+                                placeholder={selectedPostType === "JOB" ? "Job Position / Role (e.g. Senior Software Engineer)" : "Post Title (Optional)"}
                                 className="w-full bg-transparent border-none text-xl font-bold focus:ring-0 placeholder:text-tatt-gray outline-none"
                             />
+
+                            {selectedPostType === "JOB" && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/5 p-4 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Company Name</label>
+                                        <div className="relative">
+                                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tatt-gray" />
+                                            <input
+                                                value={jobCompany}
+                                                onChange={(e) => setJobCompany(e.target.value)}
+                                                placeholder="e.g. Google Africa"
+                                                className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Location</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tatt-gray" />
+                                            <input
+                                                value={jobLocation}
+                                                onChange={(e) => setJobLocation(e.target.value)}
+                                                placeholder="e.g. Nairobi, Kenya"
+                                                className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="md:col-span-2 space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Job Description Link</label>
+                                        <div className="relative">
+                                            <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tatt-gray" />
+                                            <input
+                                                value={jobLink}
+                                                onChange={(e) => setJobLink(e.target.value)}
+                                                placeholder="https://careers.company.com/job/..."
+                                                className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <textarea
                                 value={newPostContent}
@@ -803,6 +914,87 @@ export default function FeedPage() {
                     </div>
                 </div>
             )}
+
+            {/* Profile Required Modal */}
+            {isProfilePromptOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsProfilePromptOpen(false)} />
+                    <div className="relative bg-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-white/10 text-center p-8 sm:p-10">
+                        <div className="size-20 bg-tatt-lime/10 rounded-[24px] flex items-center justify-center mx-auto mb-6">
+                            <Briefcase className="h-10 w-10 text-tatt-lime" />
+                        </div>
+                        <h2 className="text-2xl font-black text-foreground mb-4">Strategic Profile Required</h2>
+                        <p className="text-tatt-gray text-sm leading-relaxed mb-8">
+                            TATT is a network of identified professionals. To start sharing insights, participating in polls, or commenting, please complete your professional setup in settings.
+                        </p>
+                        
+                        <div className="space-y-3 bg-black/5 p-5 rounded-2xl text-left mb-8">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Items needed:</p>
+                            <div className="grid grid-cols-2 gap-y-2">
+                                <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
+                                    <div className="size-1.5 rounded-full bg-tatt-lime" /> Profession
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
+                                    <div className="size-1.5 rounded-full bg-tatt-lime" /> Industry
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
+                                    <div className="size-1.5 rounded-full bg-tatt-lime" /> Location
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-bold text-foreground/70">
+                                    <div className="size-1.5 rounded-full bg-tatt-lime" /> Bio & Interests
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <Link 
+                                href="/dashboard/settings"
+                                className="w-full bg-tatt-lime text-black font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                            >
+                                Go to Settings
+                            </Link>
+                            <button 
+                                onClick={() => setIsProfilePromptOpen(false)}
+                                className="w-full py-4 text-xs font-black uppercase tracking-widest text-tatt-gray hover:text-foreground transition-colors"
+                            >
+                                Maybe Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Upgrade Required Modal */}
+            {isUpgradePromptOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsUpgradePromptOpen(false)} />
+                    <div className="relative bg-tatt-black w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl border border-white/10 text-center p-8 sm:p-10">
+                        <div className="size-20 bg-tatt-lime/10 rounded-[24px] flex items-center justify-center mx-auto mb-6">
+                            <Lock className="h-10 w-10 text-tatt-lime" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white mb-4">Strategic Connection Locked</h2>
+                        <p className="text-white/60 text-sm leading-relaxed mb-8">
+                            Expanding your professional network is a premium TATT feature. Upgrade to Ubuntu, Imani, or Kiongozi to send connection requests and build your circle.
+                        </p>
+                        
+                        <div className="flex flex-col gap-3">
+                            <Link 
+                                href="/dashboard/upgrade"
+                                className="w-full bg-tatt-lime text-black font-black py-4 rounded-2xl uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                            >
+                                View Plans & Upgrade
+                            </Link>
+                            <button 
+                                onClick={() => setIsUpgradePromptOpen(false)}
+                                className="w-full py-4 text-xs font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                            >
+                                Maybe Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
@@ -863,6 +1055,16 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
     };
 
     const handleDelete = async () => {
+        // Enforce 30-minute limit
+        const isStaff = !!(user?.systemRole && user.systemRole !== 'COMMUNITY_MEMBER');
+        const minutesSinceCreation = (new Date().getTime() - new Date(post.createdAt).getTime()) / 60000;
+        
+        if (!isStaff && minutesSinceCreation > 30) {
+            toast.error("Strategic insights can only be removed within 30 minutes of publishing.");
+            setShowOptions(false);
+            return;
+        }
+
         if (!window.confirm("Are you sure you want to delete this strategic insight? This action cannot be undone.")) return;
         
         const loadingToast = toast.loading("Removing post...");
@@ -946,6 +1148,12 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                     icon: Calendar,
                     className: "bg-tatt-gray/10 text-tatt-gray border border-tatt-gray/30",
                 };
+            case "JOB":
+                return {
+                    label: "Career / Job",
+                    icon: Briefcase,
+                    className: "bg-tatt-bronze/10 text-tatt-bronze border border-tatt-bronze/30",
+                };
             default: // GENERAL
                 return {
                     label: "TATT-POST",
@@ -969,6 +1177,9 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
             )}
             {post.type === "GENERAL" && (
                 <div className="bg-gradient-to-r from-tatt-bronze/30 via-tatt-bronze/10 to-transparent h-0.5" />
+            )}
+            {post.type === "JOB" && (
+                <div className="bg-gradient-to-r from-tatt-bronze/40 via-tatt-bronze/10 to-transparent h-0.5" />
             )}
 
             <div className="p-5">
@@ -1018,7 +1229,7 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                                 )}
                             </div>
                             <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-widest mt-1">
-                                {post.chapter?.name || 'Global'} Chapter • {formatDistanceToNow(new Date(post.createdAt))} ago
+                                {(post.chapter?.name || 'Global').replace(/\s*Chapter\s*$/i, '')} Chapter • {formatDistanceToNow(new Date(post.createdAt))} ago
                             </p>
                         </div>
                     </div>
@@ -1030,45 +1241,48 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                             <MoreHorizontal className="h-5 w-5" />
                         </button>
                         {showOptions && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-2xl shadow-2xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200">
-                                {post.author.id !== user?.id && (
-                                    <>
-                                        <button onClick={handleBookmark} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
-                                            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-tatt-lime text-tatt-lime' : ''}`} />
-                                            {isBookmarked ? 'Bookmarked' : 'Bookmark Post'}
+                            <>
+                                <div className="fixed inset-0 z-[55]" onClick={() => setShowOptions(false)} />
+                                <div className="absolute right-0 mt-2 w-48 bg-white border border-border rounded-2xl shadow-2xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200">
+                                    {post.author.id !== user?.id && (
+                                        <>
+                                            <button onClick={handleBookmark} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
+                                                <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-tatt-lime text-tatt-lime' : ''}`} />
+                                                {isBookmarked ? 'Bookmarked' : 'Bookmark Post'}
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowOptions(false); setIsReporting(true); }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 transition-colors text-left"
+                                            >
+                                                <Flag className="h-4 w-4" />
+                                                Report Post
+                                            </button>
+                                        </>
+                                    )}
+                                    {(user?.systemRole === 'ADMIN' || user?.systemRole === 'SUPERADMIN' || user?.systemRole === 'MODERATOR' || user?.systemRole === 'REGIONAL_ADMIN') && (
+                                        <button onClick={handleHighlight} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
+                                            <Highlighter className={`h-4 w-4 ${isHighlighted ? 'text-tatt-lime' : ''}`} />
+                                            {isHighlighted ? 'Remove Highlight' : 'Highlight in Chapter'}
                                         </button>
-                                        <button
-                                            onClick={() => { setShowOptions(false); setIsReporting(true); }}
+                                    )}
+                                    <button
+                                        onClick={() => { setShowOptions(false); setIsReposting(true); }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left"
+                                    >
+                                        <Repeat2 className="h-4 w-4" />
+                                        Repost
+                                    </button>
+                                    {(post.author.id === user?.id || (user?.systemRole && user.systemRole !== 'COMMUNITY_MEMBER')) && (
+                                        <button 
+                                            onClick={handleDelete} 
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 transition-colors text-left"
                                         >
-                                            <Flag className="h-4 w-4" />
-                                            Report Post
+                                            <Trash2 className="h-4 w-4" />
+                                            Delete Post
                                         </button>
-                                    </>
-                                )}
-                                {(user?.systemRole === 'ADMIN' || user?.systemRole === 'SUPERADMIN' || user?.systemRole === 'MODERATOR' || user?.systemRole === 'REGIONAL_ADMIN') && (
-                                    <button onClick={handleHighlight} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left">
-                                        <Highlighter className={`h-4 w-4 ${isHighlighted ? 'text-tatt-lime' : ''}`} />
-                                        {isHighlighted ? 'Remove Highlight' : 'Highlight in Chapter'}
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => { setShowOptions(false); setIsReposting(true); }}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-black/5 transition-colors text-left"
-                                >
-                                    <Repeat2 className="h-4 w-4" />
-                                    Repost
-                                </button>
-                                {(post.author.id === user?.id || (user?.systemRole && user.systemRole !== 'COMMUNITY_MEMBER')) && (
-                                    <button 
-                                        onClick={handleDelete} 
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-red-50 text-red-600 transition-colors text-left"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        Delete Post
-                                    </button>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
 
@@ -1104,6 +1318,74 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                         </div>
                     )}
 
+                    {post.type === "JOB" && !post.isPremiumLocked && (
+                        <div className="mt-4 p-5 rounded-[24px] bg-tatt-bronze/5 border border-tatt-bronze/20 space-y-4 shadow-sm relative overflow-hidden">
+                            {user?.communityTier === 'FREE' && post.author.id !== user?.id ? (
+                                <div className="flex flex-col items-center justify-center text-center py-4 px-2 space-y-4">
+                                    <div className="size-12 rounded-full bg-tatt-bronze/10 flex items-center justify-center text-tatt-bronze">
+                                        <Lock className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-black text-tatt-bronze-dark uppercase tracking-widest mb-1">Opportunities Locked</h4>
+                                        <p className="text-[11px] text-tatt-gray max-w-[240px] leading-relaxed">
+                                            Job details like Role, Company, and Location are exclusive to paid members. 
+                                        </p>
+                                    </div>
+                                    <Link 
+                                        href="/dashboard/upgrade"
+                                        className="inline-flex items-center gap-2 px-6 py-2 bg-tatt-bronze text-white font-black text-[10px] uppercase tracking-widest rounded-full hover:scale-105 transition-all shadow-md shadow-tatt-bronze/20"
+                                    >
+                                        Upgrade to View Details
+                                    </Link>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="size-9 rounded-xl bg-tatt-bronze/10 flex items-center justify-center text-tatt-bronze shrink-0 border border-tatt-bronze/20">
+                                                <GraduationCap className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-tatt-bronze/60 leading-none mb-1">Role / Position</p>
+                                                <p className="text-sm font-black text-tatt-bronze-dark leading-none truncate">{post.title || "Position Open"}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="size-9 rounded-xl bg-tatt-bronze/10 flex items-center justify-center text-tatt-bronze shrink-0 border border-tatt-bronze/20">
+                                                <Briefcase className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-tatt-bronze/60 leading-none mb-1">Company</p>
+                                                <p className="text-sm font-black text-tatt-bronze-dark leading-none truncate">{post.jobCompany || "Confidential"}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="size-9 rounded-xl bg-tatt-bronze/10 flex items-center justify-center text-tatt-bronze shrink-0 border border-tatt-bronze/20">
+                                                <MapPin className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-tatt-bronze/60 leading-none mb-1">Location</p>
+                                                <p className="text-sm font-black text-tatt-bronze-dark leading-none truncate">{post.jobLocation || "Remote / Global"}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {post.jobLink && (
+                                        <a 
+                                            href={post.jobLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 w-full py-3.5 bg-tatt-bronze hover:bg-tatt-bronze-dark text-white font-black text-[11px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-tatt-bronze/30 active:scale-[0.98]"
+                                        >
+                                            View Job Description
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
                     {post.mediaUrls && post.mediaUrls.length > 0 && !post.isPremiumLocked && (
                         <div className={`grid gap-2 mt-4 overflow-hidden rounded-2xl border border-border ${post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {post.mediaUrls.map((url, i) => (
@@ -1117,22 +1399,24 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
 
                     {/* Original Post Preview (for reposts) */}
                     {post.parentPost && (
-                        <div className="mt-4 p-4 rounded-2xl bg-black/5  border border-border space-y-3 cursor-pointer hover:border-border/60 transition-colors" onClick={() => window.location.href = `/dashboard/feed/${post.parentPost?.id}`}>
-                            <div className="flex items-center gap-3">
-                                <div className="size-8 rounded-full border border-border overflow-hidden bg-background">
-                                    {post.parentPost.author.profilePicture ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={post.parentPost.author.profilePicture} alt={post.parentPost.author.firstName} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="size-full flex items-center justify-center text-[10px] font-bold text-tatt-lime">
-                                            {post.parentPost.author.firstName.charAt(0)}{post.parentPost.author.lastName.charAt(0)}
-                                        </div>
-                                    )}
-                                </div>
-                                <span className="text-xs font-black text-foreground">{post.parentPost.author.firstName} {post.parentPost.author.lastName}</span>
+                        <div className="mt-4 p-4 rounded-2xl bg-black/5 border border-border space-y-3 group/repost relative">
+                            <div className="flex items-center gap-3 relative z-10">
+                                <Link href={`/dashboard/network/${post.parentPost.author.id}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                    <div className="size-8 rounded-full border border-border overflow-hidden bg-background">
+                                        {post.parentPost.author.profilePicture ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={post.parentPost.author.profilePicture} alt={post.parentPost.author.firstName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="size-full flex items-center justify-center text-[10px] font-bold text-tatt-lime">
+                                                {post.parentPost.author.firstName.charAt(0)}{post.parentPost.author.lastName.charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-xs font-black text-foreground">{post.parentPost.author.firstName} {post.parentPost.author.lastName}</span>
+                                </Link>
                                 <span className="text-[10px] text-tatt-gray">• {formatDistanceToNow(new Date(post.parentPost.createdAt))} ago</span>
                             </div>
-                            <div className="text-sm line-clamp-3 text-tatt-gray italic">
+                            <div className="text-sm line-clamp-3 text-tatt-gray italic relative z-10">
                                 {post.parentPost.isPremiumLocked ? "Elite Strategic Insight (Locked)" : (post.parentPost.content || "").replace(/<[^>]*>?/gm, '').substring(0, 200) + '...'}
                             </div>
                         </div>

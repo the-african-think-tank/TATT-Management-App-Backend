@@ -9,6 +9,8 @@ import { CommunityTier } from '../iam/enums/roles.enum';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Sequelize } from 'sequelize-typescript';
 import Stripe from 'stripe';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class MembershipService implements OnApplicationBootstrap {
@@ -21,6 +23,7 @@ export class MembershipService implements OnApplicationBootstrap {
         @InjectModel(Discount) private discountRepo: typeof Discount,
         @InjectModel(User) private userRepo: typeof User,
         @InjectModel(Chapter) private chapterRepo: typeof Chapter,
+        private notificationsService: NotificationsService,
     ) {
         this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
             apiVersion: '2025-01-27.acacia' as any,
@@ -108,6 +111,10 @@ export class MembershipService implements OnApplicationBootstrap {
         return plan.update(dto);
     }
 
+    async createPlan(dto: any) {
+        return this.planRepo.create(dto);
+    }
+
     // --- Legacy Tiers (Internal logic) ---
 
     async getTiers() {
@@ -117,6 +124,10 @@ export class MembershipService implements OnApplicationBootstrap {
 
     async updateTier(id: string, dto: any) {
         return this.updatePlan(id, dto);
+    }
+
+    async createTier(dto: any) {
+        return this.createPlan(dto);
     }
 
     // --- Discounts ---
@@ -138,10 +149,34 @@ export class MembershipService implements OnApplicationBootstrap {
                 id: dto.code
             });
 
-            return this.discountRepo.create({
+            const discount = await this.discountRepo.create({
                 ...dto,
                 stripeCouponId: stripeCoupon.id
             });
+
+            // Trigger Notifications for members not on these plans
+            if (dto.applicablePlans && dto.applicablePlans.length > 0) {
+                const targetPlans = dto.applicablePlans.join(', ');
+                const usersToNotify = await this.userRepo.findAll({
+                    where: {
+                        communityTier: { [Op.notIn]: dto.applicablePlans },
+                        isActive: true
+                    }
+                });
+
+                for (const user of usersToNotify) {
+                    await this.notificationsService.create(
+                        user.id,
+                        NotificationType.PROMOTION,
+                        `New Exclusive Offer: ${dto.name}`,
+                        `Unlock ${dto.value}${dto.discountType === DiscountType.PERCENTAGE ? '%' : '$'} off on ${targetPlans} plans! Limited time offer. Upgrade now to claim.`,
+                        { discountCode: dto.code, plans: dto.applicablePlans, url: '/dashboard/upgrade' },
+                        true
+                    );
+                }
+            }
+
+            return discount;
         } catch (error: any) {
             this.logger.error(`Stripe Coupon creation failed: ${error.message}`);
             // Still create locally if Stripe fails (optional, but better to keep in sync)
@@ -157,25 +192,53 @@ export class MembershipService implements OnApplicationBootstrap {
 
     // --- Members Management ---
 
-    async getSubscribedMembers(filters: {
-        chapterId?: string;
-        tier?: CommunityTier;
-        billingCycle?: 'MONTHLY' | 'YEARLY';
-    }) {
-        const where: any = {
-            communityTier: { [Op.ne]: CommunityTier.FREE }
-        };
+    async getSubscribedMembers(filters: any) {
+        const { chapterId, tier, billingCycle, search, page = 1, limit = 10 } = filters;
+        const where: any = {};
+        const offset = (page - 1) * limit;
 
-        if (filters.chapterId) where.chapterId = filters.chapterId;
-        if (filters.tier) where.communityTier = filters.tier;
-        if (filters.billingCycle) where.billingCycle = filters.billingCycle;
+        if (chapterId) {
+            where.chapterId = chapterId;
+        }
 
-        return this.userRepo.findAll({
+        if (tier) {
+            where.communityTier = tier;
+        }
+
+        if (billingCycle) {
+            where.billingCycle = billingCycle;
+        }
+
+        if (search) {
+            where[Op.or] = [
+                { firstName: { [Op.iLike]: `%${search}%` } },
+                { lastName: { [Op.iLike]: `%${search}%` } },
+                { email: { [Op.iLike]: `%${search}%` } },
+                { professionTitle: { [Op.iLike]: `%${search}%` } },
+                { companyName: { [Op.iLike]: `%${search}%` } },
+            ];
+        }
+
+        const { count, rows } = await this.userRepo.findAndCountAll({
             where,
-            include: [{ model: Chapter, attributes: ['name'] }],
-            attributes: ['id', 'firstName', 'lastName', 'email', 'communityTier', 'billingCycle', 'subscriptionExpiresAt', 'chapterId'],
-            order: [['createdAt', 'DESC']]
+            include: [{
+                model: Chapter,
+                as: 'chapter',
+                attributes: ['id', 'name', 'code']
+            }],
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset,
+            paranoid: false
         });
+
+        return {
+            members: rows,
+            total: count,
+            page,
+            limit,
+            totalPages: Math.ceil(count / limit)
+        };
     }
 
     async getChapters() {
@@ -185,16 +248,21 @@ export class MembershipService implements OnApplicationBootstrap {
     }
 
     async getMembershipAnalytics() {
-        const currentMonth = new Date().getMonth();
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         const growthLabels = [];
         for (let i = 5; i >= 0; i--) {
-            growthLabels.push(months[(currentMonth - i + 12) % 12]);
+            growthLabels.push(months[(now.getMonth() - i + 12) % 12]);
         }
 
-        const tierGrowth: any = {};
         const activeTiers = [CommunityTier.UBUNTU, CommunityTier.IMANI, CommunityTier.KIONGOZI];
+        const tierGrowth: any = {};
 
+        // Calculate Tier Growth for the last 6 months
         for (const tier of activeTiers) {
             const monthlyCounts = await this.userRepo.findAll({
                 attributes: [
@@ -203,28 +271,51 @@ export class MembershipService implements OnApplicationBootstrap {
                 ],
                 where: {
                     communityTier: tier,
-                    createdAt: {
-                        [Op.gte]: new Date(new Date().setMonth(new Date().getMonth() - 5))
-                    }
+                    createdAt: { [Op.gte]: sixMonthsAgo }
                 },
                 group: [Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt'))],
-                order: [[Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt')), 'ASC']]
+                order: [[Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt')), 'ASC']],
+                raw: true
             });
 
-            // Fallback mock data if DB is empty for UI aesthetic
-            let data = [10, 20, 15, 25, 30, 45];
-            if (monthlyCounts.length > 0) {
-                const dbCounts = monthlyCounts.map((m: any) => parseInt(m.dataValues.count, 10));
-                while (dbCounts.length < 6) dbCounts.unshift(0);
-                data = dbCounts.slice(-6);
-            }
+            // Fill in the 6-month array
+            const data = new Array(6).fill(0);
+            monthlyCounts.forEach((m: any) => {
+                const date = new Date(m.month);
+                const monthDiff = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+                const index = 5 - monthDiff;
+                if (index >= 0 && index < 6) {
+                    data[index] = parseInt(m.count, 10);
+                }
+            });
             tierGrowth[tier] = data;
+        }
+
+        // Calculate Total Growth Rate (Current Month vs Last Month)
+        const currentMonthCount = await this.userRepo.count({
+            where: { createdAt: { [Op.gte]: currentMonthStart } }
+        });
+        const lastMonthCount = await this.userRepo.count({
+            where: {
+                createdAt: {
+                    [Op.gte]: lastMonthStart,
+                    [Op.lt]: currentMonthStart
+                }
+            }
+        });
+
+        let totalGrowthRate = "0%";
+        if (lastMonthCount === 0) {
+            totalGrowthRate = currentMonthCount > 0 ? `+${currentMonthCount * 100}%` : "0%";
+        } else {
+            const rate = ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100;
+            totalGrowthRate = `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
         }
 
         return {
             labels: growthLabels,
             tierGrowth,
-            totalGrowthRate: '+32.4%' // Mocked for design parity as requested
+            totalGrowthRate
         };
     }
 }

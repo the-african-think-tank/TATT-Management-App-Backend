@@ -87,4 +87,8 @@ export class UpdateProfileDto {
     @ApiProperty({ required: false })
     @IsString() @IsOptional()
     linkedInProfileUrl?: string;
+
+    @ApiProperty({ required: false })
+    @IsBoolean() @IsOptional()
+    hasAutoPayEnabled?: boolean;
 }

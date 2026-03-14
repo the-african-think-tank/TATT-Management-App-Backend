@@ -184,7 +184,7 @@ export default function MyChapterPage() {
       const [chapterRes, membersRes, activitiesRes, feedRes, eventsRes] = await Promise.allSettled([
         api.get(`/chapters/${cid}`),
         api.get(`/chapters/${cid}/members`),
-        api.get(`/chapters/${cid}/activities?limit=10`),
+        api.get(`/chapters/${cid}/activities?limit=10&visibility=CHAPTER_WIDE`),
         api.get(`/chapters/${cid}/feed?limit=15`),
         api.get(`/events`),
       ]);

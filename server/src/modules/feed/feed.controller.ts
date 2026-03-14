@@ -106,6 +106,12 @@ export class FeedController {
         return this.feedService.getFeed(req.user, query);
     }
 
+    @ApiOperation({ summary: 'Get active trending insight and community prompt' })
+    @Get('curation/active')
+    async getActiveCuration() {
+        return this.feedService.getActiveCuration();
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     //  FEED — single post
     // ═══════════════════════════════════════════════════════════════════════════

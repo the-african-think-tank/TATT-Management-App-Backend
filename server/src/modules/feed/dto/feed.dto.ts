@@ -129,6 +129,22 @@ export class CreatePostDto {
     @IsOptional()
     @IsString()
     parentPostId?: string;
+
+    @ApiPropertyOptional({ description: 'Link to the job description (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    @IsUrl()
+    jobLink?: string;
+
+    @ApiPropertyOptional({ description: 'Location of the job (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    jobLocation?: string;
+
+    @ApiPropertyOptional({ description: 'Name of the company (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    jobCompany?: string;
 }
 
 // ─── UPDATE POST ─────────────────────────────────────────────────────────────

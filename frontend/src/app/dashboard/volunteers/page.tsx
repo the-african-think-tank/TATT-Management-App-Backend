@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
     Loader2, ChevronLeft, ChevronRight, HeartHandshake,
     Clock, CheckCircle2, XCircle, CalendarClock, RotateCcw,
-    PartyPopper,
+    PartyPopper, Megaphone, Info, MapPin
 } from "lucide-react";
 import { Suspense } from "react";
 import { VolunteerHeroBanner } from "@/components/volunteers/volunteer-hero-banner";
@@ -45,6 +45,8 @@ function VolunteersContent() {
 
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
     const [appsLoading, setAppsLoading] = useState(true);
+    const [activities, setActivities] = useState<any[]>([]);
+    const [activitiesLoading, setActivitiesLoading] = useState(true);
 
     const fetchApplications = async () => {
         if (!user?.id) { setAppsLoading(false); return; }
@@ -55,6 +57,22 @@ function VolunteersContent() {
             setMyApplications([]);
         } finally {
             setAppsLoading(false);
+        }
+    };
+
+    const fetchActivities = async () => {
+        if (!user?.chapterId || !user?.flags?.includes('VOLUNTEER')) {
+            setActivitiesLoading(false);
+            return;
+        }
+        try {
+            setActivitiesLoading(true);
+            const { data } = await api.get(`/chapters/${user.chapterId}/activities?visibility=VOLUNTEERS_ONLY&limit=5`);
+            setActivities(Array.isArray(data.data) ? data.data : []);
+        } catch {
+            setActivities([]);
+        } finally {
+            setActivitiesLoading(false);
         }
     };
 
@@ -80,8 +98,9 @@ function VolunteersContent() {
         };
         fetchRoles();
         fetchApplications();
+        fetchActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id]);
+    }, [user?.id, user?.chapterId]);
 
     const scrollRoles = (direction: "left" | "right") => {
         const el = rolesScrollRef.current;
@@ -194,6 +213,53 @@ function VolunteersContent() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+                    </section>
+                )}
+                {/* ── Volunteer Exclusive Activities ────────────────────────── */}
+                {user?.flags?.includes('VOLUNTEER') && (
+                    <section className="pt-8 pb-4" aria-label="Volunteer activities">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Megaphone className="h-5 w-5 text-tatt-lime" />
+                            <h2 className="text-lg sm:text-xl font-bold text-foreground">Volunteer Briefings & Actions</h2>
+                        </div>
+                        
+                        {activitiesLoading ? (
+                            <div className="flex items-center gap-2 text-tatt-gray py-4">
+                                <Loader2 className="h-5 w-5 animate-spin" /> Loading briefings...
+                            </div>
+                        ) : activities.length === 0 ? (
+                            <div className="p-8 rounded-2xl border border-border bg-surface text-center">
+                                <Info className="h-8 w-8 mx-auto text-tatt-gray opacity-30 mb-2" />
+                                <p className="text-sm text-tatt-gray font-medium">No active volunteer briefings for your chapter.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {activities.map((act) => (
+                                    <div key={act.id} className="bg-surface rounded-2xl border border-border p-6 shadow-sm hover:border-tatt-lime/40 transition-all group">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <span className="px-2 py-1 rounded bg-tatt-lime/10 text-tatt-lime text-[10px] font-black uppercase tracking-widest border border-tatt-lime/20">
+                                                {act.type.replace('_', ' ')}
+                                            </span>
+                                            {act.eventDate && (
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-tatt-gray bg-background px-2 py-1 rounded border border-border">
+                                                    <Clock className="h-3 w-3" />
+                                                    {new Date(act.eventDate).toLocaleDateString()}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <h3 className="font-bold text-foreground mb-2 group-hover:text-tatt-lime transition-colors">{act.title}</h3>
+                                        <p className="text-sm text-tatt-gray line-clamp-3 mb-4 leading-relaxed">{act.content}</p>
+                                        
+                                        {(act.eventLocation) && (
+                                            <div className="flex items-center gap-2 text-xs font-medium text-tatt-gray mt-auto pt-4 border-t border-border/50">
+                                                <MapPin className="h-3.5 w-3.5 text-tatt-lime" />
+                                                <span className="truncate">{act.eventLocation}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </section>

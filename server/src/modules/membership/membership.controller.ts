@@ -29,6 +29,13 @@ export class MembershipController {
         return this.membershipService.updateTier(id, dto);
     }
 
+    @ApiOperation({ summary: 'Create a membership tier' })
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Post('tiers')
+    async createTier(@Body() dto: any) {
+        return this.membershipService.createTier(dto);
+    }
+
     // --- Discounts Endpoints ---
 
     @ApiOperation({ summary: 'Get all discounts' })
@@ -61,8 +68,11 @@ export class MembershipController {
         @Query('chapterId') chapterId?: string,
         @Query('tier') tier?: CommunityTier,
         @Query('billingCycle') billingCycle?: 'MONTHLY' | 'YEARLY',
+        @Query('search') search?: string,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
     ) {
-        const filters = { chapterId, tier, billingCycle };
+        const filters = { chapterId, tier, billingCycle, search, page: Number(page), limit: Number(limit) };
         return this.membershipService.getSubscribedMembers(filters);
     }
 

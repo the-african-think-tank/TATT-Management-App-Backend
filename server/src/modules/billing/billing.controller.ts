@@ -1,8 +1,8 @@
-import { Controller, Post, Get, Req, Res, Headers, HttpStatus, RawBodyRequest, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, Res, Headers, HttpStatus, RawBodyRequest, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { BillingService } from './billing.service';
-import { SubscriberSchema, RevenueMetricsSchema, GenericMessageResponseSchema } from './dto/billing.schemas';
+import { SubscriberSchema, RevenueMetricsSchema, GenericMessageResponseSchema, SubscribeDto } from './dto/billing.schemas';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -44,6 +44,40 @@ export class BillingController {
     async getPlans() {
         return this.billingService.getPlans();
     }
+    
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Subscribe to a membership plan (Onboarding/Upgrade)' })
+    @UseGuards(JwtAuthGuard)
+    @Post('subscribe')
+    async subscribe(@Req() req: any, @Body() dto: SubscribeDto) {
+        const userId = req.user.id;
+        return this.billingService.createSubscription(userId, dto.communityTier as any, dto.billingCycle as any, dto.paymentMethodId);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get default payment method for current user' })
+    @UseGuards(JwtAuthGuard)
+    @Get('payment-method')
+    async getPaymentMethod(@Req() req: any) {
+        return this.billingService.getDefaultPaymentMethod(req.user.id);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update default payment method' })
+    @UseGuards(JwtAuthGuard)
+    @Post('payment-method')
+    async updatePaymentMethod(@Req() req: any, @Body() dto: { paymentMethodId: string }) {
+        return this.billingService.updatePaymentMethod(req.user.id, dto.paymentMethodId);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Toggle auto-pay status' })
+    @UseGuards(JwtAuthGuard)
+    @Post('autopay/toggle')
+    async toggleAutoPay(@Req() req: any, @Body() dto: { enabled: boolean }) {
+        return this.billingService.toggleAutoPay(req.user.id, dto.enabled);
+    }
+
 
     // --- ADMIN SUBSCRIPTION VIEWS ---
 

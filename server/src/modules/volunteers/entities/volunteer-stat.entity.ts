@@ -7,6 +7,13 @@ export enum VolunteerGrade {
     GOLD = 'GOLD',
 }
 
+export enum VolunteerStatus {
+    ACTIVE = 'ACTIVE',
+    TRAINING = 'TRAINING',
+    INACTIVE = 'INACTIVE',
+    SUSPENDED = 'SUSPENDED',
+}
+
 @Table({
     tableName: 'volunteer_stats',
     timestamps: true,
@@ -47,4 +54,16 @@ export class VolunteerStat extends Model<VolunteerStat> {
         defaultValue: VolunteerGrade.SILVER,
     })
     grade: VolunteerGrade;
+
+    @Column({
+        type: DataType.ENUM(...Object.values(VolunteerStatus)),
+        defaultValue: VolunteerStatus.TRAINING,
+    })
+    status: VolunteerStatus;
+
+    @Column({
+        type: DataType.DECIMAL(2, 1),
+        defaultValue: 5.0,
+    })
+    rating: number;
 }

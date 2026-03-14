@@ -18,6 +18,7 @@ export enum PostType {
     RESOURCE = 'RESOURCE',    // Premium knowledge resource (articles, guides)
     EVENT = 'EVENT',       // Upcoming chapter or global event
     ANNOUNCEMENT = 'ANNOUNCEMENT', // Org-wide announcement (admin-authored)
+    JOB = 'JOB',                   // Job listing (member-authored)
 }
 
 import { PostUpvote } from './post-upvote.entity';
@@ -111,10 +112,24 @@ export class Post extends Model<Post> {
     @BelongsTo(() => Chapter, 'chapterId')
     chapter: Chapter;
 
+    // ─── JOB POST METADATA ────────────────────────────────────────────────────────
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobLink?: string;
+
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobLocation?: string;
+
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobCompany?: string;
+
     // ─── PUBLISH STATE ────────────────────────────────────────────────────────
     @Default(true)
     @Column(DataType.BOOLEAN)
     isPublished: boolean;
+
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    isShadowBanned: boolean;
 
     // ─── REPOSTING ────────────────────────────────────────────────────────────
     @ForeignKey(() => Post)

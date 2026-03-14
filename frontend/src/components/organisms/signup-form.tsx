@@ -173,7 +173,7 @@ export function SignupForm() {
   const router = useRouter();
   const { login: authLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -233,26 +233,35 @@ export function SignupForm() {
       console.error("Signup error:", err);
       const status = err.response?.status;
       const msg = err.response?.data?.message;
+
       if (status === 409) {
-        setError(msg || "This email is already registered. Please sign in or use a different email.");
+        setError(
+          <div className="flex flex-col gap-1">
+            <p className="font-bold">{msg || "This email is already registered."}</p>
+            <p>If you haven&apos;t finished setting up your account, <a href="/" className="underline font-black hover:text-red-900 transition-colors">Login here to resume your onboarding →</a></p>
+          </div>
+        );
       } else {
-        setError(Array.isArray(msg) ? msg[0] : msg || "Something went wrong. Please try again.");
+        const errorMsg = Array.isArray(msg) ? msg[0] : msg || "Something went wrong. Please try again.";
+        setError(errorMsg);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+
   return (
     <section className="w-full max-w-[448px]">
       <header className="space-y-2">
-        <h1 className="text-[30px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
+        <h1 className="text-[28px] xs:text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
           Create Your Account
         </h1>
-        <p className="text-sm sm:text-base leading-6 text-tatt-gray">
+        <p className="text-xs sm:text-base leading-6 text-tatt-gray">
           Step into a world of collective intelligence and impact.
         </p>
       </header>
+
 
       {error && (
         <div className="mt-6 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start gap-2">
@@ -417,15 +426,16 @@ export function SignupForm() {
       </form>
 
       <div className="mt-10 border-t border-[#f5f5f0] pt-10 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[2px] text-tatt-gray">
+        <p className="text-[10px] font-bold uppercase tracking-[2px] text-tatt-gray mb-6">
           In partnership with
         </p>
-        <div className="mt-4 flex items-center justify-center gap-6 opacity-30">
-          <span className="h-6 w-20 rounded-[2px] bg-tatt-black" />
-          <span className="h-6 w-16 rounded-[2px] bg-tatt-black" />
-          <span className="h-6 w-24 rounded-[2px] bg-tatt-black" />
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
+          <span className="h-4 w-16 sm:h-6 sm:w-20 rounded-[2px] bg-tatt-black" />
+          <span className="h-4 w-12 sm:h-6 sm:w-16 rounded-[2px] bg-tatt-black" />
+          <span className="h-4 w-20 sm:h-6 sm:w-24 rounded-[2px] bg-tatt-black" />
         </div>
       </div>
+
     </section>
   );
 }

@@ -20,6 +20,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { StoreModule } from './modules/store/store.module';
 
 @Module({
     imports: [
@@ -50,6 +51,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
         JobsModule,         // Job Board & Opportunities Domain
         DashboardModule,    // Admin Dashboards & Stats Domain
         MembershipModule,   // Admin Membership Center & Discounts Domain
+        StoreModule,        // TATT Store — Products, Inventory & Orders Domain
         MailModule,         // Transactional Email Domain (Global)
     ],
     controllers: [],

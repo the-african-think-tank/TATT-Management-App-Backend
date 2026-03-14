@@ -33,8 +33,10 @@ export type User = {
     interests?: { id: string; name: string }[];
     deletionRequestedAt?: string | null;
     linkedInProfileUrl?: string;
+    hasAutoPayEnabled?: boolean;
     createdAt?: string;
 };
+
 
 type AuthContextType = {
     user: User | null;

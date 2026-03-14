@@ -8,6 +8,7 @@ import { VolunteerApplication } from './entities/volunteer-application.entity';
 import { VolunteerActivity } from './entities/volunteer-activity.entity';
 import { VolunteerTrainingResource } from './entities/volunteer-training.entity';
 import { VolunteerStat } from './entities/volunteer-stat.entity';
+import { VolunteerTrainingProgress } from './entities/volunteer-training-progress.entity';
 import { User } from '../iam/entities/user.entity';
 import { Connection } from '../connections/entities/connection.entity';
 
@@ -19,6 +20,7 @@ import { Connection } from '../connections/entities/connection.entity';
             VolunteerActivity,
             VolunteerTrainingResource,
             VolunteerStat,
+            VolunteerTrainingProgress,
             User,
             Connection,
         ]),

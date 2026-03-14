@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
@@ -9,10 +10,8 @@ import {
     LayoutDashboard,
     Users,
     Globe,
-    MessageSquare,
     Heart,
     Calendar,
-    ClipboardList,
     Rss,
     Handshake,
     IdCard,
@@ -46,6 +45,7 @@ interface MenuGroup {
 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
 
@@ -71,20 +71,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const menuItems: MenuGroup[] = [
         {
-
             group: "Overview", items: [
-                { icon: <LayoutDashboard size={20} />, label: "Dashboard Overview", href: "/admin", active: true }
+                { icon: <LayoutDashboard size={20} />, label: "Dashboard Overview", href: "/admin" }
             ]
         },
         {
             group: "Community", items: [
                 { icon: <Users size={20} />, label: "Org Management", href: "/admin/org-management", badge: "NEW", flag: "CAN_ACCESS_ORG_MANAGEMENT" },
                 { icon: <Globe size={20} />, label: "Regional Chapters", href: "/admin/regional-chapters", flag: "CAN_ACCESS_REGIONAL_CHAPTERS" },
-                { icon: <MessageSquare size={20} />, label: "Forum Moderation", href: "#", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
-                { icon: <Heart size={20} />, label: "Volunteer Center", href: "#", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
+                { icon: <Rss size={20} />, label: "TATT Feed Moderation", href: "/admin/feed-moderation", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
+                { icon: <Heart size={20} />, label: "Volunteer Center", href: "/admin/volunteers", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
                 { icon: <Calendar size={20} />, label: "Events & Mixers", href: "/admin/events", flag: "CAN_ACCESS_EVENTS" },
-                { icon: <ClipboardList size={20} />, label: "Programs", href: "#", flag: "CAN_ACCESS_PROGRAMS" },
-                { icon: <Rss size={20} />, label: "Community Feed", href: "#", flag: "CAN_ACCESS_COMMUNITY_FEED" },
                 { icon: <Handshake size={20} />, label: "Promotions & Partnerships", href: "#", flag: "CAN_ACCESS_PARTNERSHIPS" },
                 { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" }
             ]
@@ -92,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {
             group: "Resources", items: [
                 { icon: <BookOpen size={20} />, label: "Content & Resources", href: "#", flag: "CAN_ACCESS_CONTENT_RESOURCES" },
-                { icon: <Package size={20} />, label: "Sales & Inventory", href: "#", flag: "CAN_ACCESS_SALES_INVENTORY" },
+                { icon: <Package size={20} />, label: "Sales & Inventory", href: "/admin/sales-inventory", flag: "CAN_ACCESS_SALES_INVENTORY" },
                 { icon: <BarChart3 size={20} />, label: "Analytics", href: "#", flag: "CAN_ACCESS_ANALYTICS" }
             ]
         }
@@ -144,7 +141,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <Link
                                             key={i}
                                             href={item.href}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${item.active
+                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+                                                pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
                                                 ? "bg-tatt-lime text-tatt-black font-bold"
                                                 : "text-white/70 hover:text-white hover:bg-tatt-lime/10"
                                                 }`}

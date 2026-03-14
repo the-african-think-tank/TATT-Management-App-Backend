@@ -4,8 +4,10 @@ import { VolunteerRole } from './entities/volunteer-role.entity';
 import { VolunteerApplication, ApplicationStatus } from './entities/volunteer-application.entity';
 import { VolunteerActivity, ActivityStatus } from './entities/volunteer-activity.entity';
 import { VolunteerTrainingResource } from './entities/volunteer-training.entity';
-import { VolunteerStat, VolunteerGrade } from './entities/volunteer-stat.entity';
+import { VolunteerStat, VolunteerGrade, VolunteerStatus } from './entities/volunteer-stat.entity';
+import { VolunteerTrainingProgress } from './entities/volunteer-training-progress.entity';
 import { User } from '../iam/entities/user.entity';
+import { Chapter } from '../chapters/entities/chapter.entity';
 import { Connection, ConnectionStatus } from '../connections/entities/connection.entity';
 import { AccountFlags } from '../iam/enums/roles.enum';
 import {
@@ -26,6 +28,7 @@ export class VolunteersService {
         @InjectModel(VolunteerActivity) private activityModel: typeof VolunteerActivity,
         @InjectModel(VolunteerTrainingResource) private trainingModel: typeof VolunteerTrainingResource,
         @InjectModel(VolunteerStat) private statModel: typeof VolunteerStat,
+        @InjectModel(VolunteerTrainingProgress) private progressModel: typeof VolunteerTrainingProgress,
         @InjectModel(User) private userModel: typeof User,
         @InjectModel(Connection) private connectionRepo: typeof Connection,
     ) { }
@@ -197,11 +200,146 @@ export class VolunteersService {
         return this.trainingModel.findAll({ order: [['createdAt', 'DESC']] });
     }
 
+    async getTrainingStats() {
+        const resources = await this.trainingModel.findAll({
+            order: [['createdAt', 'DESC']]
+        });
+
+        const stats = await Promise.all(resources.map(async (resource) => {
+            const completedCount = await this.progressModel.count({
+                where: { resourceId: resource.id, isCompleted: true }
+            });
+
+            return {
+                id: resource.id,
+                title: resource.title,
+                completions: completedCount,
+                mediaCount: resource.mediaUrls.length
+            };
+        }));
+
+        return stats;
+    }
+
     async getStats(userId: string) {
         const [pendingActivities, neededRoles] = await Promise.all([
             this.activityModel.count({ where: { assignedToId: userId, status: ActivityStatus.ASSIGNED } }),
             this.roleModel.count({ where: { isActive: true, openUntil: { [Op.gt]: new Date() } } })
         ]);
         return { pendingActivities, neededRoles };
+    }
+
+    // ─── ADMIN DASHBOARD ───────────────────────────────────────────────────────
+
+    async getAdminDashboardStats() {
+        const [totalVolunteers, pendingApplications, onboardingVolunteers, trainingCompletion] = await Promise.all([
+            this.userModel.count({ where: { flags: { [Op.contains]: [AccountFlags.VOLUNTEER] } } }),
+            this.applicationModel.count({ where: { status: ApplicationStatus.PENDING } }),
+            this.statModel.count({ where: { status: VolunteerStatus.TRAINING } }),
+            this.calculateTrainingCompletionRate()
+        ]);
+
+        return {
+            totalVolunteers,
+            pendingApplications,
+            onboardingVolunteers,
+            trainingCompletionRate: trainingCompletion
+        };
+    }
+
+    async getAdminVolunteersList(query: { page?: number; limit?: number; search?: string; chapterId?: string; status?: string }) {
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const offset = (page - 1) * limit;
+
+        const where: any = { flags: { [Op.contains]: [AccountFlags.VOLUNTEER] } };
+        const statWhere: any = {};
+        
+        if (query.search) {
+            where[Op.or] = [
+                { firstName: { [Op.iLike]: `%${query.search}%` } },
+                { lastName: { [Op.iLike]: `%${query.search}%` } },
+                { email: { [Op.iLike]: `%${query.search}%` } },
+            ];
+        }
+        if (query.chapterId) where.chapterId = query.chapterId;
+        if (query.status) statWhere.status = query.status;
+
+        const { rows, count } = await this.userModel.findAndCountAll({
+            where,
+            include: [
+                { 
+                    model: VolunteerStat,
+                    where: Object.keys(statWhere).length > 0 ? statWhere : undefined,
+                    required: Object.keys(statWhere).length > 0
+                },
+                { model: Chapter },
+                { model: VolunteerApplication, as: 'applications', limit: 1, order: [['createdAt', 'DESC']] }
+            ],
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']]
+        });
+
+        return {
+            data: rows,
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit)
+        };
+    }
+
+    async getAdminApplicationsList(query: { page?: number; limit?: number; search?: string; status?: string }) {
+        const page = query.page || 1;
+        const limit = query.limit || 10;
+        const offset = (page - 1) * limit;
+
+        const where: any = {};
+        if (query.status) where.status = query.status;
+        
+        const userWhere: any = {};
+        if (query.search) {
+            userWhere[Op.or] = [
+                { firstName: { [Op.iLike]: `%${query.search}%` } },
+                { lastName: { [Op.iLike]: `%${query.search}%` } },
+                { email: { [Op.iLike]: `%${query.search}%` } },
+            ];
+        }
+
+        const { rows, count } = await this.applicationModel.findAndCountAll({
+            where,
+            include: [
+                { 
+                    model: User, 
+                    where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+                    required: Object.keys(userWhere).length > 0
+                },
+                { model: VolunteerRole, as: 'role' }
+            ],
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']]
+        });
+
+        return {
+            data: rows,
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit)
+        };
+    }
+
+    private async calculateTrainingCompletionRate() {
+        const totalVolunteers = await this.userModel.count({ where: { flags: { [Op.contains]: [AccountFlags.VOLUNTEER] } } });
+        if (totalVolunteers === 0) return 0;
+
+        const totalResources = await this.trainingModel.count();
+        if (totalResources === 0) return 100;
+
+        const completedRecords = await this.progressModel.count({ where: { isCompleted: true } });
+        
+        // This is a simplified average: (Total completions) / (Total possible completions)
+        const rate = (completedRecords / (totalVolunteers * totalResources)) * 100;
+        return Math.round(rate);
     }
 }

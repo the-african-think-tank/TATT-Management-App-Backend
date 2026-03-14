@@ -11,6 +11,8 @@ export enum NotificationType {
     EVENT_REMINDER = 'EVENT_REMINDER',
     SYSTEM_ALERT = 'SYSTEM_ALERT',
     ACCOUNT = 'ACCOUNT',
+    PROMOTION = 'PROMOTION',
+    LOW_STOCK = 'LOW_STOCK',
 }
 
 @Table({

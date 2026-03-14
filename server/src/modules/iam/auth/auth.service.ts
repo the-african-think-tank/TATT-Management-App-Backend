@@ -470,8 +470,9 @@ export class AuthService {
                 'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod',
                 'connectionPreference', 'expertise', 'businessName', 'businessRole',
                 'businessProfileLink', 'professionalHighlight', 'location', 'deletionRequestedAt',
-                'linkedInProfileUrl'
+                'linkedInProfileUrl', 'hasAutoPayEnabled'
             ],
+
             include: [
                 { model: Chapter, as: 'chapter' },
                 { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
@@ -506,10 +507,13 @@ export class AuthService {
                 systemRole: user.systemRole,
                 communityTier: user.communityTier,
                 isActive: user.isActive,
+                flags: user.flags,
                 isTwoFactorEnabled: user.isTwoFactorEnabled,
                 twoFactorMethod: user.twoFactorMethod ?? null,
                 deletionRequestedAt: user.deletionRequestedAt || null,
+                hasAutoPayEnabled: user.hasAutoPayEnabled,
             },
         };
+
     }
 }

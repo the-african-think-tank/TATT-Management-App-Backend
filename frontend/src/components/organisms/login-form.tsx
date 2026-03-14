@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthButton } from "@/components/atoms/auth-button";
 import { LoginField } from "@/components/molecules/login-field";
 import { RememberForgotRow } from "@/components/molecules/remember-forgot-row";
@@ -26,6 +27,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const { login: authLogin } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -48,12 +50,22 @@ export function LoginForm() {
       if (response.data.access_token) {
         authLogin(response.data.access_token, response.data.user);
 
+        // IMPORTANT: Use router.push (client-side nav), NOT window.location.href.
+        // window.location.href triggers a full page reload which resets the JS module
+        // scope, wiping the in-memory token — causing an instant redirect back to login.
         const systemRole = response.data.user.systemRole;
         if (systemRole && systemRole !== "COMMUNITY_MEMBER") {
-          window.location.href = "/admin";
+          router.push("/admin");
+        } else if (!response.data.user.flags?.includes("ONBOARDING_COMPLETED")) {
+          // If they haven't finished the onboarding selection yet,
+          // redirect to the plans page instead of the dashboard.
+          router.push("/onboarding/plans");
+
         } else {
-          window.location.href = "/dashboard";
+          router.push("/dashboard");
         }
+
+
       } else if (response.data.requiresTwoFactor) {
         setError("Two-factor authentication required. (2FA UI not yet implemented)");
       }
@@ -69,7 +81,7 @@ export function LoginForm() {
     <section className="w-full max-w-[448px]">
       <header className="space-y-2">
         <h1 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] text-tatt-black">
-          Welcome Back
+          Welcome TATT Community
         </h1>
         <p className="text-sm sm:text-base leading-6 text-tatt-gray">
           Please enter your details to access the member portal.

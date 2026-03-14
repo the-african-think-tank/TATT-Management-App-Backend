@@ -13,10 +13,12 @@ import { PostLike } from './entities/post-like.entity';
 import { PostComment } from './entities/post-comment.entity';
 import { PostUpvote } from './entities/post-upvote.entity';
 import { PostBookmark } from './entities/post-bookmark.entity';
-import { PostReport } from './entities/post-report.entity';
+import { PostReport, ReportStatus } from './entities/post-report.entity';
+import { FeedInsight } from './entities/feed-insight.entity';
+import { FeedPrompt } from './entities/feed-prompt.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
-import { CommunityTier, SystemRole } from '../iam/enums/roles.enum';
+import { CommunityTier, SystemRole, AccountFlags } from '../iam/enums/roles.enum';
 import {
     FeedQueryDto, FeedFilter,
     CreatePostDto, UpdatePostDto,
@@ -45,7 +47,7 @@ const STAFF_ROLES: SystemRole[] = [
 /** Minimal author fields returned in feed card */
 const AUTHOR_ATTRS = [
     'id', 'firstName', 'lastName', 'profilePicture',
-    'professionTitle', 'communityTier', 'tattMemberId',
+    'professionTitle', 'communityTier', 'tattMemberId', 'flags',
 ] as const;
 
 const CHAPTER_ATTRS = ['id', 'name', 'code'] as const;
@@ -96,6 +98,12 @@ function canSeePremium(user?: User): boolean {
 
 function canCreatePremium(user?: User): boolean {
     return isStaff(user) || isPaidMember(user);
+}
+
+function hasCompletedProfile(user: User): boolean {
+    // Staff are exempt from mandatory profile completion to allow quick setup
+    if (isStaff(user)) return true;
+    return user.flags?.includes(AccountFlags.PROFILE_COMPLETED) ?? false;
 }
 
 /**
@@ -156,6 +164,8 @@ export class FeedService {
         @InjectModel(PostUpvote) private upvoteRepo: typeof PostUpvote,
         @InjectModel(PostBookmark) private bookmarkRepo: typeof PostBookmark,
         @InjectModel(PostReport) private reportRepo: typeof PostReport,
+        @InjectModel(FeedInsight) private insightRepo: typeof FeedInsight,
+        @InjectModel(FeedPrompt) private promptRepo: typeof FeedPrompt,
         @InjectModel(User) private userRepo: typeof User,
     ) { }
 
@@ -179,18 +189,9 @@ export class FeedService {
             };
         }
 
-        const where: Record<string, any> = { isPublished: true };
-
-        if (filter === FeedFilter.CHAPTER) {
-            where['chapterId'] = viewer.chapterId;
-        }
-
-        if (filter === FeedFilter.PREMIUM) {
-            where['isPremium'] = true;
-        }
+        const where: any = { isPublished: true };
 
         const include: any[] = [
-            { model: User, as: 'author', attributes: [...AUTHOR_ATTRS] },
             { model: Chapter, as: 'chapter', attributes: [...CHAPTER_ATTRS], required: false },
             { model: PostLike, as: 'likes', attributes: ['userId'], required: false },
             { model: PostUpvote, as: 'upvotes', attributes: ['userId'], required: false },
@@ -202,6 +203,43 @@ export class FeedService {
                 include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }]
             }
         ];
+
+        // ── SHADOW BAN LOGIC ────────────────────────────────────────────────
+        // Staff see everything. Regular members only see non-shadow-banned posts
+        // unless they are the author of the post.
+        if (!isStaff(viewer)) {
+            where[Op.and] = [
+                {
+                    [Op.or]: [
+                        { isShadowBanned: false },
+                        { authorId: viewer.id }
+                    ]
+                }
+            ];
+            
+            // Also hide posts from shadow-banned users (except for the user themselves)
+            include.push({
+                model: User,
+                as: 'author',
+                attributes: [...AUTHOR_ATTRS],
+                where: {
+                    [Op.or]: [
+                        { id: viewer.id },
+                        { flags: { [Op.notRegexp]: '.*SHADOW_BANNED.*' } }
+                    ]
+                }
+            });
+        } else {
+            include.push({ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] });
+        }
+
+        if (filter === FeedFilter.CHAPTER) {
+            where['chapterId'] = viewer.chapterId;
+        }
+
+        if (filter === FeedFilter.PREMIUM) {
+            where['isPremium'] = true;
+        }
 
         // ── BOOKMARKS filter logic ───────────────────────────────────────────
         if (filter === FeedFilter.BOOKMARKS) {
@@ -268,6 +306,19 @@ export class FeedService {
 
         if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
 
+        const isOwner = viewer && post.authorId === viewer.id;
+        const isStaffUser = isStaff(viewer);
+
+        if (post.isShadowBanned && !isOwner && !isStaffUser) {
+            throw new NotFoundException('Post not found.');
+        }
+
+        // Also check if author is shadow banned
+        const authorIsShadowBanned = post.author?.flags?.includes(AccountFlags.SHADOW_BANNED);
+        if (authorIsShadowBanned && !isOwner && !isStaffUser) {
+            throw new NotFoundException('Post not found.');
+        }
+
         let liked = false, upvoted = false, bookmarked = false;
         if (viewer) {
             const [l, u, b] = await Promise.all([
@@ -287,13 +338,24 @@ export class FeedService {
     }
 
     async createPost(author: User, dto: CreatePostDto) {
+        if (!hasCompletedProfile(author)) {
+            throw new ForbiddenException(
+                'Profile Setup Required: Please complete your professional profile (Title, Industry, Bio, and Interests) before posting to the TATT Feed.'
+            );
+        }
+
         if (dto.isPremium && !canCreatePremium(author)) {
+
             throw new ForbiddenException('Only paid members and staff can create premium posts.');
         }
 
         const restrictedTypes = [PostType.ANNOUNCEMENT, PostType.RESOURCE];
         if (restrictedTypes.includes(dto.type) && !isStaff(author)) {
             throw new ForbiddenException(`Only staff can create ${dto.type} posts.`);
+        }
+
+        if (dto.type === PostType.JOB && !canCreatePremium(author)) {
+            throw new ForbiddenException('Only paid members and staff can create job announcement posts.');
         }
 
         const fullAuthor = await this.userRepo.findByPk(author.id, { attributes: ['id', 'chapterId'] });
@@ -312,7 +374,26 @@ export class FeedService {
             chapterId: fullAuthor?.chapterId ?? null,
             isPublished: true,
             parentPostId: dto.parentPostId ?? null,
+            jobLink: dto.jobLink ?? null,
+            jobLocation: dto.jobLocation ?? null,
+            jobCompany: dto.jobCompany ?? null,
         });
+
+        if (dto.parentPostId) {
+            const parentPost = await this.postRepo.findByPk(dto.parentPostId);
+            if (parentPost && parentPost.authorId === author.id) {
+                // Count existing reposts of this same post by this author
+                const repostCount = await this.postRepo.count({
+                    where: {
+                        authorId: author.id,
+                        parentPostId: dto.parentPostId,
+                    },
+                });
+                if (repostCount >= 2) {
+                    throw new ForbiddenException('You can only repost your own strategic insight twice.');
+                }
+            }
+        }
 
         return { message: 'Post published successfully.', postId: post.id };
     }
@@ -348,7 +429,22 @@ export class FeedService {
     async deletePost(viewer: User, postId: string) {
         const post = await this.postRepo.findByPk(postId);
         if (!post) throw new NotFoundException('Post not found.');
-        if (post.authorId !== viewer.id && !isStaff(viewer)) throw new ForbiddenException('Not authorised.');
+        
+        const isOwner = post.authorId === viewer.id;
+        const isStaffUser = isStaff(viewer);
+
+        if (!isOwner && !isStaffUser) {
+            throw new ForbiddenException('You are not authorized to delete this post.');
+        }
+
+        // Only enforce 30-minute window for authors (staff can delete anytime)
+        if (isOwner && !isStaffUser) {
+            const minutesSinceCreation = (new Date().getTime() - new Date(post.createdAt).getTime()) / 60000;
+            if (minutesSinceCreation > 30) {
+                throw new ForbiddenException('Posts can only be deleted within 30 minutes of publishing.');
+            }
+        }
+
         await post.destroy();
         return { message: 'Post removed.' };
     }
@@ -426,7 +522,14 @@ export class FeedService {
     }
 
     async addComment(author: User, postId: string, dto: AddCommentDto) {
+        if (!hasCompletedProfile(author)) {
+            throw new ForbiddenException(
+                'Profile Setup Required: Please complete your professional profile before joining the conversation.'
+            );
+        }
+
         const post = await this.postRepo.findByPk(postId);
+
         if (!post || !post.isPublished) throw new NotFoundException('Post not found.');
         if (post.authorId === author.id) throw new BadRequestException('You cannot comment on your own post.');
 
@@ -442,5 +545,140 @@ export class FeedService {
         if (comment.authorId !== viewer.id && comment.post?.authorId !== viewer.id && !isStaff(viewer)) throw new ForbiddenException('Not authorised.');
         await comment.destroy();
         return { message: 'Comment removed.' };
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  ADMIN / MODERATION
+    // ════════════════════════════════════════════════════════════════════════════
+
+    async getAdminStats() {
+        const [reportsHandled, activeDiscussions, flaggedUsers] = await Promise.all([
+            this.reportRepo.count({ where: { status: ReportStatus.RESOLVED } }),
+            this.postRepo.count({ where: { isPublished: true, createdAt: { [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),
+            this.userRepo.count({ where: { flags: { [Op.contains]: [AccountFlags.SHADOW_BANNED] } } }),
+        ]);
+
+        return {
+            reportsHandled,
+            activeDiscussions,
+            flaggedUsers,
+        };
+    }
+
+    async getReportQueue() {
+        return this.reportRepo.findAll({
+            where: { status: ReportStatus.PENDING },
+            include: [
+                { 
+                    model: Post, 
+                    as: 'post', 
+                    include: [{ model: User, as: 'author', attributes: AUTHOR_ATTRS as any }] 
+                },
+                { model: User, as: 'reporter', attributes: AUTHOR_ATTRS as any },
+            ],
+            order: [['createdAt', 'DESC']],
+        });
+    }
+
+    async handleReport(admin: User, reportId: string, action: 'RESOLVE' | 'DISMISS', notes?: string) {
+        const report = await this.reportRepo.findByPk(reportId);
+        if (!report) throw new NotFoundException('Report not found');
+
+        report.status = action === 'RESOLVE' ? ReportStatus.RESOLVED : ReportStatus.DISMISSED;
+        report.adminNotes = notes;
+        await report.save();
+
+        return { message: `Report ${action.toLowerCase()}d.` };
+    }
+
+    async shadowBanPost(admin: User, postId: string, status: boolean) {
+        const post = await this.postRepo.findByPk(postId);
+        if (!post) throw new NotFoundException('Post not found');
+
+        post.isShadowBanned = status;
+        await post.save();
+
+        return { message: `Post shadow ban ${status ? 'enabled' : 'disabled'}.` };
+    }
+
+    async shadowBanUser(admin: User, userId: string, status: boolean) {
+        const user = await this.userRepo.findByPk(userId);
+        if (!user) throw new NotFoundException('User not found');
+
+        let flags = user.flags || [];
+        if (status) {
+            if (!flags.includes(AccountFlags.SHADOW_BANNED)) flags.push(AccountFlags.SHADOW_BANNED);
+        } else {
+            flags = flags.filter(f => f !== AccountFlags.SHADOW_BANNED);
+        }
+
+        user.flags = flags;
+        await user.save();
+
+        return { message: `User shadow ban ${status ? 'enabled' : 'disabled'}.` };
+    }
+
+    // ─── Feed Curation (Insights & Prompts) ──────────────────────────────────
+
+    async createInsight(dto: { title: string; content: string; startDate?: string }) {
+        // Deactivate existing active insights if any (optional, but UI shows one active slot)
+        await this.insightRepo.update({ isActive: false }, { where: { isActive: true } });
+
+        const insight = await this.insightRepo.create({
+            title: dto.title,
+            content: dto.content,
+            startDate: dto.startDate ? new Date(dto.startDate) : new Date(),
+            isActive: true,
+        });
+        return insight;
+    }
+
+    async getInsights() {
+        return this.insightRepo.findAll({ order: [['createdAt', 'DESC']] });
+    }
+
+    async deleteInsight(id: string) {
+        await this.insightRepo.destroy({ where: { id } });
+        return { message: 'Insight removed.' };
+    }
+
+    async createPrompt(dto: { prompt: string }) {
+        return this.promptRepo.create({
+            prompt: dto.prompt,
+            isActive: false, // Created prompts are inactive by default until rotated
+        });
+    }
+
+    async getPrompts() {
+        return this.promptRepo.findAll({ order: [['createdAt', 'DESC']] });
+    }
+
+    async rotatePrompt() {
+        // Find all prompts
+        const allPrompts = await this.promptRepo.findAll();
+        if (allPrompts.length === 0) return null;
+
+        // Deactivate current active one
+        await this.promptRepo.update({ isActive: false }, { where: { isActive: true } });
+
+        // Select a random one to activate
+        const nextPrompt = allPrompts[Math.floor(Math.random() * allPrompts.length)];
+        nextPrompt.isActive = true;
+        
+        // Randomize counts for aesthetic "live node" feel as requested in UI
+        nextPrompt.messageCount = Math.floor(Math.random() * 500) + 100;
+        nextPrompt.zapCount = Math.floor(Math.random() * 1000) + 200;
+        
+        await nextPrompt.save();
+        return nextPrompt;
+    }
+
+    async getActiveCuration() {
+        const [insight, prompt] = await Promise.all([
+            this.insightRepo.findOne({ where: { isActive: true }, order: [['createdAt', 'DESC']] }),
+            this.promptRepo.findOne({ where: { isActive: true } }),
+        ]);
+
+        return { insight, prompt };
     }
 }

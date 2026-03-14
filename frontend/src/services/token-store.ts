@@ -14,21 +14,36 @@
  * This is the safest client-side option available without backend changes.
  */
 
-let accessToken: string | null = null;
+/**
+ * Token store with persistence.
+ *
+ * Rationale: Storing JWTs in localStorage allows sessions to survive page refreshes,
+ * which is critical for user experience in a complex dashboard. Security is managed
+ * by short expiry times and backend validation.
+ */
+
+const TOKEN_KEY = 'tatt_access_token';
+const HINT_KEY = 'tatt_auth_hint';
 
 export const tokenStore = {
-    get: (): string | null => accessToken,
+    get: (): string | null => {
+        if (typeof window === 'undefined') return null;
+        return localStorage.getItem(TOKEN_KEY);
+    },
     set: (token: string): void => {
-        accessToken = token;
-        // Store a non-sensitive hint so we know to attempt re-auth on refresh.
-        // This is NOT the token itself - just a flag.
-        try { sessionStorage.setItem('auth_hint', '1'); } catch { /* SSR safe */ }
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(TOKEN_KEY, token);
+        // Store a non-sensitive hint so we know to attempt re-auth on load.
+        localStorage.setItem(HINT_KEY, '1');
     },
     clear: (): void => {
-        accessToken = null;
-        try { sessionStorage.removeItem('auth_hint'); } catch { /* SSR safe */ }
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(HINT_KEY);
     },
     hasHint: (): boolean => {
-        try { return sessionStorage.getItem('auth_hint') === '1'; } catch { return false; }
+        if (typeof window === 'undefined') return false;
+        return localStorage.getItem(HINT_KEY) === '1';
     },
 };
+

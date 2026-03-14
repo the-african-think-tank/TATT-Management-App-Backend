@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
     PlusCircle,
     Search,
@@ -20,7 +21,8 @@ import {
     AlertCircle,
     HeartHandshake,
     Settings,
-    MessageSquare
+    MessageSquare,
+    ArrowUpRight
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth, User } from "@/context/auth-context";
@@ -38,12 +40,14 @@ interface Chapter {
     regionalManager?: User;
     associateRegionalDirector?: User;
     createdAt: string;
+    memberCount?: number;
     _count?: {
         members: number;
     }
 }
 
 export function AdminRegionalChaptersPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState("directory");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -52,7 +56,7 @@ export function AdminRegionalChaptersPage() {
     const [orgMembers, setOrgMembers] = useState<User[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Form State
+    const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         name: "",
         country: "",
@@ -103,22 +107,40 @@ export function AdminRegionalChaptersPage() {
         return nextCode.toString().padStart(4, "0");
     };
 
+    const openEditModal = (chapter: Chapter) => {
+        setSelectedChapterId(chapter.id);
+        setFormData({
+            name: chapter.name,
+            country: chapter.country || "",
+            stateRegion: chapter.stateRegion || "",
+            cities: chapter.cities.join(", "),
+            regionalManagerId: chapter.regionalManagerId || "",
+            associateRegionalDirectorId: chapter.associateRegionalDirectorId || ""
+        });
+        setIsCreateModalOpen(true);
+    };
+
     const handleCreateChapter = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             setIsSubmitting(true);
-            const code = generateChapterCode();
-
+            
             const payload = {
                 ...formData,
-                code,
                 cities: formData.cities.split(",").map(c => c.trim()).filter(c => c !== ""),
                 regionalManagerId: formData.regionalManagerId || undefined,
                 associateRegionalDirectorId: formData.associateRegionalDirectorId || undefined
             };
 
-            await api.post("/chapters", payload);
+            if (selectedChapterId) {
+                await api.patch(`/chapters/${selectedChapterId}`, payload);
+            } else {
+                const code = generateChapterCode();
+                await api.post("/chapters", { ...payload, code });
+            }
+
             setIsCreateModalOpen(false);
+            setSelectedChapterId(null);
             setFormData({
                 name: "",
                 country: "",
@@ -129,8 +151,8 @@ export function AdminRegionalChaptersPage() {
             });
             fetchChapters();
         } catch (error) {
-            console.error("Failed to create chapter:", error);
-            alert("Error creating chapter. Please check if the name is unique.");
+            console.error("Failed to save chapter:", error);
+            alert("Error saving chapter. Please check if the name is unique.");
         } finally {
             setIsSubmitting(false);
         }
@@ -167,17 +189,19 @@ export function AdminRegionalChaptersPage() {
                         <span className="text-3xl font-black text-foreground">{chapters.length}</span>
                     </div>
                 </div>
+                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm">
+                    <p className="text-sm text-tatt-gray font-medium">Active Members</p>
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-3xl font-black text-foreground">
+                            {chapters.reduce((acc, curr) => acc + (Number(curr.memberCount) || 0), 0)}
+                        </span>
+                    </div>
+                </div>
                 <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
                     <p className="text-sm text-tatt-gray font-medium">Global Volunteers</p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-3xl font-black text-foreground">--</span>
                         <span className="text-[10px] text-tatt-gray italic font-medium px-1.5 py-0.5 rounded">Coming Soon</span>
-                    </div>
-                </div>
-                <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
-                    <p className="text-sm text-tatt-gray font-medium">Active Members</p>
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="text-3xl font-black text-foreground">--</span>
                     </div>
                 </div>
                 <div className="bg-surface p-5 rounded-xl border border-border shadow-sm opacity-60">
@@ -234,6 +258,7 @@ export function AdminRegionalChaptersPage() {
                                     <tr className="bg-background border-b border-border">
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Chapter Name & Region</th>
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">ID / Code</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Members</th>
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider">Leadership Team</th>
                                         <th className="px-6 py-4 text-xs font-bold text-tatt-gray uppercase tracking-wider text-right">Actions</th>
                                     </tr>
@@ -258,8 +283,12 @@ export function AdminRegionalChaptersPage() {
                                         filteredChapters.map((chapter) => (
                                             <tr key={chapter.id} className="hover:bg-background/50 transition-colors">
                                                 <td className="px-6 py-5">
-                                                    <div className="font-bold text-foreground flex items-center gap-2">
+                                                    <div 
+                                                        className="font-bold text-foreground flex items-center gap-2 cursor-pointer hover:text-tatt-lime transition-colors group/name"
+                                                        onClick={() => router.push(`/admin/regional-chapters/${chapter.id}`)}
+                                                    >
                                                         {chapter.name}
+                                                        <ArrowUpRight className="h-3 w-3 opacity-0 group-hover/name:opacity-100 transition-opacity" />
                                                     </div>
                                                     <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
                                                         <MapPin className="h-3 w-3" />
@@ -270,6 +299,16 @@ export function AdminRegionalChaptersPage() {
                                                     <span className="font-mono text-xs bg-background px-2 py-1 rounded border border-border font-bold">
                                                         ID: {chapter.code}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="size-8 rounded-lg bg-background border border-border flex items-center justify-center">
+                                                            <Users className="h-4 w-4 text-tatt-lime" />
+                                                        </div>
+                                                        <span className="text-sm font-black text-foreground">
+                                                            {Number(chapter.memberCount) || 0}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-4">
@@ -305,13 +344,32 @@ export function AdminRegionalChaptersPage() {
                                                 </td>
                                                 <td className="px-6 py-5 text-right">
                                                     <div className="flex justify-end gap-1">
-                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Manage Volunteers">
+                                                        <button 
+                                                            className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" 
+                                                            title="View Chapter Details"
+                                                            onClick={() => router.push(`/admin/regional-chapters/${chapter.id}`)}
+                                                        >
+                                                            <ArrowUpRight className="h-4 w-4" />
+                                                        </button>
+                                                        <button 
+                                                            className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" 
+                                                            title="Manage Volunteers"
+                                                            onClick={() => router.push(`/admin/regional-chapters/${chapter.id}?tab=volunteers`)}
+                                                        >
                                                             <Users className="h-4 w-4" />
                                                         </button>
-                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="View Activities">
+                                                        <button 
+                                                            className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" 
+                                                            title="View Activities"
+                                                            onClick={() => router.push(`/admin/regional-chapters/${chapter.id}?tab=activities`)}
+                                                        >
                                                             <ClipboardList className="h-4 w-4" />
                                                         </button>
-                                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" title="Edit Chapter">
+                                                        <button 
+                                                            className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-colors group" 
+                                                            title="Edit Chapter"
+                                                            onClick={() => openEditModal(chapter)}
+                                                        >
                                                             <Edit className="h-4 w-4" />
                                                         </button>
                                                     </div>
@@ -378,10 +436,10 @@ export function AdminRegionalChaptersPage() {
                     <div className="bg-surface rounded-2xl border border-border w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="p-6 border-b border-border flex justify-between items-center bg-background/50">
                             <div>
-                                <h3 className="text-xl font-bold text-foreground">Establish Regional Chapter</h3>
-                                <p className="text-xs text-tatt-gray mt-1">Configure identity, location, and leadership roles.</p>
+                                <h3 className="text-xl font-bold text-foreground">{selectedChapterId ? 'Edit Regional Chapter' : 'Establish Regional Chapter'}</h3>
+                                <p className="text-xs text-tatt-gray mt-1">{selectedChapterId ? 'Update chapter configuration and leadership.' : 'Configure identity, location, and leadership roles.'}</p>
                             </div>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="bg-surface hover:bg-background h-8 w-8 flex items-center justify-center rounded-full border border-border text-tatt-gray hover:text-foreground transition-colors">
+                            <button onClick={() => { setIsCreateModalOpen(false); setSelectedChapterId(null); }} className="bg-surface hover:bg-background h-8 w-8 flex items-center justify-center rounded-full border border-border text-tatt-gray hover:text-foreground transition-colors">
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
@@ -545,7 +603,7 @@ export function AdminRegionalChaptersPage() {
                                         className="w-full md:w-auto bg-tatt-lime text-background-dark px-10 py-3 rounded-lg text-sm font-bold shadow-xl shadow-tatt-lime/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                                        Create Regional Chapter
+                                        {selectedChapterId ? 'Update Regional Chapter' : 'Create Regional Chapter'}
                                     </button>
                                 </div>
                             </div>
