@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         },
         {
             group: "Resources", items: [
-                { icon: <BookOpen size={20} />, label: "Content & Resources", href: "#", flag: "CAN_ACCESS_CONTENT_RESOURCES" },
+                { icon: <BookOpen size={20} />, label: "Content & Resources", href: "/admin/resources", flag: "CAN_ACCESS_CONTENT_RESOURCES" },
                 { icon: <Package size={20} />, label: "Sales & Inventory", href: "/admin/sales-inventory", flag: "CAN_ACCESS_SALES_INVENTORY" },
                 { icon: <BarChart3 size={20} />, label: "Analytics", href: "#", flag: "CAN_ACCESS_ANALYTICS" }
             ]

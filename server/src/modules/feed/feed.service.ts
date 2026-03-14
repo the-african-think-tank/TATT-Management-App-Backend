@@ -225,7 +225,7 @@ export class FeedService {
                 where: {
                     [Op.or]: [
                         { id: viewer.id },
-                        { flags: { [Op.is]: null } },
+                        { flags: null },
                         Sequelize.literal(`NOT ('SHADOW_BANNED' = ANY("author"."flags"))`)
                     ]
                 }
@@ -556,7 +556,7 @@ export class FeedService {
         const [reportsHandled, activeDiscussions, flaggedUsers] = await Promise.all([
             this.reportRepo.count({ where: { status: ReportStatus.RESOLVED } }),
             this.postRepo.count({ where: { isPublished: true, createdAt: { [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),
-            this.userRepo.count({ where: { flags: { [Op.contains]: [AccountFlags.SHADOW_BANNED] } } }),
+            this.userRepo.count({ where: { flags: Sequelize.literal(`'SHADOW_BANNED' = ANY("flags")`) } }),
         ]);
 
         return {
