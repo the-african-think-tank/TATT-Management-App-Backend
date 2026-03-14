@@ -225,7 +225,8 @@ export class FeedService {
                 where: {
                     [Op.or]: [
                         { id: viewer.id },
-                        { flags: { [Op.notRegexp]: '.*SHADOW_BANNED.*' } }
+                        { flags: { [Op.is]: null } },
+                        { flags: { [Op.not]: { [Op.contains]: ['SHADOW_BANNED'] } } }
                     ]
                 }
             });
