@@ -6,7 +6,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as sanitizeHtml from 'sanitize-html';
 import { Post, PostType, ContentFormat } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
@@ -226,7 +226,7 @@ export class FeedService {
                     [Op.or]: [
                         { id: viewer.id },
                         { flags: { [Op.is]: null } },
-                        { flags: { [Op.not]: { [Op.contains]: ['SHADOW_BANNED'] } } }
+                        Sequelize.literal(`NOT ('SHADOW_BANNED' = ANY("author"."flags"))`)
                     ]
                 }
             });
