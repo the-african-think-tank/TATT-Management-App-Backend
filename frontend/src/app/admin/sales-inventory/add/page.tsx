@@ -107,7 +107,9 @@ export default function AddProductPage() {
         setVariants(prev => {
             const next = [...prev];
             const currentItem = next[index];
-            const updated: Variant = { ...currentItem, [field]: value };
+            if (!currentItem) return prev;
+
+            const updated = { ...currentItem, [field]: value } as Variant;
             
             if (field === 'size' || field === 'color') {
                 updated.sku = generateSKU(updated.size, updated.color);
