@@ -210,7 +210,7 @@ export default function EventsPage() {
                                             {event.locations?.[0]?.chapter?.name && (
                                                 <div className="flex items-center gap-2 text-xs font-medium text-tatt-gray">
                                                     <Globe className="size-3.5 text-tatt-lime" />
-                                                    <span>{event.locations[0].chapter.name} Chapter</span>
+                                                    <span>{event.locations[0]?.chapter?.name} Chapter</span>
                                                 </div>
                                             )}
                                         </div>
