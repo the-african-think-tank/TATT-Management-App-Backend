@@ -99,8 +99,8 @@ export function StoreSingleClient() {
             const uniqueSizes = Array.from(sizes);
             const uniqueColors = Array.from(colors);
 
-            if (uniqueSizes.length > 0) setSelectedSize(uniqueSizes[0]);
-            if (uniqueColors.length > 0) setSelectedColor(uniqueColors[0]);
+            if (uniqueSizes.length > 0) setSelectedSize(uniqueSizes[0] ?? null);
+            if (uniqueColors.length > 0) setSelectedColor(uniqueColors[0] ?? null);
             
         } catch (error) {
             console.error("Failed to fetch product", error);
@@ -201,7 +201,7 @@ export function StoreSingleClient() {
                               <label className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Select Size Package</label>
                               <div className="flex flex-wrap gap-2">
                                   {uniqueSizes.map((s) => (
-                                      <button key={s} onClick={() => setSelectedSize(s)} className={`px-4 py-2 rounded-xl border-2 font-black uppercase text-[10px] tracking-widest transition-all ${selectedSize === s ? 'border-tatt-lime bg-tatt-lime/5' : 'border-border text-tatt-gray'}`}>
+                                      <button key={s} onClick={() => setSelectedSize(s ?? null)} className={`px-4 py-2 rounded-xl border-2 font-black uppercase text-[10px] tracking-widest transition-all ${selectedSize === s ? 'border-tatt-lime bg-tatt-lime/5' : 'border-border text-tatt-gray'}`}>
                                           {s}
                                       </button>
                                   ))}
@@ -215,8 +215,8 @@ export function StoreSingleClient() {
                               <label className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Archive Colorway</label>
                               <div className="flex flex-wrap gap-3">
                                   {uniqueColors.map((c) => (
-                                      <button key={c} onClick={() => setSelectedColor(c)} className={`group relative size-10 rounded-full border-2 transition-all p-0.5 ${selectedColor === c ? 'border-tatt-lime' : 'border-border'}`}>
-                                          <div className="w-full h-full rounded-full border border-black/5" style={{ backgroundColor: c.toLowerCase() === 'obsidian' ? '#000' : c.toLowerCase() }} />
+                                      <button key={c} onClick={() => setSelectedColor(c ?? null)} className={`group relative size-10 rounded-full border-2 transition-all p-0.5 ${selectedColor === c ? 'border-tatt-lime' : 'border-border'}`}>
+                                          <div className="w-full h-full rounded-full border border-black/5" style={{ backgroundColor: (c || "").toLowerCase() === 'obsidian' ? '#000' : (c || "").toLowerCase() }} />
                                           {selectedColor === c && <div className="absolute -top-1 -right-1 size-4 bg-tatt-lime rounded-full flex items-center justify-center border-2 border-white"><Check size={8} className="text-tatt-black" /></div>}
                                       </button>
                                   ))}

@@ -90,7 +90,7 @@ export default function JobPostPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (data.urls?.[0]) {
-        setFormData(prev => ({ ...prev, companyLogoUrl: data.urls[0] }));
+        setFormData(prev => ({ ...prev, companyLogoUrl: data.urls[0] || "" }));
         toast.success("Logo uploaded successfully");
       }
     } catch (err) {
@@ -423,7 +423,7 @@ export default function JobPostPage() {
                     {formData.companyLogoUrl ? (
                       <img src={formData.companyLogoUrl} alt="Logo" className="w-full h-full object-cover rounded-2xl" />
                     ) : (
-                      (formData.companyName || "C")[0].toUpperCase()
+                      (formData.companyName || "C").charAt(0).toUpperCase()
                     )}
                   </div>
                   <span className="px-3 py-1 bg-background border border-border rounded-full text-[8px] font-black uppercase tracking-wider text-tatt-gray">{formData.type}</span>
