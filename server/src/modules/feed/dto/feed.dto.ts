@@ -46,6 +46,11 @@ export class FeedQueryDto {
     @Min(1)
     @Max(50)
     limit?: number;
+
+    @ApiPropertyOptional({ description: 'Filter posts by topic ID' })
+    @IsOptional()
+    @IsString()
+    topicId?: string;
 }
 
 // ─── CREATE POST ─────────────────────────────────────────────────────────────
@@ -129,6 +134,42 @@ export class CreatePostDto {
     @IsOptional()
     @IsString()
     parentPostId?: string;
+
+    @ApiPropertyOptional({ description: 'UUID of the FeedTopic this post belongs to' })
+    @IsOptional()
+    @IsString()
+    topicId?: string;
+
+    @ApiPropertyOptional({ description: 'Link to the job description (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    @IsUrl()
+    jobLink?: string;
+
+    @ApiPropertyOptional({ description: 'Location of the job (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    jobLocation?: string;
+
+    @ApiPropertyOptional({ description: 'Name of the company (for JOB posts).' })
+    @IsOptional()
+    @IsString()
+    jobCompany?: string;
+
+    @ApiPropertyOptional({ description: 'Event type (for EVENT posts). e.g. WEBINAR, WORKSHOP, CONFERENCE, IN_PERSON' })
+    @IsOptional()
+    @IsString()
+    eventType?: string;
+
+    @ApiPropertyOptional({ description: 'Date/time of the event (ISO string, for EVENT posts).' })
+    @IsOptional()
+    @IsString()
+    eventDate?: string;
+
+    @ApiPropertyOptional({ description: 'Registration / event URL (for EVENT posts).' })
+    @IsOptional()
+    @IsString()
+    eventUrl?: string;
 }
 
 // ─── UPDATE POST ─────────────────────────────────────────────────────────────
@@ -177,6 +218,11 @@ export class UpdatePostDto {
     @IsOptional()
     @IsBoolean()
     isPublished?: boolean;
+
+    @ApiPropertyOptional({ description: 'Topic UUID to attach or switch to' })
+    @IsOptional()
+    @IsString()
+    topicId?: string;
 }
 
 // ─── COMMENT ─────────────────────────────────────────────────────────────────

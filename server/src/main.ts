@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Sequelize } from 'sequelize-typescript';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -10,6 +11,7 @@ import * as fs from 'fs';
 
 import { ConfigService } from '@nestjs/config';
 
+// Trigger restart at 2026-03-19T14:40
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         cors: false, // we configure CORS explicitly below so one source of truth
@@ -53,7 +55,7 @@ async function bootstrap() {
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
-            forbidNonWhitelisted: true,
+            forbidNonWhitelisted: false,
             transform: true,
         }),
     );
@@ -159,7 +161,7 @@ async function bootstrap() {
     }
 
     const port = process.env.PORT || 5000;
-    await app.listen(port);
+    await app.listen(port, '0.0.0.0');
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
     console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api-docs`);
     console.log(`[TATT-Management-App] Upload dir  → ${uploadDir}`);

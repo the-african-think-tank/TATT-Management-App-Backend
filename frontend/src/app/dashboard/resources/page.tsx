@@ -60,10 +60,51 @@ export default function ResourcesPage() {
     setError(null);
     try {
       const params: Record<string, string | number> = { page, limit: 12 };
-      if (typeFilter) params.type = typeFilter;
-      const { data } = await api.get<ResourcesListResponse>("/resources", { params });
-      setItems(Array.isArray(data?.data) ? data.data : []);
-      setMeta(data?.meta ?? null);
+      
+      let resourceData: any[] = [];
+      let partnershipData: any[] = [];
+      let totalItems = 0;
+
+      // Fetch regular resources
+      if (!typeFilter || typeFilter !== "PARTNERSHIP") {
+        if (typeFilter) params.type = typeFilter;
+        const { data } = await api.get<ResourcesListResponse>("/resources", { params });
+        resourceData = (Array.isArray(data?.data) ? data.data : []).map(r => ({...r, isPartnership: false}));
+        totalItems = data?.meta?.total ?? 0;
+      }
+
+      // Fetch partnerships if applicable
+      if (!typeFilter || typeFilter === "PARTNERSHIP") {
+        const { data } = await api.get("/partnerships/my-benefits");
+        partnershipData = (Array.isArray(data) ? data : []).map(p => ({
+          ...p,
+          id: p.id,
+          title: p.name,
+          type: "PARTNERSHIP",
+          thumbnailUrl: p.logoUrl,
+          description: p.description,
+          tags: [p.category],
+          isPartnership: true
+        }));
+        
+        if (typeFilter === "PARTNERSHIP") {
+          totalItems = partnershipData.length;
+        } else {
+          totalItems += partnershipData.length;
+        }
+      }
+
+      const combined = typeFilter === "PARTNERSHIP" 
+        ? partnershipData 
+        : [...partnershipData.slice(0, 4), ...resourceData]; // Priority to some partnerships on "All"
+
+      setItems(combined);
+      setMeta({
+          total: totalItems,
+          page,
+          limit: 12,
+          totalPages: Math.ceil(totalItems / 12)
+      });
     } catch (err: unknown) {
       const res =
         err && typeof err === "object" && "response" in err
@@ -177,9 +218,15 @@ export default function ResourcesPage() {
               {filteredItems.map((resource) => (
                 <li key={resource.id}>
                   <Link
-                    href={`/dashboard/resources/${resource.id}`}
-                    className="block h-full rounded-xl border border-border bg-surface p-4 sm:p-5 hover:border-tatt-lime/50 hover:shadow-md transition-all text-left"
+                    href={resource.isPartnership ? (resource.isLocked ? "/dashboard/upgrade" : `/dashboard/partnerships/${resource.id}`) : `/dashboard/resources/${resource.id}`}
+                    target="_self"
+                    className={`relative block h-full rounded-xl border border-border bg-surface p-4 sm:p-5 hover:border-tatt-lime/50 hover:shadow-md transition-all text-left ${resource.isLocked ? "opacity-80 grayscale-[0.5]" : ""}`}
                   >
+                    {resource.isLocked && (
+                      <div className="absolute top-4 right-4 z-10 p-1.5 bg-background/80 rounded-full border border-border">
+                        <Lock className="size-3.5 text-tatt-gray" />
+                      </div>
+                    )}
                     <div className="flex items-start gap-3 mb-3">
                       {resource.thumbnailUrl ? (
                         <img
@@ -214,9 +261,9 @@ export default function ResourcesPage() {
                         ))}
                       </div>
                     )}
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-tatt-lime">
-                      View resource
-                      <ExternalLink className="h-4 w-4" />
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-tatt-lime mt-auto">
+                      {resource.isPartnership ? (resource.isLocked ? "Upgrade to Unlock" : (resource.buttonLabel || "Redeem Offer")) : "View resource"}
+                      {resource.isPartnership && !resource.isLocked ? <ExternalLink className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </span>
                   </Link>
                 </li>

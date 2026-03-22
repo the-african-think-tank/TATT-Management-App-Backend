@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
 import Image from "next/image";
 import {
     LayoutDashboard,
+    MessageSquare,
     Users,
     Globe,
-    MessageSquare,
     Heart,
     Calendar,
-    ClipboardList,
     Rss,
     Handshake,
     IdCard,
@@ -25,8 +25,16 @@ import {
     Settings,
     Menu,
     X,
-    User as UserIcon
+    User as UserIcon,
+    Check,
+    Trash2,
+    CheckCircle2,
+    Eye,
+    Clock,
+    Briefcase,
+    Banknote,
 } from "lucide-react";
+import api from "@/services/api";
 
 interface MenuItem {
     icon: React.ReactNode;
@@ -46,21 +54,63 @@ interface MenuGroup {
 
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [notifications, setNotifications] = useState<any[]>([]);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const notificationsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setDropdownOpen(false);
             }
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+                setNotificationsOpen(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const { data } = await api.get("/notifications");
+            // Only show those that are NOT dismissed
+            setNotifications(data.filter((n: any) => !n.dismissedAt));
+        } catch (error) {
+            console.error("Failed to fetch notifications:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            // Poll every 1 min
+            const interval = setInterval(fetchNotifications, 60000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
+
+    const markAsRead = async (id: string) => {
+        try {
+            await api.patch(`/notifications/${id}/read`);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n));
+        } catch (e) { console.error(e); }
+    };
+
+    const dismissNotification = async (id: string) => {
+        try {
+            await api.patch(`/notifications/${id}/dismiss`);
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (e) { console.error(e); }
+    };
+
+    const unreadCount = notifications.filter(n => !n.readAt).length;
 
     const userHasAccess = (requiredFlag?: string) => {
         if (!requiredFlag) return true; // No specific flag needed
@@ -71,29 +121,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const menuItems: MenuGroup[] = [
         {
-
             group: "Overview", items: [
-                { icon: <LayoutDashboard size={20} />, label: "Dashboard Overview", href: "/admin", active: true }
+                { icon: <LayoutDashboard size={20} />, label: "Dashboard Overview", href: "/admin" }
             ]
         },
         {
             group: "Community", items: [
                 { icon: <Users size={20} />, label: "Org Management", href: "/admin/org-management", badge: "NEW", flag: "CAN_ACCESS_ORG_MANAGEMENT" },
                 { icon: <Globe size={20} />, label: "Regional Chapters", href: "/admin/regional-chapters", flag: "CAN_ACCESS_REGIONAL_CHAPTERS" },
-                { icon: <MessageSquare size={20} />, label: "Forum Moderation", href: "#", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
-                { icon: <Heart size={20} />, label: "Volunteer Center", href: "#", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
+                { icon: <Rss size={20} />, label: "TATT Feed Moderation", href: "/admin/feed-moderation", dot: true, flag: "CAN_ACCESS_FORUM_MODERATION" },
+                { icon: <Globe size={20} />, label: "Community Feed", href: "/admin/community-feed", flag: "CAN_ACCESS_FORUM_MODERATION" },
+                { icon: <Heart size={20} />, label: "Volunteer Center", href: "/admin/volunteers", flag: "CAN_ACCESS_VOLUNTEER_CENTER" },
                 { icon: <Calendar size={20} />, label: "Events & Mixers", href: "/admin/events", flag: "CAN_ACCESS_EVENTS" },
-                { icon: <ClipboardList size={20} />, label: "Programs", href: "#", flag: "CAN_ACCESS_PROGRAMS" },
-                { icon: <Rss size={20} />, label: "Community Feed", href: "#", flag: "CAN_ACCESS_COMMUNITY_FEED" },
-                { icon: <Handshake size={20} />, label: "Promotions & Partnerships", href: "#", flag: "CAN_ACCESS_PARTNERSHIPS" },
-                { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" }
+                { icon: <Handshake size={20} />, label: "Partnerships", href: "/admin/partnerships", flag: "CAN_ACCESS_PARTNERSHIPS" },
+                { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" },
+                { icon: <Briefcase size={20} />, label: "Jobs Center", href: "/admin/jobs" },
+                { icon: <MessageSquare size={20} />, label: "Messages", href: "/admin/messages", badge: "NEW" }
+            ]
+        },
+        {
+            group: "Financial Management", items: [
+                { icon: <Banknote size={20} />, label: "Revenue Center", href: "/admin/revenue", flag: "CAN_ACCESS_REVENUE_CENTER" },
+                { icon: <Package size={20} />, label: "Sales & Inventory", href: "/admin/sales-inventory", flag: "CAN_ACCESS_SALES_INVENTORY" },
             ]
         },
         {
             group: "Resources", items: [
-                { icon: <BookOpen size={20} />, label: "Content & Resources", href: "#", flag: "CAN_ACCESS_CONTENT_RESOURCES" },
-                { icon: <Package size={20} />, label: "Sales & Inventory", href: "#", flag: "CAN_ACCESS_SALES_INVENTORY" },
-                { icon: <BarChart3 size={20} />, label: "Analytics", href: "#", flag: "CAN_ACCESS_ANALYTICS" }
+                { icon: <BookOpen size={20} />, label: "Content & Resources", href: "/admin/resources", flag: "CAN_ACCESS_CONTENT_RESOURCES" },
+                { icon: <Globe size={20} />, label: "Platform Management", href: "/admin/platform", flag: "CAN_ACCESS_PLATFORM_SETTINGS" },
+                { icon: <BarChart3 size={20} />, label: "Analytics", href: "/admin/analytics", flag: "CAN_ACCESS_ANALYTICS" }
             ]
         }
     ];
@@ -144,7 +200,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <Link
                                             key={i}
                                             href={item.href}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${item.active
+                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+                                                pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
                                                 ? "bg-tatt-lime text-tatt-black font-bold"
                                                 : "text-white/70 hover:text-white hover:bg-tatt-lime/10"
                                                 }`}
@@ -198,14 +255,98 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         <div className="flex items-center gap-2 lg:gap-6">
                             <div className="flex items-center gap-1 lg:gap-2">
-                                <button className="p-2 text-tatt-gray hover:bg-background rounded-lg relative">
-                                    <Bell size={20} />
-                                    <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-surface"></span>
-                                </button>
+                                <div className="relative" ref={notificationsRef}>
+                                    <button 
+                                        onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                        className={`p-2 rounded-lg relative transition-all ${notificationsOpen ? 'bg-tatt-lime/10 text-tatt-lime' : 'text-tatt-gray hover:bg-background'}`}
+                                    >
+                                        <Bell size={20} className={unreadCount > 0 ? "animate-swing" : ""} />
+                                        {unreadCount > 0 && (
+                                            <span className="absolute top-2 right-2 size-4 bg-red-600 text-[8px] font-black text-white flex items-center justify-center rounded-full border-2 border-surface animate-bounce shadow-sm">
+                                                {unreadCount > 9 ? '9+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
 
-                                <button className="p-2 text-tatt-gray hover:bg-background rounded-lg">
-                                    <Settings size={20} />
-                                </button>
+                                    {notificationsOpen && (
+                                        <div className="absolute right-0 mt-3 w-[24rem] md:w-[28rem] bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-border overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
+                                            <div className="p-5 border-b border-border flex items-center justify-between bg-surface/50">
+                                                <h4 className="text-sm font-black uppercase tracking-widest text-tatt-black">Notifications</h4>
+                                                {unreadCount > 0 && (
+                                                    <span className="text-[10px] font-bold text-tatt-lime-dark bg-tatt-lime/20 px-2 py-0.5 rounded-full">
+                                                        {unreadCount} New
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="max-h-[32rem] overflow-y-auto custom-scrollbar divide-y divide-border">
+                                                {notifications.length === 0 ? (
+                                                    <div className="p-12 text-center">
+                                                        <div className="size-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 text-tatt-gray/40">
+                                                            <Bell size={32} />
+                                                        </div>
+                                                        <p className="text-sm font-bold text-tatt-black">All Caught Up!</p>
+                                                        <p className="text-xs text-tatt-gray mt-1">No pending notifications at the moment.</p>
+                                                    </div>
+                                                ) : (
+                                                    notifications.map((n) => (
+                                                        <div key={n.id} className={`p-4 flex gap-4 transition-all group ${!n.readAt ? 'bg-tatt-lime/5' : 'hover:bg-surface'}`}>
+                                                            <div className={`mt-1 size-10 rounded-xl shrink-0 flex items-center justify-center ${!n.readAt ? 'bg-tatt-lime/20 text-tatt-lime-dark' : 'bg-surface text-tatt-gray'}`}>
+                                                                {n.type === 'NEW_MESSAGE' ? <MessageSquare size={18} /> : 
+                                                                 n.type === 'CONNECTION_REQUEST' ? <Users size={18} /> :
+                                                                 <Bell size={18} />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center justify-between gap-2 mb-0.5">
+                                                                    <p className={`text-sm font-black line-clamp-1 ${!n.readAt ? 'text-tatt-black' : 'text-tatt-gray-dark'}`}>
+                                                                        {n.title}
+                                                                    </p>
+                                                                    <span className="text-[9px] font-bold text-tatt-gray whitespace-nowrap">
+                                                                        {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-tatt-gray line-clamp-2 font-medium leading-relaxed mb-3">
+                                                                    {n.message}
+                                                                </p>
+                                                                <div className="flex items-center gap-3">
+                                                                    {!n.readAt && (
+                                                                        <button 
+                                                                            onClick={() => markAsRead(n.id)}
+                                                                            className="text-[9px] font-black uppercase tracking-widest text-tatt-lime-dark hover:underline flex items-center gap-1"
+                                                                        >
+                                                                            <Check size={10} strokeWidth={3} /> Mark Read
+                                                                        </button>
+                                                                    )}
+                                                                    <button 
+                                                                        onClick={() => dismissNotification(n.id)}
+                                                                        className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:underline flex items-center gap-1"
+                                                                    >
+                                                                        <X size={10} strokeWidth={3} /> Dismiss
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                            
+                                            <div className="p-4 bg-surface/50 border-t border-border text-center">
+                                                <Link href="/admin/settings" className="text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:text-tatt-black transition-colors px-4 py-2">
+                                                    Notification Settings
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {user?.systemRole === "SUPERADMIN" && (
+                                    <Link 
+                                        href="/admin/settings"
+                                        className="p-2 text-tatt-gray hover:bg-background rounded-lg hover:text-tatt-lime transition-all"
+                                    >
+                                        <Settings size={20} />
+                                    </Link>
+                                )}
                             </div>
                             <div className="h-8 w-px bg-border hidden sm:block"></div>
                             <div className="relative group" ref={dropdownRef}>

@@ -7,9 +7,11 @@ import { User } from '../iam/entities/user.entity';
 import { Post, PostType } from '../feed/entities/post.entity';
 import { PostLike } from '../feed/entities/post-like.entity';
 import { PostComment } from '../feed/entities/post-comment.entity';
-import { CreateChapterDto } from './dto/chapters.dto';
+import { CreateChapterDto, UpdateChapterDto } from './dto/chapters.dto';
 import { CreateChapterActivityDto, UpdateChapterActivityDto } from './dto/chapter-activity.dto';
-import { SystemRole } from '../iam/enums/roles.enum';
+import { SystemRole, AccountFlags } from '../iam/enums/roles.enum';
+import { VolunteerApplication, ApplicationStatus } from '../volunteers/entities/volunteer-application.entity';
+import { VolunteerRole } from '../volunteers/entities/volunteer-role.entity';
 
 const ACTIVITY_AUTHOR_ATTRS = ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'communityTier'] as const;
 const POST_AUTHOR_ATTRS = ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'communityTier', 'tattMemberId'] as const;
@@ -25,6 +27,8 @@ export class ChaptersService implements OnApplicationBootstrap {
         @InjectModel(Post) private postRepository: typeof Post,
         @InjectModel(PostLike) private likeRepository: typeof PostLike,
         @InjectModel(PostComment) private commentRepository: typeof PostComment,
+        @InjectModel(VolunteerApplication) private volunteerAppRepo: typeof VolunteerApplication,
+        @InjectModel(VolunteerRole) private volunteerRoleRepo: typeof VolunteerRole,
     ) { }
 
     async onApplicationBootstrap() {
@@ -32,12 +36,12 @@ export class ChaptersService implements OnApplicationBootstrap {
         if (count === 0) {
             this.logger.log('Seeding initial Regional Chapters...');
             const regions = [
-                { name: 'Nairobi Chapter', code: 'NBO', country: 'Kenya', stateRegion: 'Nairobi', cities: ['Nairobi'], description: 'TATT Hub for East Africa and Kenya.' },
-                { name: 'Lagos Chapter', code: 'LOS', country: 'Nigeria', stateRegion: 'Lagos', cities: ['Lagos'], description: 'Strategic hub for Nigeria and West Africa.' },
-                { name: 'Johannesburg Chapter', code: 'JNB', country: 'South Africa', stateRegion: 'Gauteng', cities: ['Johannesburg'], description: 'Regional base for Southern African operations.' },
-                { name: 'Accra Chapter', code: 'ACC', country: 'Ghana', stateRegion: 'Greater Accra', cities: ['Accra'], description: 'Key West African center for development.' },
-                { name: 'London Diaspora Chapter', code: 'LDN', country: 'UK', stateRegion: 'London', cities: ['London'], description: 'Major Diaspora hub connect in the United Kingdom.' },
-                { name: 'Atlanta Diaspora Chapter', code: 'ATL', country: 'USA', stateRegion: 'Georgia', cities: ['Atlanta'], description: 'Primary Diaspora network starting point in North America.' }
+                { name: 'Nairobi Chapter', code: '1001', country: 'Kenya', stateRegion: 'Nairobi', cities: ['Nairobi'], description: 'TATT Hub for East Africa and Kenya.' },
+                { name: 'Lagos Chapter', code: '1002', country: 'Nigeria', stateRegion: 'Lagos', cities: ['Lagos'], description: 'Strategic hub for Nigeria and West Africa.' },
+                { name: 'Johannesburg Chapter', code: '1003', country: 'South Africa', stateRegion: 'Gauteng', cities: ['Johannesburg'], description: 'Regional base for Southern African operations.' },
+                { name: 'Accra Chapter', code: '1004', country: 'Ghana', stateRegion: 'Greater Accra', cities: ['Accra'], description: 'Key West African center for development.' },
+                { name: 'London Diaspora Chapter', code: '1005', country: 'UK', stateRegion: 'London', cities: ['London'], description: 'Major Diaspora hub connect in the United Kingdom.' },
+                { name: 'Atlanta Diaspora Chapter', code: '1006', country: 'USA', stateRegion: 'Georgia', cities: ['Atlanta'], description: 'Primary Diaspora network starting point in North America.' }
             ];
 
             for (const chap of regions) {
@@ -47,17 +51,61 @@ export class ChaptersService implements OnApplicationBootstrap {
         }
     }
 
-    async createChapter(dto: CreateChapterDto) {
-        const existingCode = await this.chapterRepository.findOne({ where: { code: dto.code } });
-        if (existingCode) {
-            throw new ConflictException(`Chapter with code ${dto.code} already exists.`);
+    async updateChapter(id: string, dto: UpdateChapterDto) {
+        const chapter = await this.chapterRepository.findByPk(id);
+        if (!chapter) throw new NotFoundException('Chapter not found.');
+
+        if (dto.code && dto.code !== chapter.code) {
+            if (!/^\d{4}$/.test(dto.code)) {
+                throw new ConflictException('Chapter code must be a 4-digit number.');
+            }
+            const existing = await this.chapterRepository.findOne({ where: { code: dto.code } });
+            if (existing) throw new ConflictException(`Code ${dto.code} is already in use.`);
         }
-        const chapter = await this.chapterRepository.create({ ...dto });
+
+        await chapter.update(dto);
+        return { message: 'Chapter updated successfully', data: chapter };
+    }
+
+    async createChapter(dto: CreateChapterDto) {
+        if (dto.code && !/^\d{4}$/.test(dto.code)) {
+            throw new ConflictException('Chapter code must be a 4-digit number.');
+        }
+
+        const code = dto.code || await this.generateChapterCode();
+
+        const existingCode = await this.chapterRepository.findOne({ where: { code } });
+        if (existingCode) {
+            throw new ConflictException(`Chapter with code ${code} already exists.`);
+        }
+        const chapter = await this.chapterRepository.create({ ...dto, code });
         return { message: 'Chapter created successfully', data: chapter };
+    }
+
+    private async generateChapterCode(): Promise<string> {
+        const lastChapter = await this.chapterRepository.findOne({
+            order: [['code', 'DESC']],
+            where: { code: { [Op.regexp]: '^[0-9]{4}$' } }
+        });
+
+        if (!lastChapter) return '1001';
+
+        const nextNum = parseInt(lastChapter.code) + 1;
+        return nextNum.toString().padStart(4, '0');
     }
 
     async getAllChapters() {
         return this.chapterRepository.findAll({
+            attributes: {
+                include: [
+                    [
+                        this.chapterRepository.sequelize.literal(
+                            `CAST((SELECT COUNT(*) FROM "users" WHERE "users"."chapterId" = "Chapter"."id" AND "users"."isActive" = true AND "users"."deletedAt" IS NULL) AS INTEGER)`
+                        ),
+                        'memberCount'
+                    ]
+                ]
+            },
             include: [
                 {
                     model: User,
@@ -117,15 +165,38 @@ export class ChaptersService implements OnApplicationBootstrap {
 
     // ── CHAPTER ACTIVITIES (Admin-managed news/events/announcements) ─────────────
 
-    async getChapterActivities(chapterId: string, page = 1, limit = 20) {
+    async getChapterActivities(chapterId: string, page = 1, limit = 20, visibility?: string) {
         await this.getChapterById(chapterId);
         const offset = (page - 1) * limit;
+        const where: any = { chapterId, isPublished: true };
+        if (visibility) where.visibility = visibility;
+
         const { count, rows } = await this.activityRepository.findAndCountAll({
-            where: { chapterId, isPublished: true },
+            where,
             include: [
                 { model: User, as: 'author', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
+                { model: User, as: 'volunteerManager', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
             ],
             order: [['createdAt', 'DESC']],
+            limit,
+            offset,
+        });
+        return {
+            data: rows,
+            meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) },
+        };
+    }
+
+    async getAllActivities(page = 1, limit = 20) {
+        const offset = (page - 1) * limit;
+        const { count, rows } = await this.activityRepository.findAndCountAll({
+            where: { isPublished: true },
+            include: [
+                { model: Chapter, as: 'chapter', attributes: ['name', 'code'] },
+                { model: User, as: 'author', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
+                { model: User, as: 'volunteerManager', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
+            ],
+            order: [['eventDate', 'ASC'], ['createdAt', 'DESC']], // Upcoming first
             limit,
             offset,
         });
@@ -141,14 +212,15 @@ export class ChaptersService implements OnApplicationBootstrap {
         if (!isAdmin) {
             throw new ForbiddenException('Only chapter admins can post chapter activities.');
         }
-        const { eventDate, ...rest } = dto;
+        const { eventDate, endDate, ...rest } = dto;
         const activity = await this.activityRepository.create({
             chapterId,
             authorId: author.id,
             ...rest,
             eventDate: eventDate ? new Date(eventDate) : undefined,
+            endDate: endDate ? new Date(endDate) : undefined,
             isPublished: true,
-        });
+        } as any);
         return { message: 'Chapter activity posted successfully.', activityId: activity.id };
     }
 
@@ -173,6 +245,59 @@ export class ChaptersService implements OnApplicationBootstrap {
         if (!isAdmin && !isOwner) throw new ForbiddenException('Unauthorised.');
         await activity.destroy();
         return { message: 'Activity deleted.' };
+    }
+
+    async getChapterVolunteers(chapterId: string) {
+        this.logger.log(`Fetching volunteers for chapter ${chapterId}`);
+        await this.getChapterById(chapterId);
+
+        try {
+            // 1. Get existing volunteers (Users in this chapter with VOLUNTEER flag)
+            this.logger.log(`Querying active volunteers for chapter ${chapterId}`);
+            const activeVolunteers = await this.userRepository.findAll({
+                where: {
+                    chapterId,
+                    isActive: true,
+                    flags: { [Op.contains]: [AccountFlags.VOLUNTEER] }
+                },
+                attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'email'],
+            });
+
+            // 2. Get pending applications for this chapter
+            this.logger.log(`Querying pending applications for chapter ${chapterId}`);
+            const pendingApplications = await this.volunteerAppRepo.findAll({
+                where: {
+                    status: ApplicationStatus.PENDING
+                },
+                include: [
+                    {
+                        model: User,
+                        as: 'user',
+                        where: { chapterId },
+                        attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'email']
+                    },
+                    {
+                        model: VolunteerRole,
+                        as: 'role',
+                        attributes: ['name'],
+                        required: false
+                    }
+                ],
+                order: [['createdAt', 'DESC']]
+            });
+
+            this.logger.log(`Found ${activeVolunteers.length} active and ${pendingApplications.length} pending volunteers`);
+
+            return {
+                active: activeVolunteers,
+                pending: pendingApplications,
+                totalActive: activeVolunteers.length,
+                totalPending: pendingApplications.length
+            };
+        } catch (error) {
+            this.logger.error(`Error in getChapterVolunteers for chapter ${chapterId}:`, error);
+            throw error;
+        }
     }
 
     // ── CHAPTER FEED (community member posts within this chapter) ─────────────────

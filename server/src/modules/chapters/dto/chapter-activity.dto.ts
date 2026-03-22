@@ -1,6 +1,6 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, IsDateString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, IsDateString, IsNumber, IsArray, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ActivityType } from '../entities/chapter-activity.entity';
+import { ActivityType, LocationType, ActivityVisibility } from '../entities/chapter-activity.entity';
 
 export class CreateChapterActivityDto {
     @ApiProperty({ enum: ActivityType, example: ActivityType.ANNOUNCEMENT })
@@ -27,10 +27,40 @@ export class CreateChapterActivityDto {
     @IsDateString()
     eventDate?: string;
 
+    @ApiPropertyOptional({ example: '2026-03-15T12:00:00Z' })
+    @IsOptional()
+    @IsDateString()
+    endDate?: string;
+
+    @ApiPropertyOptional({ enum: LocationType })
+    @IsOptional()
+    @IsEnum(LocationType)
+    locationType?: LocationType;
+
     @ApiPropertyOptional({ example: 'Accra Hub — 5 Liberation Rd' })
     @IsOptional()
     @IsString()
     eventLocation?: string;
+
+    @ApiPropertyOptional({ example: 50 })
+    @IsOptional()
+    @IsNumber()
+    targetVolunteers?: number;
+
+    @ApiPropertyOptional({ enum: ActivityVisibility })
+    @IsOptional()
+    @IsEnum(ActivityVisibility)
+    visibility?: ActivityVisibility;
+
+    @ApiPropertyOptional({ example: 'uuid' })
+    @IsOptional()
+    @IsUUID()
+    volunteerManagerId?: string;
+
+    @ApiPropertyOptional({ type: [Object] })
+    @IsOptional()
+    @IsArray()
+    rolesNeeded?: any[];
 }
 
 export class UpdateChapterActivityDto {

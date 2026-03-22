@@ -13,6 +13,12 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  Lock,
+  Star,
+  Zap,
+  TrendingUp,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { JobCard } from "@/components/jobs/job-card";
@@ -32,6 +38,138 @@ const CATEGORIES = [
 const LOCATION_OPTIONS = ["All", "Remote", "Hybrid", "On-site"];
 const TYPE_OPTIONS = ["All Types", "Full-time", "Part-time", "Contract"];
 
+const PAID_TIERS = ["UBUNTU", "IMANI", "KIONGOZI"];
+
+function isPaidMember(tier: string | undefined) {
+  return PAID_TIERS.includes(tier ?? "");
+}
+
+function PremiumGate() {
+  return (
+    <div className="relative min-h-screen w-full bg-background text-foreground overflow-hidden">
+
+      {/* ── Blurred full-page background preview ───────────────── */}
+      <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+        {/* Fake header */}
+        <div className="bg-surface px-4 sm:px-8 py-6 flex items-center justify-between border-b border-border blur-sm opacity-50">
+          <div>
+            <div className="h-8 w-40 rounded-lg bg-foreground/20 mb-2" />
+            <div className="h-4 w-64 rounded bg-foreground/10" />
+          </div>
+          <div className="flex gap-3">
+            <div className="h-10 w-28 rounded-lg bg-foreground/10" />
+            <div className="h-10 w-28 rounded-lg bg-tatt-lime/20" />
+          </div>
+        </div>
+        <div className="px-4 sm:px-8 py-6 blur-sm opacity-30 space-y-4">
+          <div className="h-11 w-full rounded-lg bg-surface border border-border" />
+          <div className="flex gap-2">
+            {["All Categories", "Green Energy", "FinTech", "Sustainability"].map((c) => (
+              <div key={c} className="h-8 px-4 rounded-lg bg-surface border border-border text-xs flex items-center text-foreground/50">{c}</div>
+            ))}
+          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-xl border border-border p-5 flex gap-4">
+              <div className="size-12 rounded-lg bg-tatt-lime/10 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-48 rounded bg-foreground/20" />
+                <div className="h-3.5 w-32 rounded bg-foreground/10" />
+                <div className="flex gap-3">
+                  <div className="h-3 w-24 rounded bg-foreground/10" />
+                  <div className="h-3 w-16 rounded bg-foreground/10" />
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <div className="h-10 w-10 rounded-lg bg-foreground/10" />
+                <div className="h-10 w-24 rounded-lg bg-tatt-lime/20" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Full overlay to dim everything */}
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+      </div>
+
+      {/* ── Gate card centered on top ───────────────────────────── */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-2xl">
+          <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-2xl">
+            <div className="h-1 bg-gradient-to-r from-tatt-lime via-tatt-lime/60 to-transparent" />
+
+            <div className="p-8 sm:p-10">
+              <div className="size-16 rounded-2xl bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center mx-auto mb-6">
+                <Lock className="size-8 text-tatt-lime" />
+              </div>
+
+              <div className="text-center mb-8">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-tatt-lime mb-3">Members Only</p>
+                <h1 className="text-2xl sm:text-3xl font-black text-foreground leading-tight mb-3">
+                  Exclusive Opportunities<br />for TATT Members
+                </h1>
+                <p className="text-tatt-gray text-sm leading-relaxed max-w-md mx-auto">
+                  The TATT Job Board is a curated space for leadership and innovation roles — exclusively available to Ubuntu, Imani, and Kiongozi members.
+                </p>
+              </div>
+
+              {/* Benefits */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                {[
+                  { icon: Briefcase, title: "Curated Listings", desc: "Roles matched to think tank professionals" },
+                  { icon: Star, title: "Priority Applications", desc: "Apply directly through the TATT platform" },
+                  { icon: TrendingUp, title: "Talent Matchmaking", desc: "Get discovered by top employers in our network" },
+                  { icon: Users, title: "TATT Job Alerts", desc: "Get notified when roles match your profile" },
+                ].map(({ icon: Icon, title, desc }) => (
+                  <div key={title} className="flex items-start gap-3 p-4 rounded-2xl bg-background border border-border">
+                    <div className="size-8 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime shrink-0 mt-0.5">
+                      <Icon className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{title}</p>
+                      <p className="text-xs text-tatt-gray mt-0.5">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Plans */}
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                {[
+                  { name: "Ubuntu", color: "bg-[#333] text-white", badge: "Entry" },
+                  { name: "Imani", color: "bg-tatt-black text-white border border-white/20", badge: "Growth" },
+                  { name: "Kiongozi", color: "bg-tatt-lime text-black", badge: "Elite" },
+                ].map(({ name, color, badge }) => (
+                  <div key={name} className="text-center">
+                    <div className={`rounded-xl py-3 px-2 text-center font-black text-sm mb-1 ${color}`}>{name}</div>
+                    <p className="text-[10px] text-tatt-gray font-medium">{badge}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="flex flex-col gap-3">
+                <Link
+                  href="/dashboard/upgrade"
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-tatt-lime text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-tatt-lime/20"
+                >
+                  <Zap className="size-4" />
+                  Upgrade to Access Job Board
+                  <ArrowRight className="size-4" />
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="text-center py-3 text-xs font-black text-tatt-gray uppercase tracking-widest hover:text-foreground transition-colors"
+                >
+                  Back to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function JobsPage() {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<JobListing[]>([]);
@@ -47,15 +185,16 @@ export default function JobsPage() {
   const [page, setPage] = useState(1);
   const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
 
+  // Show gate for FREE tier or no tier 
+  const userTier = user?.communityTier;
+  const isLoaded = !loading || user !== undefined;
+
   const fetchJobs = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, string | number> = {
-        page,
-        limit: 10,
-      };
+      const params: Record<string, string | number> = { page, limit: 10 };
       if (search.trim()) params.search = search.trim();
       if (category !== "All Categories") params.category = category;
       if (location !== "All") params.location = location;
@@ -87,16 +226,14 @@ export default function JobsPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
+    if (!user) { setLoading(false); return; }
+    if (!isPaidMember(user.communityTier)) { setLoading(false); return; }
     fetchJobs();
-  }, [fetchJobs, user?.id]);
+  }, [fetchJobs, user]);
 
   useEffect(() => {
-    fetchSavedIds();
-  }, [fetchSavedIds, user?.id]);
+    if (user && isPaidMember(user.communityTier)) fetchSavedIds();
+  }, [fetchSavedIds, user]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +250,20 @@ export default function JobsPage() {
     });
   }, []);
 
+  // While auth is resolving, show spinner
+  if (user === undefined || user === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-tatt-lime" />
+      </div>
+    );
+  }
+
+  // Show gate for free members
+  if (!isPaidMember(userTier)) {
+    return <PremiumGate />;
+  }
+
   const totalPages = meta?.totalPages ?? 0;
 
   return (
@@ -122,12 +273,11 @@ export default function JobsPage() {
         <div className="max-w-[1920px] mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Opportunities
-              </h1>
-              <p className="text-tatt-gray text-sm mt-0.5">
-                Curated leadership and innovation roles for our network.
-              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Opportunities</h1>
+                <span className="px-2 py-0.5 rounded-md bg-tatt-lime/10 border border-tatt-lime/30 text-tatt-lime text-[10px] font-black uppercase tracking-widest">Members Only</span>
+              </div>
+              <p className="text-tatt-gray text-sm">Curated leadership and innovation roles for our network.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -137,7 +287,7 @@ export default function JobsPage() {
                 <Bookmark className="h-4 w-4" />
                 Saved Roles
               </Link>
-              {user?.communityTier === "KIONGOZI" && (
+              {userTier === "KIONGOZI" && (
                 <Link
                   href="/dashboard/jobs/post"
                   className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg font-bold bg-tatt-lime text-tatt-black hover:brightness-95 transition-colors text-sm"
@@ -203,10 +353,7 @@ export default function JobsPage() {
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => {
-                    setCategory(cat);
-                    setPage(1);
-                  }}
+                  onClick={() => { setCategory(cat); setPage(1); }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     category === cat
                       ? "bg-tatt-lime text-tatt-black"

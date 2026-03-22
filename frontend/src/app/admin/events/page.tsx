@@ -83,6 +83,7 @@ export default function AdminEventsPage() {
         type: "EVENT",
         basePrice: 0,
         isForAllMembers: true,
+        targetMembershipTiers: [] as string[],
         locations: [] as Array<{ chapterId: string; address: string }>
     });
 
@@ -121,6 +122,7 @@ export default function AdminEventsPage() {
                 type: "EVENT",
                 basePrice: 0,
                 isForAllMembers: true,
+                targetMembershipTiers: [],
                 locations: []
             });
         } catch (error: any) {
@@ -456,6 +458,32 @@ export default function AdminEventsPage() {
                                 </div>
                             </div>
 
+                            {!form.isForAllMembers && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold">Target Tiers (Select at least one)</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {["FREE", "UBUNTU", "IMANI", "KIONGOZI"].map(tier => (
+                                            <button
+                                                key={tier}
+                                                type="button"
+                                                onClick={() => {
+                                                    const tiers = form.targetMembershipTiers.includes(tier)
+                                                        ? form.targetMembershipTiers.filter(t => t !== tier)
+                                                        : [...form.targetMembershipTiers, tier];
+                                                    setForm({ ...form, targetMembershipTiers: tiers });
+                                                }}
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${form.targetMembershipTiers.includes(tier)
+                                                    ? "bg-tatt-lime text-tatt-black border-tatt-lime shadow-lg shadow-tatt-lime/20"
+                                                    : "bg-background text-tatt-gray border-border hover:border-tatt-lime/50"
+                                                    }`}
+                                            >
+                                                {tier}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="space-y-3 pt-2">
                                 <div className="flex items-center justify-between">
                                     <label className="text-sm font-bold">Locations & Chapters</label>
@@ -559,11 +587,17 @@ export default function AdminEventsPage() {
                                         <span className="flex items-center gap-1.5"><MapPin className="size-3.5 text-tatt-lime-dark" /> {selectedEvent.locations?.[0]?.address || "Location TBA"}</span>
                                     </div>
                                 </div>
-                                <div className="bg-surface p-4 rounded-2xl shadow-sm border border-border text-center min-w-[120px]">
-                                    <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest mb-1">Total Attendees</p>
-                                    <p className="text-3xl font-black text-foreground">{attendees.length}</p>
+                                    <div className="bg-surface p-4 rounded-2xl shadow-sm border border-border text-center min-w-[120px]">
+                                        <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest mb-1">Total Attendees</p>
+                                        <p className="text-3xl font-black text-foreground">{attendees.length}</p>
+                                    </div>
+                                    <div className="bg-tatt-lime-light/20 p-4 rounded-2xl shadow-sm border border-tatt-lime/20 text-center min-w-[120px]">
+                                        <p className="text-[10px] font-black text-tatt-lime-dark uppercase tracking-widest mb-1">Total Revenue</p>
+                                        <p className="text-3xl font-black text-tatt-green-deep">
+                                            ${attendees.reduce((acc, reg) => acc + (Number(reg.amountPaid) || 0), 0).toLocaleString()}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="space-y-6">
@@ -622,13 +656,16 @@ export default function AdminEventsPage() {
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <p className="text-xs font-bold truncate">{reg.user.firstName} {reg.user.lastName}</p>
-                                                                <p className="text-[9px] text-tatt-gray truncate">{reg.user.professionTitle || "Member"}</p>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded bg-surface border border-border">
+                                                                        {reg.user.communityTier}
+                                                                    </span>
+                                                                    <span className="text-[9px] text-tatt-gray truncate">{reg.user.professionTitle || "Member"}</span>
+                                                                </div>
                                                             </div>
                                                             <div className="text-right shrink-0">
-                                                                <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded bg-surface border border-border">
-                                                                    {reg.user.communityTier}
-                                                                </span>
-                                                                <p className="text-[9px] text-tatt-gray mt-0.5">{reg.user.chapter?.name || "Global"}</p>
+                                                                <p className="text-xs font-black text-tatt-green-deep">${Number(reg.amountPaid).toFixed(2)}</p>
+                                                                <p className="text-[8px] text-tatt-gray mt-0.5 uppercase font-bold">{reg.isBusinessRegistration ? "Business" : "Individual"}</p>
                                                             </div>
                                                         </div>
                                                     ))}

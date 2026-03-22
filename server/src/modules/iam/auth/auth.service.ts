@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { Op } from 'sequelize';
 import Stripe from 'stripe';
+import { SystemSettingsService } from '../../system-settings/system-settings.service';
 import { User } from '../entities/user.entity';
 import { AddOrgMemberDto, BootstrapAdminDto, CompleteOrgMemberDto, CommunitySignupDto, SignInDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { SystemRole, CommunityTier } from '../enums/roles.enum';
@@ -32,10 +33,11 @@ export class AuthService {
         private mailService: MailService,
         private securityPolicyService: SecurityPolicyService,
         private twoFactorService: TwoFactorService,
-    ) {
-        this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-            apiVersion: '2025-01-27.acacia' as any,
-        });
+        private settingsService: SystemSettingsService,
+    ) { }
+
+    private async getStripe() {
+        return this.settingsService.getStripeInstance();
     }
 
     // ─── SIGN IN ──────────────────────────────────────────────────────────────────
@@ -337,7 +339,7 @@ export class AuthService {
             if (!priceId) throw new BadRequestException('Selected membership tier is invalid or unavailable.');
 
             try {
-                const customer = await this.stripe.customers.create({
+                const customer = await (await this.getStripe()).customers.create({
                     email: dto.email,
                     name: `${dto.firstName} ${dto.lastName}`,
                     payment_method: dto.paymentMethodId,
@@ -346,7 +348,7 @@ export class AuthService {
                 stripeCustomerId = customer.id;
 
                 if (!priceId.includes('mock') && !process.env.STRIPE_SECRET_KEY?.includes('placeholder')) {
-                    await this.stripe.subscriptions.create({
+                    await (await this.getStripe()).subscriptions.create({
                         customer: customer.id,
                         items: [{ price: priceId }],
                         expand: ['latest_invoice.payment_intent'],
@@ -470,8 +472,9 @@ export class AuthService {
                 'isActive', 'flags', 'isTwoFactorEnabled', 'twoFactorMethod',
                 'connectionPreference', 'expertise', 'businessName', 'businessRole',
                 'businessProfileLink', 'professionalHighlight', 'location', 'deletionRequestedAt',
-                'linkedInProfileUrl'
+                'linkedInProfileUrl', 'hasAutoPayEnabled'
             ],
+
             include: [
                 { model: Chapter, as: 'chapter' },
                 { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
@@ -485,6 +488,10 @@ export class AuthService {
         }
         delete plain.chapter;
         return plain;
+    }
+
+    async getPasswordPolicy() {
+        return this.securityPolicyService.getPolicy();
     }
 
     // ─── INTERNAL: GENERATE FULL AUTH RESPONSE ────────────────────────────────
@@ -506,10 +513,13 @@ export class AuthService {
                 systemRole: user.systemRole,
                 communityTier: user.communityTier,
                 isActive: user.isActive,
+                flags: user.flags,
                 isTwoFactorEnabled: user.isTwoFactorEnabled,
                 twoFactorMethod: user.twoFactorMethod ?? null,
                 deletionRequestedAt: user.deletionRequestedAt || null,
+                hasAutoPayEnabled: user.hasAutoPayEnabled,
             },
         };
+
     }
 }

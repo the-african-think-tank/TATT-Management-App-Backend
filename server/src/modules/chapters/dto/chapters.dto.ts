@@ -43,3 +43,47 @@ export class CreateChapterDto {
     @IsOptional()
     associateRegionalDirectorId?: string;
 }
+
+export class UpdateChapterDto {
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    @Length(4, 4)
+    code?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    name?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    description?: string;
+
+    @ApiPropertyOptional({ type: [String] })
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    cities?: string[];
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    country?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    stateRegion?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    regionalManagerId?: string;
+
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    associateRegionalDirectorId?: string;
+}

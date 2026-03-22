@@ -12,12 +12,19 @@ export function HomePage() {
   useEffect(() => {
     if (isAuthenticated && !isLoading && user) {
       if (user.systemRole === 'COMMUNITY_MEMBER') {
-        router.push('/dashboard');
+        if (!user.flags?.includes('ONBOARDING_COMPLETED')) {
+          // Redirect incomplete onboarding to plans page
+          router.push('/onboarding/plans');
+        } else {
+          router.push('/dashboard');
+        }
+
       } else {
         router.push('/admin');
       }
     }
   }, [isAuthenticated, isLoading, user, router]);
+
 
   if (isLoading) {
     return (

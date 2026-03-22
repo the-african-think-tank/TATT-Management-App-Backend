@@ -22,6 +22,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { SystemRole } from '../enums/roles.enum';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Public } from '../../../common/decorators/public.decorator';
 
 // ─── Inline request DTOs for the 2FA login step ──────────────────────────────
 class CompleteTwoFactorDto {
@@ -164,6 +165,14 @@ export class AuthController {
         return this.authService.resetPassword(resetDto);
     }
 
+    @ApiOperation({ summary: 'Get current password policy' })
+    @ApiResponse({ status: 200, description: 'Returns the current password policy details.' })
+    @Get('password-policy')
+    @Public()
+    async getPasswordPolicy() {
+        return this.authService.getPasswordPolicy();
+    }
+
     // ─── BOOTSTRAP FIRST ADMIN ───────────────────────────────────────────────
 
     @ApiOperation({
@@ -215,6 +224,7 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'Registration complete, JWT returned.', type: AuthTokenResponseSchema })
     @ApiResponse({ status: 401, description: 'Invalid or expired token.' })
     @Post('org-member/complete-registration')
+    @Public()
     @HttpCode(HttpStatus.OK)
     async completeOrgRegistration(@Body() completeRegistrationDto: CompleteOrgMemberDto) {
         return this.authService.completeOrgMemberRegistration(completeRegistrationDto);

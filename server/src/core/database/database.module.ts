@@ -15,6 +15,9 @@ import { PostComment } from '../../modules/feed/entities/post-comment.entity';
 import { PostBookmark } from '../../modules/feed/entities/post-bookmark.entity';
 import { PostUpvote } from '../../modules/feed/entities/post-upvote.entity';
 import { PostReport } from '../../modules/feed/entities/post-report.entity';
+import { FeedInsight } from '../../modules/feed/entities/feed-insight.entity';
+import { FeedPrompt } from '../../modules/feed/entities/feed-prompt.entity';
+import { FeedTopic } from '../../modules/feed/entities/feed-topic.entity';
 import { DirectMessage } from '../../modules/messages/entities/direct-message.entity';
 import { Resource } from '../../modules/resources/entities/resource.entity';
 import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
@@ -33,6 +36,11 @@ import { VolunteerActivity } from '../../modules/volunteers/entities/volunteer-a
 import { VolunteerApplication } from '../../modules/volunteers/entities/volunteer-application.entity';
 import { VolunteerStat } from '../../modules/volunteers/entities/volunteer-stat.entity';
 import { VolunteerTrainingResource } from '../../modules/volunteers/entities/volunteer-training.entity';
+import { Product } from '../../modules/store/entities/product.entity';
+import { ProductVariant } from '../../modules/store/entities/product-variant.entity';
+import { Order } from '../../modules/store/entities/order.entity';
+import { OrderItem } from '../../modules/store/entities/order-item.entity';
+import { Partnership } from '../../modules/partnerships/entities/partnership.entity';
 
 @Module({
     imports: [
@@ -48,12 +56,15 @@ import { VolunteerTrainingResource } from '../../modules/volunteers/entities/vol
                 models: [
                     User, Chapter, ProfessionalInterest, UserInterest, Connection,
                     SecurityPolicy, PasswordHistory, EmailOtp,
-                    Post, PostLike, PostComment, PostUpvote, PostBookmark, PostReport, DirectMessage,
+                    Post, PostLike, PostComment, PostUpvote, PostBookmark, PostReport, 
+                    FeedInsight, FeedPrompt, FeedTopic,
+                    DirectMessage,
                     Resource, ResourceInteraction, Notification,
                     MembershipPlan,
                     Event, EventChapter, EventGuest, EventRegistration,
                     JobListing, JobApplication, SavedJob,
-                    VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource
+                    VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
+                    Product, ProductVariant, Order, OrderItem, Partnership,
                 ],
                 autoLoadModels: true,
                 // Default to true unless explicitly set to false, 'false', or '0'

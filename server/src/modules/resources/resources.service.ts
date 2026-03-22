@@ -99,6 +99,15 @@ export class ResourcesService {
         return { message: 'Resource updated successfully', data: this.toDetailSchema(resource) };
     }
 
+    async getStats(_user: User) {
+        const [total, videos, guides] = await Promise.all([
+            this.resourceRepository.count(),
+            this.resourceRepository.count({ where: { type: 'VIDEO' } }),
+            this.resourceRepository.count({ where: { type: 'GUIDE' } }),
+        ]);
+        return { total, videos, guides };
+    }
+
     async remove(id: string, _user: User) {
         const resource = await this.getResourceById(id);
         await resource.destroy(); // paranoid: soft-delete

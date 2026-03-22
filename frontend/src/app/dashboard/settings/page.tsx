@@ -14,8 +14,13 @@ import {
     CheckCircle,
     Loader2,
     Save,
-    Trash2
+    Trash2,
+    CreditCard,
+    RefreshCw,
+    Wallet,
+    Lock
 } from "lucide-react";
+
 import { Interest } from "@/types/interests";
 import { ChapterDetail } from "@/types/chapter";
 import { toast } from "react-hot-toast";
@@ -138,8 +143,161 @@ const ConfirmationModal = ({
     );
 };
 
+const PaymentMethodModal = ({
+    isOpen,
+    onClose,
+    onSuccess
+}: {
+    isOpen: boolean,
+    onClose: () => void,
+    onSuccess: () => void
+}) => {
+    const [cardDetails, setCardDetails] = useState({
+        number: '',
+        expiry: '',
+        cvc: '',
+        name: ''
+    });
+    const [cardType, setCardType] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    if (!isOpen) return null;
+
+    const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let { name, value } = e.target;
+        if (name === 'number') {
+            value = value.replace(/\D/g, '').substring(0, 16);
+            if (value.startsWith('4')) setCardType('visa');
+            else if (value.startsWith('5')) setCardType('mastercard');
+            else if (value.startsWith('34') || value.startsWith('37')) setCardType('amex');
+            else if (value.startsWith('6')) setCardType('discover');
+            else setCardType(null);
+        }
+        if (name === 'expiry') {
+            value = value.replace(/\D/g, '');
+            if (value.length > 2) value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            else value = value.substring(0, 4);
+        }
+        if (name === 'cvc') value = value.replace(/\D/g, '').substring(0, 4);
+        setCardDetails(prev => ({ ...prev, [name]: value }));
+    };
+
+    const validate = () => {
+        if (cardDetails.number.length < 13) return "Invalid card number";
+        if (cardDetails.expiry.length < 5) return "Invalid expiry";
+        if (cardDetails.cvc.length < 3) return "Invalid CVC";
+        if (!cardDetails.name) return "Name on card is required";
+        return null;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const err = validate();
+        if (err) {
+            setError(err);
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await api.post("/billing/payment-method", {
+                paymentMethodId: "pm_card_visa" // MOCK - In production this would be from Stripe Elements
+            });
+            toast.success("Payment method updated!");
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Failed to update payment method.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-surface border border-border w-full max-w-md rounded-3xl p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
+                <button onClick={onClose} className="absolute top-6 right-6 text-tatt-gray hover:text-foreground">
+                    <X className="size-6" />
+                </button>
+
+                <div className="size-14 rounded-2xl bg-tatt-lime/10 flex items-center justify-center mb-6">
+                    <CreditCard className="text-tatt-lime size-7" />
+                </div>
+
+                <h3 className="text-2xl font-black mb-2">Add Payment Method</h3>
+                <p className="text-tatt-gray text-sm mb-8">Update your default card for future renewals.</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="relative">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Card Number</label>
+                        <input
+                            name="number"
+                            value={cardDetails.number}
+                            onChange={handleCardChange}
+                            placeholder="•••• •••• •••• ••••"
+                            className="w-full bg-background border-border border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                        />
+                        {cardType && (
+                            <span className="absolute right-4 bottom-3 text-[10px] font-black text-tatt-lime uppercase">{cardType}</span>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Expiry</label>
+                            <input
+                                name="expiry"
+                                value={cardDetails.expiry}
+                                onChange={handleCardChange}
+                                placeholder="MM/YY"
+                                className="w-full bg-background border-border border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">CVC</label>
+                            <input
+                                name="cvc"
+                                value={cardDetails.cvc}
+                                onChange={handleCardChange}
+                                placeholder="•••"
+                                className="w-full bg-background border-border border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Name on Card</label>
+                        <input
+                            name="name"
+                            value={cardDetails.name}
+                            onChange={handleCardChange}
+                            placeholder="John Doe"
+                            className="w-full bg-background border-border border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                        />
+                    </div>
+
+                    {error && <p className="text-red-500 text-xs font-bold mt-2">{error}</p>}
+
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-4 bg-tatt-lime text-black text-sm font-black uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center mt-4 disabled:opacity-50 shadow-lg shadow-tatt-lime/20"
+                    >
+                        {isSubmitting ? <Loader2 className="size-5 animate-spin" /> : "Securely Attach Card"}
+                    </button>
+                    <p className="text-[10px] text-tatt-gray text-center flex items-center justify-center gap-1">
+                        <Lock className="size-3" /> Encrypted and processed by Stripe
+                    </p>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 export default function SettingsPage() {
-    const { user, login } = useAuth();
+    const { user, updateUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
@@ -163,7 +321,13 @@ export default function SettingsPage() {
         profilePicture: "",
         chapterId: "",
         linkedInProfileUrl: "",
+        hasAutoPayEnabled: true,
     });
+
+    const [paymentMethod, setPaymentMethod] = useState<{ last4: string, brand: string, exp_month: number, exp_year: number } | null>(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [togglingAutoPay, setTogglingAutoPay] = useState(false);
+
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -192,7 +356,9 @@ export default function SettingsPage() {
                         profilePicture: user.profilePicture || "",
                         chapterId: user.chapterId || "",
                         linkedInProfileUrl: user.linkedInProfileUrl || "",
+                        hasAutoPayEnabled: user.hasAutoPayEnabled ?? true,
                     });
+
                 }
             } catch (error) {
                 console.error("Failed to load settings data", error);
@@ -201,7 +367,17 @@ export default function SettingsPage() {
             }
         };
 
+        const fetchPaymentMethod = async () => {
+            try {
+                const resp = await api.get("/billing/payment-method");
+                setPaymentMethod(resp.data);
+            } catch (err) {
+                console.error("Failed to fetch payment method", err);
+            }
+        };
+
         loadInitialData();
+        fetchPaymentMethod();
     }, [user]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -220,6 +396,20 @@ export default function SettingsPage() {
                 : [...prev.interests, interestId];
             return { ...prev, interests };
         });
+    };
+
+    const handleAutoPayToggle = async (enabled: boolean) => {
+        setTogglingAutoPay(true);
+        try {
+            await api.post("/billing/autopay/toggle", { enabled });
+            setFormData(prev => ({ ...prev, hasAutoPayEnabled: enabled }));
+            updateUser({ hasAutoPayEnabled: enabled } as any);
+            toast.success(`Auto-pay ${enabled ? 'enabled' : 'disabled'} successfully.`);
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to toggle auto-pay.");
+        } finally {
+            setTogglingAutoPay(false);
+        }
     };
 
     const cleanPayload = (data: any) => {
@@ -242,7 +432,7 @@ export default function SettingsPage() {
             const response = await api.patch("/account/profile", cleanedPayload);
 
             // Update auth context with new user data
-            login(localStorage.getItem('token') || "", response.data);
+            updateUser(response.data);
             toast.success("Profile settings saved securely!");
         } catch (error) {
             console.error("Failed to update profile", error);
@@ -278,7 +468,7 @@ export default function SettingsPage() {
 
             // 3. Update both local state and auth context
             setFormData(prev => ({ ...prev, profilePicture: imageUrl }));
-            login(localStorage.getItem('token') || "", profileRes.data);
+            updateUser(profileRes.data);
             
             toast.success("Profile picture updated!", { id: 'upload' });
         } catch (error) {
@@ -295,7 +485,7 @@ export default function SettingsPage() {
 
             // Refresh user profile
             const meRes = await api.get("/auth/me");
-            login(localStorage.getItem('token') || "", meRes.data);
+            updateUser(meRes.data);
             setIsConfirmModalOpen(false);
         } catch (error) {
             toast.error("Failed to schedule deletion.");
@@ -312,7 +502,7 @@ export default function SettingsPage() {
 
             // Refresh user profile
             const meRes = await api.get("/auth/me");
-            login(localStorage.getItem('token') || "", meRes.data);
+            updateUser(meRes.data);
         } catch (error) {
             toast.error("Failed to cancel deletion.");
         } finally {
@@ -609,13 +799,110 @@ export default function SettingsPage() {
                                     </span>
                                     <span className="text-[10px] text-tatt-gray mt-1">{pref.desc}</span>
                                 </div>
-                                {formData.connectionPreference === pref.id && (
+                        {formData.connectionPreference === pref.id && (
                                     <CheckCircle className="text-tatt-lime absolute top-4 right-4 size-4" />
                                 )}
                             </label>
                         ))}
                     </div>
                 </section>
+
+                {/* Billing & Subscription */}
+                <section className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
+                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                        <Wallet className="text-tatt-lime size-5" />
+                        Billing & Subscription
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Auto-pay Toggle Block */}
+                        <div className="space-y-4">
+                            <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Renewal Preference</label>
+                            <div className="flex flex-col gap-3">
+                                {[
+                                    { id: true, title: 'Full Autopay (Recommended)', desc: 'Seamlessly renew membership using your default card on file.', icon: RefreshCw },
+                                    { id: false, title: 'Manual Renewal', desc: 'Receive invoice reminders and pay manually each billing cycle.', icon: UserIcon }
+                                ].map((item) => {
+                                    const Icon = item.icon;
+                                    const isSelected = formData.hasAutoPayEnabled === item.id;
+                                    return (
+                                        <button
+                                            key={item.title}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, hasAutoPayEnabled: item.id }))}
+                                            className={`flex items-start gap-4 p-4 rounded-xl border text-left transition-all ${isSelected 
+                                                ? 'border-tatt-lime bg-tatt-lime/5 shadow-md' 
+                                                : 'border-border hover:border-tatt-lime/30'}`}
+                                        >
+                                            <div className={`mt-1 p-2 rounded-lg ${isSelected ? 'bg-tatt-lime text-black' : 'bg-gray-100 text-tatt-gray'}`}>
+                                                <Icon className="size-4" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`text-sm font-bold ${isSelected ? 'text-foreground' : 'text-tatt-gray'}`}>{item.title}</p>
+                                                <p className="text-[10px] text-tatt-gray mt-1 leading-relaxed">{item.desc}</p>
+                                            </div>
+                                            {isSelected && <CheckCircle className="size-4 text-tatt-lime mt-1" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Payment Method Block */}
+                        <div className="space-y-4">
+                            <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Default Payment Method</label>
+                            
+                            {paymentMethod ? (
+                                <div className="p-5 bg-gradient-to-br from-[#1d1d1b] to-black rounded-2xl shadow-xl relative overflow-hidden group">
+                                    <div className="size-10 bg-yellow-400/20 rounded-lg mb-8 backdrop-blur-sm border border-yellow-400/10 flex items-center justify-center">
+                                        <div className="size-6 bg-yellow-400/40 rounded-sm"></div>
+                                    </div>
+                                    
+                                    <div className="space-y-1 mb-8">
+                                        <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Card Number</p>
+                                        <p className="text-white text-lg tracking-[0.2em] font-mono">•••• •••• •••• {paymentMethod.last4}</p>
+                                    </div>
+
+                                    <div className="flex justify-between items-end">
+                                        <div className="space-y-1">
+                                            <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Expires</p>
+                                            <p className="text-white text-xs font-bold font-mono">
+                                                {String(paymentMethod.exp_month).padStart(2, '0')}/{String(paymentMethod.exp_year).slice(-2)}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 grayscale group-hover:grayscale-0 transition-all">
+                                            <div className="size-8 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                                <CreditCard className="size-4 text-white" />
+                                            </div>
+                                            <span className="text-white/40 text-[10px] font-black italic uppercase tracking-widest">
+                                                {paymentMethod.brand.toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-0 right-0 size-32 bg-tatt-lime/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-tatt-lime/20 transition-colors"></div>
+                                </div>
+                            ) : (
+                                <div className="p-5 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center py-10 bg-gray-50/50">
+                                    <div className="size-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                        <CreditCard className="size-6 text-tatt-gray opacity-40" />
+                                    </div>
+                                    <p className="text-xs font-bold text-tatt-gray">No payment method added</p>
+                                    <p className="text-[10px] text-tatt-gray/60 mt-1 uppercase tracking-tighter">Please add a card for seamless renewals</p>
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={() => setIsPaymentModalOpen(true)}
+                                className="w-full py-3 text-xs font-bold text-tatt-gray hover:text-tatt-lime transition-colors flex items-center justify-center gap-2 border border-dashed border-border rounded-xl"
+                            >
+                                <Plus className="size-4" />
+                                {paymentMethod ? 'Manage Payment Method' : 'Add New Payment Method'}
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
 
                 {/* Business Profile (Kiongozi Section) */}
                 {isKiongozi && (
@@ -722,6 +1009,20 @@ export default function SettingsPage() {
                 title="Permanently Close Account?"
                 message="This will schedule your account for permanent deletion. All your data, connections, and historical records will be removed from the system in 14 days. This action cannot be undone once the period expires."
                 confirmText="Yes, Schedule Deletion"
+            />
+
+            <PaymentMethodModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                onSuccess={async () => {
+                    // Re-fetch payment method after success
+                    try {
+                        const resp = await api.get("/billing/payment-method");
+                        setPaymentMethod(resp.data);
+                    } catch (err) {
+                        console.error("Failed to fetch payment method", err);
+                    }
+                }}
             />
         </div>
     );

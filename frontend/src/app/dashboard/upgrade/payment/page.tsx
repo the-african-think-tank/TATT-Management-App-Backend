@@ -49,12 +49,23 @@ function DashboardPaymentContent() {
 
     const planDetails = useMemo(() => {
         const plan = plans.find((p) => p.tier === planId);
-        if (!plan) return { name: planId, price: 0, period: isYearly ? "year" : "mo", features: [] };
+        if (!plan) return { name: planId, price: 0, originalPrice: 0, period: isYearly ? "year" : "mo", features: [], discount: null };
+        
+        const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+        let finalPrice = price;
+        if (plan.activeDiscount) {
+            finalPrice = plan.activeDiscount.type === 'percentage' 
+                ? price * (1 - plan.activeDiscount.value / 100) 
+                : Math.max(0, price - plan.activeDiscount.value / 100);
+        }
+
         return {
             name: plan.name,
-            price: isYearly ? plan.yearlyPrice : plan.monthlyPrice,
+            price: finalPrice,
+            originalPrice: price,
             period: isYearly ? "year" : "mo",
             features: plan.features ?? [],
+            discount: plan.activeDiscount
         };
     }, [plans, planId, isYearly]);
 
@@ -247,10 +258,18 @@ function DashboardPaymentContent() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-black text-foreground">TATT {planDetails.name}</p>
-                                        <p className="text-tatt-lime font-bold text-lg mt-0.5">
-                                            ${fmt(planDetails.price)}
-                                            <span className="text-tatt-gray text-xs font-normal ml-1">/ {planDetails.period}</span>
-                                        </p>
+                                        <div className="flex flex-col">
+                                            <p className="text-tatt-lime font-bold text-lg mt-0.5">
+                                                ${fmt(planDetails.price)}
+                                                <span className="text-tatt-gray text-xs font-normal ml-1">/ {planDetails.period}</span>
+                                            </p>
+                                            {planDetails.discount && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[10px] font-black line-through text-tatt-gray">${fmt(planDetails.originalPrice)}</span>
+                                                    <span className="text-[10px] font-black bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">-{planDetails.discount.value}{planDetails.discount.type === 'percentage' ? '%' : ' OFF'}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => router.push("/dashboard/upgrade")}

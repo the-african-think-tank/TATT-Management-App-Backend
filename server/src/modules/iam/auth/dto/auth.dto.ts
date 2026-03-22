@@ -73,7 +73,7 @@ export class CompleteOrgMemberDto {
 
     @IsString()
     @MinLength(8, { message: 'Password must be at least 8 characters long' })
-    @MaxLength(64)
+    @MaxLength(128)
     password: string;
 }
 
@@ -92,7 +92,7 @@ export class CommunitySignupDto {
 
     @IsString()
     @MinLength(8)
-    @MaxLength(64)
+    @MaxLength(128)
     password: string;
 
     @IsString()
@@ -139,6 +139,6 @@ export class ResetPasswordDto {
 
     @IsString()
     @MinLength(8, { message: 'Password must be at least 8 characters long' })
-    @MaxLength(64)
+    @MaxLength(128)
     newPassword: string;
 }

@@ -47,7 +47,7 @@ export function Footer() {
                         <a href="https://www.theafricanthinktank.com/our-programs" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Our Programs</a>
                         <a href="https://www.theafricanthinktank.com/contact-us" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Contact Us</a>
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSdmpcWaHGtDCxo_5-_kIJLPGboP2W-uxaRLCFNF08LrHAjj1Q/viewform?usp=sf_link" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Volunteer with US</a>
-                        <a href="https://www.theafricanthinktank.com/shop-2" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:text-white transition">Shop</a>
+                        <Link href="/store" className="text-tatt-lime hover:text-white transition">Shop</Link>
                     </nav>
                 </div>
 

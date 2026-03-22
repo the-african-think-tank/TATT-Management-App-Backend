@@ -27,6 +27,7 @@ export type EventItem = {
     imageUrl?: string | null;
     isForAllMembers: boolean;
     targetMembershipTiers?: string[] | null;
+    basePrice: number;
     createdAt: string;
     updatedAt: string;
     locations?: EventLocation[];

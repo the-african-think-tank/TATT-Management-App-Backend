@@ -7,9 +7,11 @@ import { MembershipPlan } from './entities/membership-plan.entity';
 import { Discount } from './entities/discount.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
+        NotificationsModule,
         SequelizeModule.forFeature([
             MembershipTier,
             MembershipPlan,

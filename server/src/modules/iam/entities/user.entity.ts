@@ -10,6 +10,9 @@ import { PostLike } from '../../feed/entities/post-like.entity';
 import { PostComment } from '../../feed/entities/post-comment.entity';
 import { DirectMessage } from '../../messages/entities/direct-message.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
+import { VolunteerStat } from '../../volunteers/entities/volunteer-stat.entity';
+import { VolunteerApplication } from '../../volunteers/entities/volunteer-application.entity';
+import { HasOne } from 'sequelize-typescript';
 
 @Table({
     tableName: 'users',
@@ -309,4 +312,10 @@ export class User extends Model<User> {
         allowNull: true,
     })
     deletionRequestedAt?: Date;
+
+    @HasOne(() => VolunteerStat)
+    volunteerStat?: VolunteerStat;
+
+    @HasMany(() => VolunteerApplication)
+    applications: VolunteerApplication[];
 }

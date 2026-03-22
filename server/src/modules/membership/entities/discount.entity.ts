@@ -56,6 +56,15 @@ export class Discount extends Model<Discount> {
     @Column({ type: DataType.STRING, allowNull: true })
     stripeCouponId?: string;
 
+    @Column({
+        type: DataType.ARRAY(DataType.STRING),
+        defaultValue: [],
+    })
+    applicablePlans: string[];
+
+    @Column({ type: DataType.DATE, allowNull: true })
+    validUntil?: Date;
+
     @Default(true)
     @Column(DataType.BOOLEAN)
     isActive: boolean;

@@ -54,6 +54,14 @@ export class ResourcesController {
         return this.resourcesService.create(dto, req.user as any);
     }
 
+    @ApiOperation({ summary: 'Get overall resource stats' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.CONTENT_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Get('stats')
+    async getStats(@Request() req: { user: { id: string } }) {
+        return this.resourcesService.getStats(req.user as any);
+    }
+
     @ApiOperation({
         summary: 'Update a resource',
         description: '**Content Admin only.** Updates metadata or access rules (visibility, minTier, chapterId, etc.).',
