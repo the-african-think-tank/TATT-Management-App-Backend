@@ -21,6 +21,8 @@
   --tatt-black: #000000;
   --tatt-gray: #606060;
   --tatt-white: #ffffff;
+  --tatt-error: #ef4444;
+  --tatt-secondary: #61611c;
 }
 
 @theme inline {
@@ -43,6 +45,8 @@
   --color-tatt-black: var(--tatt-black);
   --color-tatt-gray: var(--tatt-gray);
   --color-tatt-white: var(--tatt-white);
+  --color-tatt-error: var(--tatt-error);
+  --color-tatt-secondary: var(--tatt-secondary);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -66,4 +70,15 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+.animate-swing {
+  animation: swing 0.5s ease-in-out infinite;
+  transform-origin: top center;
 }

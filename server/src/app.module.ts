@@ -21,6 +21,10 @@ import { MembershipModule } from './modules/membership/membership.module';
 import { MailModule } from './common/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { StoreModule } from './modules/store/store.module';
+import { PartnershipsModule } from './modules/partnerships/partnerships.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
+import { RevenueModule } from './modules/revenue/revenue.module';
 
 @Module({
     imports: [
@@ -53,6 +57,10 @@ import { StoreModule } from './modules/store/store.module';
         MembershipModule,   // Admin Membership Center & Discounts Domain
         StoreModule,        // TATT Store — Products, Inventory & Orders Domain
         MailModule,         // Transactional Email Domain (Global)
+        PartnershipsModule, // Corporate Alliances & Promotions Domain
+        AnalyticsModule,    // Platform Growth and Community Analytics
+        SystemSettingsModule, // Platform Configuration & API Keys
+        RevenueModule,      // Revenue Dashboards and Financial Control Domain
     ],
     controllers: [],
     providers: [],

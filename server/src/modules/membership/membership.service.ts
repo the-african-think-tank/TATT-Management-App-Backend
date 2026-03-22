@@ -10,7 +10,10 @@ import { Chapter } from '../chapters/entities/chapter.entity';
 import { Sequelize } from 'sequelize-typescript';
 import Stripe from 'stripe';
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { BroadcastsService } from '../notifications/services/broadcasts.service';
+import { BroadcastAudience } from '../notifications/entities/broadcast.entity';
 
 @Injectable()
 export class MembershipService implements OnApplicationBootstrap {
@@ -24,10 +27,12 @@ export class MembershipService implements OnApplicationBootstrap {
         @InjectModel(User) private userRepo: typeof User,
         @InjectModel(Chapter) private chapterRepo: typeof Chapter,
         private notificationsService: NotificationsService,
-    ) {
-        this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-            apiVersion: '2025-01-27.acacia' as any,
-        });
+        private broadcastsService: BroadcastsService,
+        private settingsService: SystemSettingsService,
+    ) { }
+
+    private async getStripe() {
+        return this.settingsService.getStripeInstance();
     }
 
     async onApplicationBootstrap() {
@@ -133,13 +138,26 @@ export class MembershipService implements OnApplicationBootstrap {
     // --- Discounts ---
 
     async getDiscounts() {
-        return this.discountRepo.findAll();
+        const discounts = await this.discountRepo.findAll();
+        try {
+            const stripeCoupons = await (await this.getStripe()).coupons.list({ limit: 100 });
+            return discounts.map(discount => {
+                const stripeData = stripeCoupons.data.find(c => c.id === discount.stripeCouponId || c.id === discount.code);
+                return {
+                    ...discount.toJSON(),
+                    usageCount: stripeData ? stripeData.times_redeemed : 0
+                };
+            });
+        } catch (error) {
+            this.logger.error('Failed to sync Stripe coupons', error);
+            return discounts.map(d => ({ ...d.toJSON(), usageCount: 0 }));
+        }
     }
 
     async createDiscount(dto: any) {
         // Sync with Stripe
         try {
-            const stripeCoupon = await this.stripe.coupons.create({
+            const stripeCoupon = await (await this.getStripe()).coupons.create({
                 name: dto.name,
                 percent_off: dto.discountType === DiscountType.PERCENTAGE ? dto.value : undefined,
                 amount_off: dto.discountType === DiscountType.FIXED ? dto.value : undefined,
@@ -154,25 +172,19 @@ export class MembershipService implements OnApplicationBootstrap {
                 stripeCouponId: stripeCoupon.id
             });
 
-            // Trigger Notifications for members not on these plans
+            // Trigger Unified Broadcast for members not on these plans
             if (dto.applicablePlans && dto.applicablePlans.length > 0) {
-                const targetPlans = dto.applicablePlans.join(', ');
-                const usersToNotify = await this.userRepo.findAll({
-                    where: {
-                        communityTier: { [Op.notIn]: dto.applicablePlans },
-                        isActive: true
-                    }
-                });
-
-                for (const user of usersToNotify) {
-                    await this.notificationsService.create(
-                        user.id,
-                        NotificationType.PROMOTION,
-                        `New Exclusive Offer: ${dto.name}`,
-                        `Unlock ${dto.value}${dto.discountType === DiscountType.PERCENTAGE ? '%' : '$'} off on ${targetPlans} plans! Limited time offer. Upgrade now to claim.`,
-                        { discountCode: dto.code, plans: dto.applicablePlans, url: '/dashboard/upgrade' },
-                        true
-                    );
+                try {
+                    const targetPlans = dto.applicablePlans.join(', ');
+                    await this.broadcastsService.createSystemBroadcast({
+                        title: `Exclusive Offer: ${dto.name}`,
+                        message: `Unlock ${dto.value}${dto.discountType === DiscountType.PERCENTAGE ? '%' : '$'} off on ${targetPlans} memberships! Limited time offer. Upgrade now to claim.`,
+                        audienceType: BroadcastAudience.ALL, // Broadcast reaches all, but we can refine if needed. 
+                        // For now ALL is better for visibility of the archive.
+                        type: NotificationType.PROMOTION
+                    });
+                } catch (err) {
+                    this.logger.error('Failed to dispatch discount broadcast', err);
                 }
             }
 
@@ -243,7 +255,19 @@ export class MembershipService implements OnApplicationBootstrap {
 
     async getChapters() {
         return this.chapterRepo.findAll({
-            attributes: ['id', 'name', 'code']
+            attributes: [
+                'id', 
+                'name', 
+                'code',
+                [Sequelize.fn('COUNT', Sequelize.col('members.id')), 'memberCount']
+            ],
+            include: [{
+                model: User,
+                as: 'members',
+                attributes: [],
+                required: false
+            }],
+            group: ['Chapter.id']
         });
     }
 
@@ -291,6 +315,13 @@ export class MembershipService implements OnApplicationBootstrap {
             tierGrowth[tier] = data;
         }
 
+        // Tier counts for current stats cards
+        const ubuntuCount = await this.userRepo.count({ where: { communityTier: CommunityTier.UBUNTU } });
+        const imaniCount = await this.userRepo.count({ where: { communityTier: CommunityTier.IMANI } });
+        const kiongoziCount = await this.userRepo.count({ where: { communityTier: CommunityTier.KIONGOZI } });
+        const totalMembers = await this.userRepo.count({ where: { communityTier: { [Op.ne]: CommunityTier.FREE } } });
+        const freeMembers = await this.userRepo.count({ where: { communityTier: CommunityTier.FREE } });
+
         // Calculate Total Growth Rate (Current Month vs Last Month)
         const currentMonthCount = await this.userRepo.count({
             where: { createdAt: { [Op.gte]: currentMonthStart } }
@@ -312,10 +343,33 @@ export class MembershipService implements OnApplicationBootstrap {
             totalGrowthRate = `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
         }
 
+        // Helper to calculate tier specific rate
+        const calculateRate = (current: number, last: number) => {
+            if (last === 0) return current > 0 ? `+${current * 100}%` : "0%";
+            const rate = ((current - last) / last) * 100;
+            return `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
+        };
+
+        const parsedGrowth = {
+            ubuntuRate: calculateRate(tierGrowth[CommunityTier.UBUNTU]?.[5] || 0, tierGrowth[CommunityTier.UBUNTU]?.[4] || 0),
+            imaniRate: calculateRate(tierGrowth[CommunityTier.IMANI]?.[5] || 0, tierGrowth[CommunityTier.IMANI]?.[4] || 0),
+            kiongoziRate: calculateRate(tierGrowth[CommunityTier.KIONGOZI]?.[5] || 0, tierGrowth[CommunityTier.KIONGOZI]?.[4] || 0),
+        };
+
         return {
             labels: growthLabels,
             tierGrowth,
-            totalGrowthRate
+            totalGrowthRate,
+            stats: {
+                total: totalMembers + freeMembers,
+                ubuntu: ubuntuCount,
+                imani: imaniCount,
+                kiongozi: kiongoziCount,
+                activeGrowth: totalGrowthRate,
+                ubuntuRate: parsedGrowth.ubuntuRate,
+                imaniRate: parsedGrowth.imaniRate,
+                kiongoziRate: parsedGrowth.kiongoziRate
+            }
         };
     }
 }

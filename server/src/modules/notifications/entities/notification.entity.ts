@@ -13,6 +13,8 @@ export enum NotificationType {
     ACCOUNT = 'ACCOUNT',
     PROMOTION = 'PROMOTION',
     LOW_STOCK = 'LOW_STOCK',
+    SYSTEM_ANNOUNCEMENT = 'SYSTEM_ANNOUNCEMENT',
+    VOLUNTEER_ROLE = 'VOLUNTEER_ROLE',
 }
 
 @Table({

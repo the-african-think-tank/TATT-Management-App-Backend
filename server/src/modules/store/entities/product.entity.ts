@@ -76,6 +76,10 @@ export class Product extends Model<Product> {
     @Column({ type: DataType.DATE })
     dropEnd?: Date;
 
+    @Default(0)
+    @Column({ type: DataType.DECIMAL(10, 2) })
+    deliveryFee: number;
+
     @HasMany(() => ProductVariant)
     variants: ProductVariant[];
 

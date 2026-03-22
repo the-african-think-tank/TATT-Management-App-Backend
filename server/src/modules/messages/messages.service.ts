@@ -11,6 +11,7 @@ import { Chapter } from '../chapters/entities/chapter.entity';
 import { SendMessageDto, MessageHistoryQueryDto } from './dto/messages.dto';
 import { NotificationsService } from '../notifications/services/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { SystemRole } from '../iam/enums/roles.enum';
 
 // Profile fields returned in conversation list and message sender context
 const PARTNER_ATTRS = [
@@ -52,6 +53,44 @@ export class MessagesService {
         }
 
         return conn;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  INITIATE ADMIN CONVERSATION (No connection required)
+    // ════════════════════════════════════════════════════════════════════════════
+    async initiateAdminConversation(admin: typeof User.prototype, targetUserId: string) {
+        if (admin.systemRole === SystemRole.COMMUNITY_MEMBER) {
+            throw new ForbiddenException('Only admin or org members can initiate instant conversations.');
+        }
+        if (admin.id === targetUserId) {
+            throw new BadRequestException('Cannot message yourself.');
+        }
+
+        const targetUser = await this.userRepo.findByPk(targetUserId);
+        if (!targetUser) throw new NotFoundException('User not found.');
+
+        let connection = await this.connectionRepo.findOne({
+            where: {
+                [Op.or]: [
+                    { requesterId: admin.id, recipientId: targetUserId },
+                    { requesterId: targetUserId, recipientId: admin.id }
+                ]
+            }
+        });
+
+        if (!connection) {
+            connection = await this.connectionRepo.create({
+                requesterId: admin.id,
+                recipientId: targetUserId,
+                status: ConnectionStatus.ACCEPTED,
+                message: 'Admin initiated conversation',
+            });
+        } else if (connection.status !== ConnectionStatus.ACCEPTED) {
+            connection.status = ConnectionStatus.ACCEPTED;
+            await connection.save();
+        }
+
+        return { connectionId: connection.id };
     }
 
     // ════════════════════════════════════════════════════════════════════════════

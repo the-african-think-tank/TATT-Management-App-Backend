@@ -18,6 +18,18 @@ import { SystemRole } from '../iam/enums/roles.enum';
 export class ChaptersController {
     constructor(private readonly chaptersService: ChaptersService) { }
 
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all chapter activities across all regions (Admin only)' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
+    @Get('all-activities')
+    async getAllActivities(
+        @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+        @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    ) {
+        return this.chaptersService.getAllActivities(page, limit);
+    }
+
     @ApiOperation({ summary: 'Get all chapters' })
     @ApiResponse({ status: 200, description: 'List of chapters.', type: [ChapterSchema] })
     @Get()

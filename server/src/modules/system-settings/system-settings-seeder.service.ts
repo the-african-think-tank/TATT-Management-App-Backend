@@ -1,0 +1,48 @@
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { SystemSettingsService } from './system-settings.service';
+import { SystemSetting } from './entities/system-setting.entity';
+
+@Injectable()
+export class SystemSettingsSeeder implements OnModuleInit {
+    private readonly logger = new Logger(SystemSettingsSeeder.name);
+
+    constructor(
+        private settingsService: SystemSettingsService,
+    ) {}
+
+    async onModuleInit() {
+        this.logger.log('Synchronizing system configurations...');
+
+        const initialSettings = [
+            // GENERAL
+            { key: 'APP_NAME', value: 'The African Think Tank', category: 'GENERAL', description: 'Global platform name.' },
+            { key: 'FRONTEND_URL', value: 'http://localhost:3000', category: 'GENERAL', description: 'Public facing platform URL.' },
+            
+            // SMTP
+            { key: 'MAIL_HOST', value: process.env.MAIL_HOST || 'smtp.gmail.com', category: 'SMTP', description: 'Outgoing mail server host.' },
+            { key: 'MAIL_PORT', value: process.env.MAIL_PORT || '587', category: 'SMTP', description: 'SMTP server port.' },
+            { key: 'MAIL_USER', value: process.env.MAIL_USER || '', category: 'SMTP', description: 'System email account username.' },
+            { key: 'MAIL_PASS', value: process.env.MAIL_PASS || '', category: 'SMTP', isSecret: true, description: 'SMTP password.' },
+            { key: 'MAIL_FROM', value: process.env.MAIL_FROM || 'no-reply@tatt.org', category: 'SMTP', description: 'Sender address for transactional emails.' },
+
+            // PAYMENT
+            { key: 'STRIPE_PUBLIC_KEY', value: process.env.STRIPE_PUBLIC_KEY || '', category: 'PAYMENT', description: 'Stripe JS publishable key.' },
+            { key: 'STRIPE_SECRET_KEY', value: process.env.STRIPE_SECRET_KEY || '', category: 'PAYMENT', isSecret: true, description: 'Stripe API secret key.' },
+            { key: 'STRIPE_WEBHOOK_SECRET', value: process.env.STRIPE_WEBHOOK_SECRET || '', category: 'PAYMENT', isSecret: true, description: 'Webhooks signature verification secret.' },
+
+            // SECURITY
+            { key: 'PWD_MIN_LENGTH', value: '8', category: 'SECURITY', description: 'Minimum characters for org member passwords.' },
+            { key: 'PWD_ROTATION_POLICY', value: 'NEVER', category: 'SECURITY', description: 'Password expiration interval (NEVER, MONTHLY, QUARTERLY, YEARLY).' },
+            { key: 'PWD_PREVENT_REUSE_COUNT', value: '3', category: 'SECURITY', description: 'Number of previous passwords to prevent reuse.' },
+            { key: 'REQUIRE_2FA_SUPERADMIN', value: 'false', category: 'SECURITY', description: 'Enforce two-factor authentication for Super Admins.' },
+            { key: 'REQUIRE_2FA_ADMIN', value: 'false', category: 'SECURITY', description: 'Enforce two-factor authentication for standard Admins.' },
+            { key: 'REQUIRE_2FA_ORG_MEMBER', value: 'false', category: 'SECURITY', description: 'Enforce two-factor authentication for Org Members.' },
+        ];
+
+        for (const s of initialSettings) {
+            await this.settingsService.update(s.key, s.value, s.category, s.description, s.isSecret || false);
+        }
+
+        this.logger.log('System configuration sync complete.');
+    }
+}

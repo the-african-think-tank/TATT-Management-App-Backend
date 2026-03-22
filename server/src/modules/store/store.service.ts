@@ -7,6 +7,8 @@ import { Order, OrderStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { User } from '../iam/entities/user.entity';
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { BroadcastsService } from '../notifications/services/broadcasts.service';
+import { BroadcastAudience } from '../notifications/entities/broadcast.entity';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { SystemRole } from '../iam/enums/roles.enum';
 import {
@@ -23,6 +25,7 @@ export class StoreService {
         @InjectModel(OrderItem) private orderItemRepo: typeof OrderItem,
         @InjectModel(User) private userRepo: typeof User,
         private notificationsService: NotificationsService,
+        private broadcastsService: BroadcastsService,
     ) { }
 
     // ─── PRODUCTS ──────────────────────────────────────────────────────────────
@@ -62,14 +65,27 @@ export class StoreService {
                 const variantsToCreate = variants.map(v => ({
                     ...v,
                     productId: product.id,
-                    // Ensure backward compatibility by mapping specific fields to label if needed
                     label: v.label || `${v.size || ''} ${v.color || ''}`.trim() || 'Default',
                     type: v.type || 'VARIANT'
                 }));
                 await this.variantRepo.bulkCreate(variantsToCreate as any, { transaction: t });
             }
             
-            return this.getProductById(product.id);
+            const fullProduct = await this.getProductById(product.id);
+            
+            // Broadcast new product to all members
+            try {
+                await this.broadcastsService.createSystemBroadcast({
+                    title: 'New Product Available!',
+                    message: `Discover our latest addition: "${fullProduct.name}". Get it now in the TATT Marketplace!`,
+                    audienceType: BroadcastAudience.ALL,
+                    type: NotificationType.PROMOTION
+                });
+            } catch (err) {
+                // Non-blocking
+            }
+
+            return fullProduct;
         });
     }
 
@@ -289,11 +305,16 @@ export class StoreService {
                      (product.variants && product.variants.some(v => v.stock <= product.lowStockThreshold));
 
         if (isLow) {
-            await this.notifyOrgMembers(
-                'Low Stock Alert',
-                `Warning: Product "${product.name}" is running low on stock. Current level: ${product.stock}`,
-                product.id
-            );
+            try {
+                await this.broadcastsService.createSystemBroadcast({
+                    title: 'Low Stock Alert',
+                    message: `The product "${product.name}" is running low (${product.stock} units remaining). Please review inventory levels soon.`,
+                    audienceType: BroadcastAudience.ORG_MEMBERS,
+                    type: NotificationType.LOW_STOCK
+                });
+            } catch (err) {
+                // Non-blocking
+            }
         }
     }
 

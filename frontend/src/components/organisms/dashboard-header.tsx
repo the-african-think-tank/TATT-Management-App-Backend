@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { Search, Bell, Menu, LogOut, User as UserIcon } from "lucide-react";
+import { Search, Bell, Menu, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { NotificationDropdown } from "./notification-dropdown";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     const { user, logout } = useAuth();
+    const isAdmin = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN";
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +42,15 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
 
             <div className="flex items-center gap-4 lg:gap-6">
+                {isAdmin && (
+                    <Link 
+                        href="/admin/settings" 
+                        className="p-2 hover:bg-black/5 rounded-lg text-tatt-gray hover:text-tatt-lime transition-all group"
+                        title="Platform Settings"
+                    >
+                        <Settings className="h-5 w-5 group-hover:rotate-45 transition-transform duration-300" />
+                    </Link>
+                )}
                 <NotificationDropdown />
                 <div className="relative" ref={dropdownRef}>
                     <div

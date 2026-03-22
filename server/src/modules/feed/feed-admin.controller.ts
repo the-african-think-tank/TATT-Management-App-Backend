@@ -104,4 +104,16 @@ export class FeedAdminController {
     async rotatePrompt() {
         return this.feedService.rotatePrompt();
     }
+
+    @ApiOperation({ summary: 'Create a new topic' })
+    @Post('topics')
+    async createTopic(@Body() dto: { name: string; description?: string }) {
+        return this.feedService.createTopic(dto);
+    }
+
+    @ApiOperation({ summary: 'Archive a topic' })
+    @Patch('topics/:id/archive')
+    async archiveTopic(@Param('id') id: string) {
+        return this.feedService.archiveTopic(id);
+    }
 }

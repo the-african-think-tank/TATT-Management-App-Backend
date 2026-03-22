@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
     Users, 
     ArrowLeft,
@@ -38,6 +39,7 @@ interface Volunteer {
 }
 
 export default function ActiveVolunteersPage() {
+    const router = useRouter();
     const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -153,7 +155,11 @@ export default function ActiveVolunteersPage() {
                                 </tr>
                             ) : (
                                 volunteers.map((agent) => (
-                                    <tr key={agent.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
+                                    <tr 
+                                        key={agent.id} 
+                                        onClick={() => router.push(`/admin/volunteers/${agent.id}`)}
+                                        className="hover:bg-tatt-lime/[0.02] transition-colors group cursor-pointer"
+                                    >
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="size-11 rounded-2xl bg-tatt-lime/10 text-tatt-lime flex items-center justify-center font-black text-xs border border-tatt-lime/20">

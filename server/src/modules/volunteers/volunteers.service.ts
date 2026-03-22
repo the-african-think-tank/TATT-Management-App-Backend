@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { VolunteerRole } from './entities/volunteer-role.entity';
 import { VolunteerApplication, ApplicationStatus } from './entities/volunteer-application.entity';
@@ -6,6 +6,7 @@ import { VolunteerActivity, ActivityStatus } from './entities/volunteer-activity
 import { VolunteerTrainingResource } from './entities/volunteer-training.entity';
 import { VolunteerStat, VolunteerGrade, VolunteerStatus } from './entities/volunteer-stat.entity';
 import { VolunteerTrainingProgress } from './entities/volunteer-training-progress.entity';
+import { VolunteerFeedback } from './entities/volunteer-feedback.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Connection, ConnectionStatus } from '../connections/entities/connection.entity';
@@ -20,8 +21,16 @@ import {
 } from './dto/volunteers.dto';
 import { Op } from 'sequelize';
 
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { BroadcastsService } from '../notifications/services/broadcasts.service';
+import { BroadcastAudience } from '../notifications/entities/broadcast.entity';
+import { MailService } from '../../common/mail/mail.service';
+
 @Injectable()
 export class VolunteersService {
+    private readonly logger = new Logger(VolunteersService.name);
+
     constructor(
         @InjectModel(VolunteerRole) private roleModel: typeof VolunteerRole,
         @InjectModel(VolunteerApplication) private applicationModel: typeof VolunteerApplication,
@@ -29,18 +38,41 @@ export class VolunteersService {
         @InjectModel(VolunteerTrainingResource) private trainingModel: typeof VolunteerTrainingResource,
         @InjectModel(VolunteerStat) private statModel: typeof VolunteerStat,
         @InjectModel(VolunteerTrainingProgress) private progressModel: typeof VolunteerTrainingProgress,
+        @InjectModel(VolunteerFeedback) private feedbackModel: typeof VolunteerFeedback,
         @InjectModel(User) private userModel: typeof User,
         @InjectModel(Connection) private connectionRepo: typeof Connection,
+        private notificationsService: NotificationsService,
+        private broadcastsService: BroadcastsService,
+        private mailService: MailService,
     ) { }
 
     // ─── ROLES (Admin) ─────────────────────────────────────────────────────────
 
     async createRole(createdBy: string, dto: CreateVolunteerRoleDto) {
-        return this.roleModel.create({
+        const role = await this.roleModel.create({
             ...dto,
             createdBy,
             openUntil: new Date(dto.openUntil)
         } as any);
+
+        // Notify relevant chapter members
+        this.notifyMembersForRole(role);
+
+        return role;
+    }
+
+    private async notifyMembersForRole(role: VolunteerRole) {
+        try {
+            await this.broadcastsService.createSystemBroadcast({
+                title: 'Strategic Volunteer Role Opened',
+                message: `A new strategic volunteer role "${role.name}" has been created in your local TATT chapter. Your contribution can drive significant impact.`,
+                audienceType: BroadcastAudience.CHAPTER_SPECIFIC,
+                targetChapterId: role.chapterId
+            });
+            this.logger.log(`Automatic system broadcast dispatched for role: ${role.name}`);
+        } catch (error) {
+            this.logger.error(`Failed to send automated broadcast for role ${role.id}`, error.stack);
+        }
     }
 
     async getActiveRoles(chapterId?: string) {
@@ -338,8 +370,99 @@ export class VolunteersService {
 
         const completedRecords = await this.progressModel.count({ where: { isCompleted: true } });
         
-        // This is a simplified average: (Total completions) / (Total possible completions)
         const rate = (completedRecords / (totalVolunteers * totalResources)) * 100;
         return Math.round(rate);
+    }
+
+    // ─── VOLUNTEER PROFILE (Admin detail view) ─────────────────────────────────
+
+    async getVolunteerProfile(volunteerId: string) {
+        const user = await this.userModel.findByPk(volunteerId, {
+            attributes: ['id', 'firstName', 'lastName', 'email', 'profilePicture', 'chapterId', 'createdAt'],
+            include: [{ model: VolunteerStat }],
+        });
+        if (!user) throw new NotFoundException('Volunteer not found');
+
+        const [applications, activities, feedback] = await Promise.all([
+            this.applicationModel.findAll({
+                where: { userId: volunteerId },
+                include: [{ model: VolunteerRole }],
+                order: [['createdAt', 'DESC']],
+            }),
+            this.activityModel.findAll({
+                where: { assignedToId: volunteerId },
+                order: [['dueDate', 'DESC']],
+                limit: 10,
+            }),
+            this.feedbackModel.findAll({
+                where: { volunteerId },
+                include: [{ model: User, as: 'reviewer', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] }],
+                order: [['createdAt', 'DESC']],
+                limit: 10,
+            }),
+        ]);
+
+        return {
+            user,
+            stats: (user as any).volunteerStat ?? null,
+            applications,
+            recentActivities: activities,
+            feedback,
+        };
+    }
+
+    async addFeedback(
+        reviewerId: string,
+        volunteerId: string,
+        payload: { rating: number; comment: string; eventLabel?: string },
+    ) {
+        const volunteer = await this.userModel.findByPk(volunteerId);
+        if (!volunteer) throw new NotFoundException('Volunteer not found');
+
+        if (payload.rating < 1 || payload.rating > 5) {
+            throw new BadRequestException('Rating must be between 1 and 5');
+        }
+
+        const feedback = await this.feedbackModel.create({
+            volunteerId,
+            reviewerId,
+            rating: payload.rating,
+            comment: payload.comment,
+            eventLabel: payload.eventLabel,
+        } as any);
+
+        // Recompute rolling average on the stat row
+        const allFeedback = await this.feedbackModel.findAll({ where: { volunteerId } });
+        const avg = allFeedback.reduce((sum, f) => sum + f.rating, 0) / allFeedback.length;
+        const stats = await this.statModel.findOne({ where: { userId: volunteerId } });
+        if (stats) {
+            stats.rating = Math.round(avg * 10) / 10;
+            stats.ratingCount = allFeedback.length;
+            await stats.save();
+        }
+
+        return feedback;
+    }
+
+    async getVolunteerFeedback(volunteerId: string, page = 1, limit = 5) {
+        const offset = (page - 1) * limit;
+        const { rows, count } = await this.feedbackModel.findAndCountAll({
+            where: { volunteerId },
+            include: [{ model: User, as: 'reviewer', attributes: ['id', 'firstName', 'lastName', 'profilePicture'] }],
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset,
+        });
+        return { data: rows, total: count, page, totalPages: Math.ceil(count / limit) };
+    }
+
+    async updateVolunteerStats(
+        volunteerId: string,
+        payload: Partial<VolunteerStat>,
+    ) {
+        const [stats] = await this.statModel.findOrCreate({ where: { userId: volunteerId } });
+        Object.assign(stats, payload);
+        await stats.save();
+        return stats;
     }
 }

@@ -27,7 +27,15 @@ export class UsersController {
     @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
     @ApiQuery({ name: 'chapterId', required: false, description: 'Filter by regional chapter UUID' })
     @ApiResponse({ status: 200, description: 'Organization members retrieved.' })
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(
+        SystemRole.ADMIN, 
+        SystemRole.SUPERADMIN,
+        SystemRole.REGIONAL_ADMIN,
+        SystemRole.MODERATOR,
+        SystemRole.CONTENT_ADMIN,
+        SystemRole.SALES,
+        SystemRole.VOLUNTEER_ADMIN
+    )
     @Get('org-members')
     async findAllOrgMembers(
         @Query('search') search?: string,

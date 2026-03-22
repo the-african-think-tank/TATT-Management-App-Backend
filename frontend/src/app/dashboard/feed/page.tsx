@@ -37,7 +37,8 @@ import {
     Eye,
     Trash2,
     ChevronRight,
-    AlertCircle
+    AlertCircle,
+    Clock
 } from "lucide-react";
 
 import Link from "next/link";
@@ -87,9 +88,13 @@ interface Post {
     createdAt: string;
     updatedAt: string;
     parentPost?: Post;
+    topic?: { id: string; name: string } | null;
     jobLink?: string;
     jobLocation?: string;
     jobCompany?: string;
+    eventType?: string | null;
+    eventDate?: string | null;
+    eventUrl?: string | null;
 }
 
 interface Comment {
@@ -179,14 +184,20 @@ export default function FeedPage() {
     const [connectMessage, setConnectMessage] = useState("");
     const [isSendingConnect, setIsSendingConnect] = useState(false);
     const [isProfilePromptOpen, setIsProfilePromptOpen] = useState(false);
-
+    const [activeInsight, setActiveInsight] = useState<any>(null);
+    const [topics, setTopics] = useState<any[]>([]);
+    const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+    const [postTopicId, setPostTopicId] = useState<string>("");
+    const [eventType, setEventType] = useState("");
+    const [eventDate, setEventDate] = useState("");
+    const [eventUrl, setEventUrl] = useState("");
 
     // Sidebar loading
     const [isLoadingSidebar, setIsLoadingSidebar] = useState(true);
 
     useEffect(() => {
         fetchFeed(1, filter, true);
-    }, [filter]);
+    }, [filter, selectedTopic]);
 
     useEffect(() => {
         fetchSidebarData();
@@ -199,7 +210,8 @@ export default function FeedPage() {
                 params: {
                     filter: currentFilter,
                     page: pageNum,
-                    limit: 10
+                    limit: 10,
+                    topicId: selectedTopic || undefined
                 }
             });
             const newPosts = res.data.data;
@@ -221,12 +233,16 @@ export default function FeedPage() {
     const fetchSidebarData = async () => {
         setIsLoadingSidebar(true);
         try {
-            const [recRes, eventRes] = await Promise.all([
+            const [recRes, eventRes, curationRes, topicsRes] = await Promise.all([
                 api.get("/connections/recommend", { params: { limit: 3 } }),
-                api.get("/events")
+                api.get("/events"),
+                api.get("/feed/curation/active"),
+                api.get("/feed/topics")
             ]);
             setRecommendations(recRes.data);
             setUpcomingEvents(eventRes.data.slice(0, 2)); // Only show top 2
+            setActiveInsight(curationRes.data?.insight);
+            setTopics(topicsRes.data);
         } catch (error) {
             console.error("Error fetching sidebar data:", error);
         } finally {
@@ -309,6 +325,10 @@ export default function FeedPage() {
                 jobLink: selectedPostType === "JOB" ? jobLink : undefined,
                 jobLocation: selectedPostType === "JOB" ? jobLocation : undefined,
                 jobCompany: selectedPostType === "JOB" ? jobCompany : undefined,
+                eventType: selectedPostType === "EVENT" ? eventType || undefined : undefined,
+                eventDate: selectedPostType === "EVENT" ? eventDate || undefined : undefined,
+                eventUrl: selectedPostType === "EVENT" ? eventUrl || undefined : undefined,
+                topicId: postTopicId || undefined,
             });
 
             toast.success("Post successfully shared to the TATT Feed!", { id: loadingToast });
@@ -321,6 +341,10 @@ export default function FeedPage() {
             setJobLink("");
             setJobLocation("");
             setJobCompany("");
+            setPostTopicId("");
+            setEventType("");
+            setEventDate("");
+            setEventUrl("");
             fetchFeed(1, filter, true); // Refresh feed
         } catch (error: any) {
 
@@ -509,6 +533,7 @@ export default function FeedPage() {
                                 onPostDeleted={() => {
                                     setPosts(prev => prev.filter(p => p.id !== post.id));
                                 }}
+                                onSelectTopic={(id) => setSelectedTopic(id)}
                             />
                         ))}
 
@@ -550,6 +575,51 @@ export default function FeedPage() {
 
                 {/* Right Discovery Sidebar */}
                 <div className="w-full lg:w-80 space-y-6">
+
+                    {/* Active Topics Sidebar Widget */}
+                    <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Community Topics</h2>
+                            <MessageSquare className="h-4 w-4 text-tatt-lime" />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {topics.length > 0 ? (
+                                topics.map(topic => (
+                                    <button
+                                        key={topic.id}
+                                        onClick={() => setSelectedTopic(topic.id === selectedTopic ? null : topic.id)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-widest transition-all ${selectedTopic === topic.id ? 'bg-tatt-lime text-black' : 'bg-black/5 text-foreground hover:bg-black/10'}`}
+                                    >
+                                        {topic.name}
+                                    </button>
+                                ))
+                            ) : (
+                                <p className="text-xs text-tatt-gray">No topics available</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Trending Insights */}
+                    {activeInsight && (
+                        <div className="bg-surface rounded-2xl border border-tatt-lime/20 p-6 shadow-[0_0_15px_rgba(209,209,5,0.1)] relative overflow-hidden">
+                            <div className="absolute -right-6 -top-6 size-24 bg-tatt-lime/10 rounded-full blur-2xl"></div>
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-tatt-lime" />
+                                    <h2 className="text-[12px] font-black uppercase tracking-widest text-foreground">Trending Insight</h2>
+                                </div>
+                                <span className="flex h-2 w-2 relative">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tatt-lime opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-tatt-lime"></span>
+                                </span>
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="font-bold text-foreground text-sm mb-2 leading-snug">{activeInsight.title}</h3>
+                                <p className="text-xs text-tatt-gray line-clamp-4 leading-relaxed">{activeInsight.content}</p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Elite Connections */}
                     <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
@@ -666,7 +736,7 @@ export default function FeedPage() {
                         <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Privacy</a>
                         <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Terms</a>
                         <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Guidelines</a>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mt-2 w-full">© 2024 The African Think Tank</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider mt-2 w-full">© 2026 The African Think Tank</p>
                     </div>
                 </div>
             </div>
@@ -796,6 +866,94 @@ export default function FeedPage() {
                                                 className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* EVENT Fields */}
+                            {selectedPostType === "EVENT" && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/5 p-4 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                                    {/* Event Type pill buttons */}
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Event Type</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {["WEBINAR","WORKSHOP","CONFERENCE","IN_PERSON","HYBRID"].map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setEventType(t)}
+                                                    className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                        eventType === t
+                                                            ? "bg-tatt-lime text-black border-tatt-lime shadow-lg shadow-tatt-lime/20"
+                                                            : "bg-white border-border text-tatt-gray hover:border-tatt-lime hover:text-tatt-lime"
+                                                    }`}
+                                                >
+                                                    {t.replace("_", " ")}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Event Date &amp; Time</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tatt-gray" />
+                                            <input
+                                                type="datetime-local"
+                                                value={eventDate}
+                                                onChange={e => setEventDate(e.target.value)}
+                                                className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Event URL <span className="normal-case font-normal opacity-60">(optional)</span></label>
+                                        <div className="relative">
+                                            <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tatt-gray" />
+                                            <input
+                                                type="url"
+                                                value={eventUrl}
+                                                onChange={e => setEventUrl(e.target.value)}
+                                                placeholder="https://zoom.us/j/..."
+                                                className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Custom topic pill-picker */}
+                            {topics.length > 0 && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1 flex items-center gap-1.5">
+                                        <MessageSquare className="size-3" /> Community Topic
+                                        <span className="font-normal normal-case opacity-60">(optional)</span>
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPostTopicId("")}
+                                            className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                postTopicId === ""
+                                                    ? "bg-tatt-lime text-black border-tatt-lime shadow-lg shadow-tatt-lime/20"
+                                                    : "bg-white border-border text-tatt-gray hover:border-tatt-lime hover:text-tatt-lime"
+                                            }`}
+                                        >
+                                            No Topic
+                                        </button>
+                                        {topics.map(t => (
+                                            <button
+                                                key={t.id}
+                                                type="button"
+                                                onClick={() => setPostTopicId(t.id === postTopicId ? "" : t.id)}
+                                                className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                    postTopicId === t.id
+                                                        ? "bg-tatt-lime text-black border-tatt-lime shadow-lg shadow-tatt-lime/20"
+                                                        : "bg-white border-border text-tatt-gray hover:border-tatt-lime hover:text-tatt-lime"
+                                                }`}
+                                            >
+                                                {t.name}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -999,7 +1157,7 @@ export default function FeedPage() {
     );
 }
 
-function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => void, onPostDeleted: () => void }) {
+function PostCard({ post, onLike, onPostDeleted, onSelectTopic }: { post: Post, onLike: () => void, onPostDeleted: () => void, onSelectTopic: (topicId: string) => void }) {
     const { user } = useAuth();
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -1397,6 +1555,53 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                         </div>
                     )}
 
+                    {/* ── EVENT CARD ───────────────────────────────────── */}
+                    {post.type === "EVENT" && !post.isPremiumLocked && (post.eventType || post.eventDate || post.eventUrl) && (
+                        <div className="mt-4 p-5 rounded-[24px] bg-tatt-gray/5 border border-tatt-gray/20 space-y-4 shadow-sm">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {post.eventType && (
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="size-9 rounded-xl bg-tatt-gray/10 flex items-center justify-center text-tatt-gray shrink-0 border border-tatt-gray/20">
+                                            {(post.eventType === "WEBINAR" || post.eventType === "HYBRID") ? <Video className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-tatt-gray/60 leading-none mb-1">Event Type</p>
+                                            <p className="text-sm font-black text-foreground leading-none truncate">{post.eventType.replace("_", " ")}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {post.eventDate && (
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="size-9 rounded-xl bg-tatt-gray/10 flex items-center justify-center text-tatt-gray shrink-0 border border-tatt-gray/20">
+                                            <Clock className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-tatt-gray/60 leading-none mb-1">Date &amp; Time</p>
+                                            <p className="text-sm font-black text-foreground leading-none">
+                                                {new Date(post.eventDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                                                {" · "}
+                                                {new Date(post.eventDate).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            {post.eventUrl && (
+                                <a
+                                    href={post.eventUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 w-full py-3.5 bg-foreground hover:opacity-90 text-background font-black text-[11px] uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-[0.98]"
+                                >
+                                    Learn More / Register
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+
+
                     {/* Original Post Preview (for reposts) */}
                     {post.parentPost && (
                         <div className="mt-4 p-4 rounded-2xl bg-black/5 border border-border space-y-3 group/repost relative">
@@ -1423,14 +1628,23 @@ function PostCard({ post, onLike, onPostDeleted }: { post: Post, onLike: () => v
                     )}
                 </div>
 
-                {/* Tags */}
-                {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                        {post.tags.map(tag => (
-                            <span key={tag} className="text-[10px] font-black text-tatt-lime uppercase tracking-widest">#{tag}</span>
-                        ))}
-                    </div>
-                )}
+                    {/* Tags & Topics */}
+                    {(post.tags?.length > 0 || post.topic) && (
+                        <div className="flex flex-wrap items-center gap-2 mt-4 text-sm font-bold opacity-90 relative z-10">
+                            {post.topic && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onSelectTopic(post.topic!.id); }}
+                                    className="text-[10px] uppercase font-black tracking-widest bg-tatt-lime/10 text-tatt-lime px-2 py-1 rounded-md border border-tatt-lime/20 hover:bg-tatt-lime/20 transition-all flex items-center gap-1.5"
+                                >
+                                    <MessageSquare className="size-3" />
+                                    {post.topic.name}
+                                </button>
+                            )}
+                            {post.tags?.map(tag => (
+                                <span key={tag} className="text-[10px] uppercase font-black tracking-widest text-tatt-gray border border-border px-2 py-1 rounded-md">#{tag}</span>
+                            ))}
+                        </div>
+                    )}
 
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between pt-6 mt-6 border-t border-border">

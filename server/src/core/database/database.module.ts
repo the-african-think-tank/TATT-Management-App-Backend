@@ -17,6 +17,7 @@ import { PostUpvote } from '../../modules/feed/entities/post-upvote.entity';
 import { PostReport } from '../../modules/feed/entities/post-report.entity';
 import { FeedInsight } from '../../modules/feed/entities/feed-insight.entity';
 import { FeedPrompt } from '../../modules/feed/entities/feed-prompt.entity';
+import { FeedTopic } from '../../modules/feed/entities/feed-topic.entity';
 import { DirectMessage } from '../../modules/messages/entities/direct-message.entity';
 import { Resource } from '../../modules/resources/entities/resource.entity';
 import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
@@ -39,6 +40,7 @@ import { Product } from '../../modules/store/entities/product.entity';
 import { ProductVariant } from '../../modules/store/entities/product-variant.entity';
 import { Order } from '../../modules/store/entities/order.entity';
 import { OrderItem } from '../../modules/store/entities/order-item.entity';
+import { Partnership } from '../../modules/partnerships/entities/partnership.entity';
 
 @Module({
     imports: [
@@ -55,14 +57,14 @@ import { OrderItem } from '../../modules/store/entities/order-item.entity';
                     User, Chapter, ProfessionalInterest, UserInterest, Connection,
                     SecurityPolicy, PasswordHistory, EmailOtp,
                     Post, PostLike, PostComment, PostUpvote, PostBookmark, PostReport, 
-                    FeedInsight, FeedPrompt,
+                    FeedInsight, FeedPrompt, FeedTopic,
                     DirectMessage,
                     Resource, ResourceInteraction, Notification,
                     MembershipPlan,
                     Event, EventChapter, EventGuest, EventRegistration,
                     JobListing, JobApplication, SavedJob,
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
-                    Product, ProductVariant, Order, OrderItem,
+                    Product, ProductVariant, Order, OrderItem, Partnership,
                 ],
                 autoLoadModels: true,
                 // Default to true unless explicitly set to false, 'false', or '0'

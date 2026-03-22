@@ -16,6 +16,7 @@ import { PostBookmark } from './entities/post-bookmark.entity';
 import { PostReport, ReportStatus } from './entities/post-report.entity';
 import { FeedInsight } from './entities/feed-insight.entity';
 import { FeedPrompt } from './entities/feed-prompt.entity';
+import { FeedTopic } from './entities/feed-topic.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier, SystemRole, AccountFlags } from '../iam/enums/roles.enum';
@@ -141,13 +142,21 @@ function applyPremiumGate(
         tags: post.tags ?? [],
         author: post.author,
         chapter: post.chapter ?? null,
+        topic: post.topic ?? null,
         likesCount: post.likes?.length ?? 0,
         upvotesCount: post.upvotes?.length ?? 0,
         commentsCount: post.comments?.length ?? 0,
         isLikedByMe: likedPostIds.has(post.id),
         isUpvotedByMe: upvotedPostIds.has(post.id),
         isBookmarked: bookmarkedPostIds.has(post.id),
+        isHighlighted: (post as any).isHighlighted ?? false,
         parentPost: post.parentPost ? applyPremiumGate(post.parentPost, viewer, new Set(), new Set(), new Set()) : null,
+        jobLink: post.jobLink ?? null,
+        jobLocation: post.jobLocation ?? null,
+        jobCompany: post.jobCompany ?? null,
+        eventType: (post as any).eventType ?? null,
+        eventDate: (post as any).eventDate ?? null,
+        eventUrl: (post as any).eventUrl ?? null,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
     };
@@ -166,6 +175,7 @@ export class FeedService {
         @InjectModel(PostReport) private reportRepo: typeof PostReport,
         @InjectModel(FeedInsight) private insightRepo: typeof FeedInsight,
         @InjectModel(FeedPrompt) private promptRepo: typeof FeedPrompt,
+        @InjectModel(FeedTopic) private topicRepo: typeof FeedTopic,
         @InjectModel(User) private userRepo: typeof User,
     ) { }
 
@@ -196,11 +206,12 @@ export class FeedService {
             { model: PostLike, as: 'likes', attributes: ['userId'], required: false },
             { model: PostUpvote, as: 'upvotes', attributes: ['userId'], required: false },
             { model: PostComment, as: 'comments', attributes: ['id'], required: false, where: { parentId: null }, paranoid: false },
+            { model: FeedTopic, as: 'topic', required: false, attributes: ['id', 'name'] },
             { 
                 model: Post, 
                 as: 'parentPost', 
                 required: false,
-                include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }]
+                include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }, { model: FeedTopic, as: 'topic', attributes: ['id', 'name'] }]
             }
         ];
 
@@ -240,6 +251,10 @@ export class FeedService {
 
         if (filter === FeedFilter.PREMIUM) {
             where['isPremium'] = true;
+        }
+
+        if (query.topicId) {
+            where['topicId'] = query.topicId;
         }
 
         // ── BOOKMARKS filter logic ───────────────────────────────────────────
@@ -301,7 +316,8 @@ export class FeedService {
                 { model: PostUpvote, as: 'upvotes', attributes: ['userId'], required: false },
                 { model: PostBookmark, as: 'bookmarks', attributes: ['userId'], required: false },
                 { model: PostComment, as: 'comments', attributes: ['id'], required: false, paranoid: false },
-                { model: Post, as: 'parentPost', required: false, include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }] }
+                { model: FeedTopic, as: 'topic', required: false, attributes: ['id', 'name'] },
+                { model: Post, as: 'parentPost', required: false, include: [{ model: User, as: 'author', attributes: [...AUTHOR_ATTRS] }, { model: FeedTopic, as: 'topic', attributes: ['id', 'name'] }] }
             ],
         });
 
@@ -373,11 +389,15 @@ export class FeedService {
             tags: dto.tags ?? [],
             isPremium: dto.isPremium ?? false,
             chapterId: fullAuthor?.chapterId ?? null,
+            topicId: dto.topicId ?? null,
             isPublished: true,
             parentPostId: dto.parentPostId ?? null,
             jobLink: dto.jobLink ?? null,
             jobLocation: dto.jobLocation ?? null,
             jobCompany: dto.jobCompany ?? null,
+            eventType: dto.eventType ?? null,
+            eventDate: dto.eventDate ? new Date(dto.eventDate) : null,
+            eventUrl: dto.eventUrl ?? null,
         });
 
         if (dto.parentPostId) {
@@ -620,6 +640,26 @@ export class FeedService {
     }
 
     // ─── Feed Curation (Insights & Prompts) ──────────────────────────────────
+
+    async createTopic(dto: { name: string; description?: string }) {
+        return this.topicRepo.create({ name: dto.name, description: dto.description });
+    }
+
+    async getTopics() {
+        return this.topicRepo.findAll({
+            where: { isArchived: false },
+            order: [['name', 'ASC']],
+            include: [{ model: Post, attributes: ['id'] }],
+        });
+    }
+
+    async archiveTopic(topicId: string) {
+        const topic = await this.topicRepo.findByPk(topicId);
+        if (!topic) throw new NotFoundException('Topic not found');
+        topic.isArchived = true;
+        await topic.save();
+        return { message: 'Topic archived' };
+    }
 
     async createInsight(dto: { title: string; content: string; startDate?: string }) {
         // Deactivate existing active insights if any (optional, but UI shows one active slot)

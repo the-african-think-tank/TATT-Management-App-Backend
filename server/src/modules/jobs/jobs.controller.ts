@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
 import { JobsService } from './jobs.service';
-import { ApplyJobDto } from './dto/jobs.dto';
+import { ApplyJobDto, CreateJobDto, FlagJobDto } from './dto/jobs.dto';
 
 @ApiTags('Jobs / Opportunities')
 @Controller('jobs')
@@ -12,14 +12,13 @@ export class JobsController {
     @Get()
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'List job opportunities with filters and pagination' })
+    @ApiOperation({ summary: 'List active job opportunities' })
     @ApiQuery({ name: 'category', required: false })
     @ApiQuery({ name: 'type', required: false })
     @ApiQuery({ name: 'location', required: false })
     @ApiQuery({ name: 'search', required: false })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiResponse({ status: 200, description: 'Paginated job listings.' })
     async getListings(
         @Query('category') category?: string,
         @Query('type') type?: string,
@@ -29,20 +28,27 @@ export class JobsController {
         @Query('limit') limit?: string,
     ) {
         return this.jobsService.getListings({
-            category,
-            type,
-            location,
-            search,
+            category, type, location, search,
             page: page ? parseInt(page, 10) : 1,
             limit: limit ? parseInt(limit, 10) : 10,
         });
+    }
+
+    @Post()
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Kiongozi members only: Create a new job listing' })
+    async create(@Body() dto: CreateJobDto, @Request() req: any) {
+        if (req.user.communityTier !== 'KIONGOZI') {
+            throw new BadRequestException('Job posting is only available for Kiongozi members.');
+        }
+        return this.jobsService.createMemberListing(req.user.id, dto);
     }
 
     @Get('insights')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Market insights for sidebar' })
-    @ApiResponse({ status: 200, description: 'Top category, salary trend, top employers.' })
     async getInsights() {
         return this.jobsService.getMarketInsights();
     }
@@ -51,7 +57,6 @@ export class JobsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get saved job listings' })
-    @ApiResponse({ status: 200, description: 'List of saved jobs.' })
     async getSaved(@Request() req: any) {
         return this.jobsService.getSavedListings(req.user.id);
     }
@@ -60,17 +65,38 @@ export class JobsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get saved job IDs only' })
-    @ApiResponse({ status: 200, description: 'Array of job IDs.' })
     async getSavedIds(@Request() req: any) {
         return this.jobsService.getSavedJobIds(req.user.id);
+    }
+
+    @Get('alerts')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get user job alerts' })
+    async getAlerts(@Request() req: any) {
+        return this.jobsService.getJobAlerts(req.user.id);
+    }
+
+    @Post('alerts')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Create new job alert' })
+    async createAlert(@Body() dto: { keyword: string; category?: string }, @Request() req: any) {
+        return this.jobsService.createJobAlert(req.user.id, dto);
+    }
+
+    @Delete('alerts/:alertId')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a job alert' })
+    async deleteAlert(@Param('alertId') alertId: string, @Request() req: any) {
+        return this.jobsService.deleteJobAlert(req.user.id, alertId);
     }
 
     @Get(':id')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get a single job by ID' })
-    @ApiResponse({ status: 200, description: 'Job details.' })
-    @ApiResponse({ status: 404, description: 'Job not found.' })
     async getOne(@Param('id') id: string) {
         return this.jobsService.getListingById(id);
     }
@@ -79,8 +105,6 @@ export class JobsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Submit job application' })
-    @ApiResponse({ status: 201, description: 'Application submitted.' })
-    @ApiResponse({ status: 400, description: 'Already applied.' })
     async apply(@Param('id') id: string, @Body() dto: ApplyJobDto, @Request() req: any) {
         return this.jobsService.apply(req.user.id, id, dto);
     }
@@ -88,8 +112,7 @@ export class JobsController {
     @Post(':id/save')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Toggle save job (add or remove from saved)' })
-    @ApiResponse({ status: 200, description: 'Saved state toggled.' })
+    @ApiOperation({ summary: 'Toggle save job' })
     async toggleSave(@Param('id') id: string, @Request() req: any) {
         return this.jobsService.toggleSaved(req.user.id, id);
     }
@@ -98,9 +121,75 @@ export class JobsController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Remove job from saved' })
-    @ApiResponse({ status: 200, description: 'Removed from saved.' })
     async unsave(@Param('id') id: string, @Request() req: any) {
         await this.jobsService.toggleSaved(req.user.id, id);
         return { message: 'Removed from saved roles.' };
+    }
+}
+
+// ── ADMIN CONTROLLER ──────────────────────────────────────────────────────────
+
+@ApiTags('Admin — Jobs Center')
+@Controller('admin/jobs')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class AdminJobsController {
+    constructor(private readonly jobsService: JobsService) {}
+
+    @Get('stats')
+    @ApiOperation({ summary: 'Jobs dashboard stats' })
+    async getStats() {
+        return this.jobsService.getAdminStats();
+    }
+
+    @Get()
+    @ApiOperation({ summary: 'List all job listings (admin view with filters)' })
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'status', required: false })
+    @ApiQuery({ name: 'type', required: false })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    async getAll(
+        @Query('search') search?: string,
+        @Query('status') status?: string,
+        @Query('type') type?: string,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        return this.jobsService.getAdminListings({
+            search, status, type,
+            page: page ? parseInt(page, 10) : 1,
+            limit: limit ? parseInt(limit, 10) : 20,
+        });
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Admin: create a new job listing' })
+    async create(@Body() dto: CreateJobDto) {
+        return this.jobsService.adminCreateListing(dto);
+    }
+
+    @Patch(':id/flag')
+    @ApiOperation({ summary: 'Admin: flag a listing and notify the poster' })
+    async flag(@Param('id') id: string, @Body() dto: FlagJobDto) {
+        return this.jobsService.adminFlagListing(id, dto.reason);
+    }
+
+    @Patch(':id/unlist')
+    @ApiOperation({ summary: 'Admin: unlist a job and notify the poster' })
+    async unlist(@Param('id') id: string, @Body() dto: FlagJobDto) {
+        return this.jobsService.adminUnlistListing(id, dto.reason);
+    }
+
+    @Patch(':id/restore')
+    @ApiOperation({ summary: 'Admin: restore a flagged/unlisted job' })
+    async restore(@Param('id') id: string) {
+        return this.jobsService.adminRestoreListing(id);
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Admin: permanently delete a job listing' })
+    async deleteListing(@Param('id') id: string) {
+        return this.jobsService.adminDeleteListing(id);
     }
 }

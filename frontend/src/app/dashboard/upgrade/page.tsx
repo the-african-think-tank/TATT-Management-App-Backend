@@ -21,6 +21,9 @@ interface Plan {
     features: string[];
     isPopular: boolean;
     hasYearlyDiscount: boolean;
+    yearlyDiscountPercent?: number;
+    eventDiscountPercent?: number;
+    accessControls?: { title: string; subtitle: string; enabled: boolean }[];
     activeDiscount?: {
         code: string;
         name: string;
@@ -127,7 +130,7 @@ export default function UpgradePage() {
                         <span className={`text-sm font-bold transition-colors ${isYearly ? "text-white" : "text-white/40"}`}>
                             Yearly{" "}
                             <span className="text-tatt-lime bg-tatt-lime/10 border border-tatt-lime/20 px-2 py-0.5 rounded-full text-xs ml-1">
-                                Save 20% + 1 Month Free
+                                Unlocked Discounts
                             </span>
                         </span>
                     </div>
@@ -188,14 +191,14 @@ export default function UpgradePage() {
                                                 Current Plan
                                             </div>
                                         )}
-                                        {isYearly && plan.hasYearlyDiscount && !plan.isPopular && (
+                                        {isYearly && plan.hasYearlyDiscount && !plan.isPopular && plan.yearlyDiscountPercent && (
                                             <div className="absolute top-0 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
-                                                1 Month Free
+                                                Save {plan.yearlyDiscountPercent}%
                                             </div>
                                         )}
-                                        {isYearly && plan.hasYearlyDiscount && plan.isPopular && (
+                                        {isYearly && plan.hasYearlyDiscount && plan.isPopular && plan.yearlyDiscountPercent && (
                                             <div className="absolute top-7 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
-                                                1 Month Free
+                                                Save {plan.yearlyDiscountPercent}%
                                             </div>
                                         )}
 
@@ -243,14 +246,25 @@ export default function UpgradePage() {
                                                 )}
                                             </div>
 
-                                            {/* Features */}
                                             <ul className="flex-1 space-y-3 mb-6">
                                                 {plan.features.map((feature, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2.5 text-sm">
+                                                    <li key={`feat-${idx}`} className="flex items-start gap-2.5 text-sm">
                                                         <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
                                                         <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{feature}</span>
                                                     </li>
                                                 ))}
+                                                {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
+                                                    <li key={`ctrl-${idx}`} className="flex items-start gap-2.5 text-sm">
+                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{control.title}</span>
+                                                    </li>
+                                                ))}
+                                                {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
+                                                    <li className="flex items-start gap-2.5 text-sm">
+                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{plan.eventDiscountPercent}% off TATT Events</span>
+                                                    </li>
+                                                )}
                                             </ul>
 
                                             {/* CTA */}

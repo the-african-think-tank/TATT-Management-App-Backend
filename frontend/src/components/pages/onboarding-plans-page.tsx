@@ -19,6 +19,9 @@ interface Plan {
     features: string[];
     isPopular: boolean;
     hasYearlyDiscount: boolean;
+    yearlyDiscountPercent?: number;
+    eventDiscountPercent?: number;
+    accessControls?: { title: string; subtitle: string; enabled: boolean }[];
     activeDiscount?: {
         code: string;
         name: string;
@@ -109,7 +112,7 @@ export function OnboardingPlansPage() {
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-tatt-lime"></div>
                         </label>
                         <span className={`text-sm font-bold ${isYearly ? 'text-tatt-black' : 'opacity-60'}`}>
-                            Yearly <span className="text-tatt-lime bg-tatt-lime/10 px-2 py-0.5 rounded ml-1">Save 20% + 1 Month Free</span>
+                            Yearly <span className="text-tatt-lime bg-tatt-lime/10 px-2 py-0.5 rounded ml-1">Unlocked Discounts</span>
                         </span>
                     </div>
                 </div>
@@ -134,9 +137,9 @@ export function OnboardingPlansPage() {
                                         Most Popular
                                     </div>
                                 )}
-                                {(plan.monthlyPrice > 0 && isYearly && plan.hasYearlyDiscount) && (
+                                {(plan.monthlyPrice > 0 && isYearly && plan.hasYearlyDiscount && plan.yearlyDiscountPercent) && (
                                     <div className={`absolute ${plan.isPopular ? 'top-6' : 'top-0'} right-0 bg-tatt-lime/30 text-tatt-black text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg`}>
-                                        1 Month Free
+                                        Save {plan.yearlyDiscountPercent}%
                                     </div>
                                 )}
                                 <div className="mb-8">
@@ -169,11 +172,23 @@ export function OnboardingPlansPage() {
                                 </div>
                                 <ul className="flex-1 flex flex-col gap-4 mb-8">
                                     {plan.features.map((feature, idx) => (
-                                        <li key={idx} className="flex items-start gap-3 text-sm">
+                                        <li key={`feat-${idx}`} className="flex items-start gap-3 text-sm">
                                             <CheckCircle className={`${plan.tier === 'FREE' ? 'text-gray-400' : 'text-tatt-lime'} h-5 w-5 shrink-0`} />
                                             <span className={plan.isPopular ? 'font-semibold' : ''}>{feature}</span>
                                         </li>
                                     ))}
+                                    {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
+                                        <li key={`ctrl-${idx}`} className="flex items-start gap-3 text-sm">
+                                            <CheckCircle className={`text-tatt-lime h-5 w-5 shrink-0`} />
+                                            <span className={plan.isPopular ? 'font-semibold' : ''}>{control.title}</span>
+                                        </li>
+                                    ))}
+                                    {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
+                                        <li className="flex items-start gap-3 text-sm">
+                                            <CheckCircle className={`text-tatt-lime h-5 w-5 shrink-0`} />
+                                            <span className={plan.isPopular ? 'font-semibold' : ''}>{plan.eventDiscountPercent}% off TATT Events</span>
+                                        </li>
+                                    )}
                                 </ul>
                                 <button
                                     onClick={() => handleSelectPlan(plan.tier, plan.monthlyPrice)}

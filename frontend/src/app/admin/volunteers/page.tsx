@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
     Users, 
     Clock, 
@@ -55,6 +56,7 @@ interface Stats {
 }
 
 export default function VolunteerCenterPage() {
+    const router = useRouter();
     const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -62,6 +64,11 @@ export default function VolunteerCenterPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [search, setSearch] = useState("");
     const [totalItems, setTotalItems] = useState(0);
+    const [activeTab, setActiveTab] = useState<'registry' | 'activities'>('registry');
+    const [chapters, setChapters] = useState<any[]>([]);
+    const [selectedChapter, setSelectedChapter] = useState<string>("all");
+    const [activities, setActivities] = useState<any[]>([]);
+    const [activitiesLoading, setActivitiesLoading] = useState(false);
 
     const fetchStats = async () => {
         try {
@@ -93,13 +100,51 @@ export default function VolunteerCenterPage() {
         }
     };
 
+    const fetchChapters = async () => {
+        try {
+            const { data } = await api.get("/chapters");
+            setChapters(data);
+        } catch (error) {
+            console.error("Failed to fetch chapters", error);
+        }
+    };
+
+    const fetchAllActivities = async () => {
+        setActivitiesLoading(true);
+        try {
+            // Since we don't have a global search activities yet, we can fetch all chapters first 
+            // but for now, if 'all' is selected, we might just fetch the first few or we need a backend endpoint.
+            // I'll assume there's a global one or I'll implement it if needed, 
+            // but I'll try to fetch for the selected chapter if not 'all'.
+            // For now, I'll fetch for the selected chapter.
+            if (selectedChapter !== "all") {
+                const { data } = await api.get(`/chapters/${selectedChapter}/activities`);
+                setActivities(data.data);
+            } else {
+                // Fetch from a new global endpoint if it exists, or just clear for now
+                // Actually, I'll add a global one.
+                const { data } = await api.get(`/chapters/all-activities`);
+                setActivities(data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch activities", error);
+        } finally {
+            setActivitiesLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchStats();
+        fetchChapters();
     }, []);
 
     useEffect(() => {
-        fetchVolunteers();
-    }, [page, search]);
+        if (activeTab === 'registry') {
+            fetchVolunteers();
+        } else {
+            fetchAllActivities();
+        }
+    }, [page, search, activeTab, selectedChapter]);
 
     const getStatusStyles = (status?: string) => {
         switch (status?.toUpperCase()) {
@@ -226,8 +271,31 @@ export default function VolunteerCenterPage() {
                 </Link>
             </div>
 
-            {/* Table Section */}
-            <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+            {/* Tab Navigation */}
+            <div className="flex border-b border-border gap-8">
+                <button 
+                    onClick={() => setActiveTab('registry')}
+                    className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative ${
+                        activeTab === 'registry' ? 'text-tatt-lime' : 'text-tatt-gray hover:text-foreground'
+                    }`}
+                >
+                    Agent Registry
+                    {activeTab === 'registry' && <div className="absolute bottom-0 left-0 w-full h-1 bg-tatt-lime rounded-full shadow-[0_0_10px_rgba(159,204,0,0.5)]"></div>}
+                </button>
+                <button 
+                    onClick={() => setActiveTab('activities')}
+                    className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative ${
+                        activeTab === 'activities' ? 'text-tatt-lime' : 'text-tatt-gray hover:text-foreground'
+                    }`}
+                >
+                    Chapter Activities
+                    {activeTab === 'activities' && <div className="absolute bottom-0 left-0 w-full h-1 bg-tatt-lime rounded-full shadow-[0_0_10px_rgba(159,204,0,0.5)]"></div>}
+                </button>
+            </div>
+
+            {activeTab === 'registry' ? (
+                /* Table Section */
+                <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
                 <div className="p-8 border-b border-border flex flex-wrap gap-6 items-center justify-between bg-surface/50 backdrop-blur-sm">
                     <div className="flex items-center gap-4">
                         <h5 className="text-xl font-black uppercase italic tracking-tighter">Active Agent Registry</h5>
@@ -285,7 +353,11 @@ export default function VolunteerCenterPage() {
                                 </tr>
                             ) : (
                                 volunteers.map((agent) => (
-                                    <tr key={agent.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
+                                    <tr 
+                                        key={agent.id} 
+                                        onClick={() => router.push(`/admin/volunteers/${agent.id}`)}
+                                        className="hover:bg-tatt-lime/[0.02] transition-colors group cursor-pointer"
+                                    >
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="size-11 rounded-2xl bg-tatt-lime/10 text-tatt-lime flex items-center justify-center font-black text-xs border border-tatt-lime/20 shadow-inner">
@@ -372,6 +444,109 @@ export default function VolunteerCenterPage() {
                     </div>
                 </div>
             </div>
+            ) : (
+                /* Chapter Activities Section */
+                <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-500">
+                    <div className="flex flex-wrap gap-4 items-center justify-between">
+                        <div className="flex items-center gap-3 bg-surface border border-border px-4 py-2 rounded-2xl shadow-sm">
+                            <Filter size={16} className="text-tatt-lime" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Select Chapter Nexus:</span>
+                            <select 
+                                value={selectedChapter} 
+                                onChange={(e) => setSelectedChapter(e.target.value)}
+                                className="bg-transparent border-none text-xs font-black uppercase tracking-widest outline-none focus:ring-0 cursor-pointer text-foreground"
+                            >
+                                <option value="all">Global (All Chapters)</option>
+                                {chapters.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                             <div className="size-3 rounded-full bg-tatt-lime shadow-[0_0_8px_rgba(159,204,0,0.6)] animate-pulse" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">{activities.length} Active Initiatives Discovered</span>
+                        </div>
+                    </div>
+
+                    {activitiesLoading ? (
+                        <div className="py-40 flex flex-col items-center justify-center gap-6">
+                            <Loader2 className="animate-spin text-tatt-lime" size={48} strokeWidth={3} />
+                            <p className="text-xs font-black uppercase tracking-[0.3em] text-tatt-gray animate-pulse">Scanning Transmission Frequencies...</p>
+                        </div>
+                    ) : activities.length === 0 ? (
+                        <div className="py-32 bg-surface/50 border-2 border-dashed border-border rounded-[3rem] text-center flex flex-col items-center gap-4">
+                            <div className="size-20 bg-background rounded-full flex items-center justify-center text-tatt-gray/20">
+                                <Search size={40} />
+                            </div>
+                            <h4 className="text-xl font-black italic uppercase tracking-tighter">No Active Signals</h4>
+                            <p className="max-w-xs mx-auto text-sm text-tatt-gray font-medium">No chapters have posted activities or initiatives in this sector yet.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {activities.map((activity) => (
+                                <div key={activity.id} className="group bg-surface border border-border rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:shadow-tatt-lime/5 hover:border-tatt-lime/30 transition-all duration-500 flex flex-col justify-between relative overflow-hidden">
+                                     {/* Background Glow */}
+                                     <div className="absolute -right-20 -top-20 size-40 bg-tatt-lime opacity-0 group-hover:opacity-10 blur-[50px] transition-opacity" />
+                                     
+                                     <div>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <span className="px-3 py-1 rounded-full bg-tatt-lime/10 text-tatt-lime text-[9px] font-black tracking-widest uppercase border border-tatt-lime/20">
+                                                {activity.type}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-tatt-gray flex items-center gap-1.5 bg-background px-2.5 py-1 rounded-lg">
+                                                <Clock size={12} />
+                                                {new Date(activity.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+
+                                        <h4 className="text-lg font-black italic tracking-tighter text-foreground group-hover:text-tatt-lime transition-colors mb-3">
+                                            {activity.title}
+                                        </h4>
+                                        
+                                        <p className="text-sm text-tatt-gray font-medium leading-relaxed line-clamp-3 mb-6">
+                                            {activity.content}
+                                        </p>
+
+                                        <div className="flex flex-col gap-3 py-4 border-y border-border/50 mb-6">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Target Personnel</span>
+                                                <span className="text-xs font-black text-foreground">{activity.targetVolunteers || 0} Volunteers Needed</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Regional Hub</span>
+                                                <span className="text-xs font-black text-tatt-lime-dark">{activity.chapter?.name || "Global Deployment"}</span>
+                                            </div>
+                                            {activity.eventDate && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Event Deployment</span>
+                                                    <span className="text-xs font-black text-foreground">{new Date(activity.eventDate).toLocaleDateString()}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                     </div>
+
+                                    <div className="flex items-center justify-between mt-auto">
+                                        <div className="flex -space-x-2">
+                                            {[...Array(3)].map((_, i) => (
+                                                <div key={i} className="size-8 rounded-full border-2 border-surface bg-background flex items-center justify-center text-[10px] font-black text-tatt-gray">
+                                                    {String.fromCharCode(65 + i)}
+                                                </div>
+                                            ))}
+                                            <div className="size-8 rounded-full border-2 border-surface bg-tatt-lime/20 flex items-center justify-center text-[10px] font-black text-tatt-lime-dark">
+                                                +12
+                                            </div>
+                                        </div>
+                                        <button className="px-4 py-2 bg-tatt-black text-tatt-lime rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-tatt-lime hover:text-tatt-black transition-all shadow-lg active:scale-95">
+                                            Monitor Initiative
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

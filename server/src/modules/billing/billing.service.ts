@@ -9,11 +9,14 @@ import { CommunityTier, AccountFlags } from '../iam/enums/roles.enum';
 
 import { MailService } from '../../common/mail/mail.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { EventRegistration } from '../events/entities/event-registration.entity';
 import { MembershipPlan } from '../membership/entities/membership-plan.entity';
 import { Discount, DiscountType } from '../membership/entities/discount.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
+import { FinancialTransaction, TransactionStatus, TransactionType } from '../revenue/entities/financial-transaction.entity';
+import { Order, OrderStatus } from '../store/entities/order.entity';
 
 @Injectable()
 export class BillingService {
@@ -25,21 +28,24 @@ export class BillingService {
         @InjectModel(EventRegistration) private eventRegistrationRepo: typeof EventRegistration,
         @InjectModel(MembershipPlan) private planRepo: typeof MembershipPlan,
         @InjectModel(Discount) private discountRepo: typeof Discount,
+        @InjectModel(FinancialTransaction) private transactionRepo: typeof FinancialTransaction,
+        @InjectModel(Order) private orderRepo: typeof Order,
         private mailService: MailService,
         private notificationsService: NotificationsService,
-    ) {
-        this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-            apiVersion: '2025-01-27.acacia' as any,
-        });
+        private settingsService: SystemSettingsService,
+    ) { }
+
+    private async getStripe(): Promise<Stripe> {
+        return this.settingsService.getStripeInstance();
     }
 
     async handleStripeWebhook(payload: Buffer, signature: string) {
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder';
+        const webhookSecret = await this.settingsService.getStripeWebhookSecret();
 
         let event: Stripe.Event;
 
         try {
-            event = this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+            event = (await this.getStripe()).webhooks.constructEvent(payload, signature, webhookSecret);
         } catch (err: any) {
             this.logger.error(`Webhook signature verification failed: ${err.message}`);
             throw new Error('Webhook Signature Failed');
@@ -65,6 +71,8 @@ export class BillingService {
                 const session = event.data.object as Stripe.Checkout.Session;
                 if (session.metadata?.type === 'EVENT_REGISTRATION') {
                     await this.handleEventRegistrationPayment(session);
+                } else if (session.metadata?.type === 'STORE_ORDER') {
+                    await this.handleStoreOrderPayment(session);
                 }
                 break;
             }
@@ -88,6 +96,35 @@ export class BillingService {
         await registration.save();
 
         this.logger.log(`Event registration ${registrationId} payment confirmed and status updated to COMPLETED.`);
+    }
+
+    private async handleStoreOrderPayment(session: Stripe.Checkout.Session) {
+        const orderId = session.metadata?.orderId;
+        if (!orderId) return;
+
+        const order = await this.orderRepo.findByPk(orderId, { include: [{ model: User, as: 'customer' }] });
+        if (!order) {
+            this.logger.error(`Store order not found for ID: ${orderId}`);
+            return;
+        }
+
+        order.status = OrderStatus.CONFIRMED;
+        await order.save();
+
+        // LOG REVENUE TRANSACTION
+        await this.transactionRepo.create({
+            userId: order.customerId,
+            chapterId: order.customer?.chapterId,
+            type: TransactionType.PRODUCT_SALE,
+            amount: (session.amount_total || 0) / 100,
+            currency: session.currency?.toUpperCase() || 'USD',
+            status: TransactionStatus.COMPLETED,
+            stripePaymentIntentId: session.payment_intent as string,
+            referenceNumber: order.orderNumber,
+            metadata: { orderId: order.id }
+        } as any);
+
+        this.logger.log(`Store order ${order.orderNumber} payment confirmed.`);
     }
 
     private async handleSubscriptionExpiredOrFailed(subscription: Stripe.Subscription) {
@@ -132,12 +169,25 @@ export class BillingService {
             return;
         }
 
-        const subscriptionResp = await this.stripe.subscriptions.retrieve(invoiceSub);
+        const subscriptionResp = await (await this.getStripe()).subscriptions.retrieve(invoiceSub);
         const currentPeriodEnd = (subscriptionResp as any).current_period_end;
 
         const expiresAt = new Date(currentPeriodEnd * 1000);
         user.subscriptionExpiresAt = expiresAt;
         await user.save();
+
+        // LOG REVENUE TRANSACTION
+        await this.transactionRepo.create({
+            userId: user.id,
+            chapterId: user.chapterId,
+            type: TransactionType.SUBSCRIPTION,
+            amount: (invoice.amount_paid || 0) / 100,
+            currency: invoice.currency?.toUpperCase() || 'USD',
+            status: TransactionStatus.COMPLETED,
+            stripePaymentIntentId: (invoice as any).payment_intent as string,
+            membershipTier: user.communityTier,
+            referenceNumber: `INV-${invoice.id}`,
+        } as any);
 
         this.logger.log(`User ${user.email} subscription automatically renewed until ${expiresAt.toISOString()}`);
 
@@ -330,7 +380,7 @@ export class BillingService {
         if (!user || !user.stripeCustomerId) return null;
 
         try {
-            const customer = await this.stripe.customers.retrieve(user.stripeCustomerId, {
+            const customer = await (await this.getStripe()).customers.retrieve(user.stripeCustomerId, {
                 expand: ['invoice_settings.default_payment_method']
             }) as Stripe.Customer;
 
@@ -356,7 +406,7 @@ export class BillingService {
         try {
             // 1. Ensure/Create Stripe Customer
             if (!user.stripeCustomerId) {
-                const customer = await this.stripe.customers.create({
+                const customer = await (await this.getStripe()).customers.create({
                     email: user.email,
                     name: `${user.firstName} ${user.lastName}`,
                     payment_method: paymentMethodId,
@@ -366,9 +416,9 @@ export class BillingService {
                 await user.save();
             } else {
                 // 2. Attach new payment method
-                await this.stripe.paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
+                await (await this.getStripe()).paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
                 // 3. Set as default
-                await this.stripe.customers.update(user.stripeCustomerId, {
+                await (await this.getStripe()).customers.update(user.stripeCustomerId, {
                     invoice_settings: { default_payment_method: paymentMethodId },
                 });
             }
@@ -385,7 +435,7 @@ export class BillingService {
         if (!user || !user.stripeCustomerId) throw new Error('Subscription not found');
 
         try {
-            const subscriptions = await this.stripe.subscriptions.list({
+            const subscriptions = await (await this.getStripe()).subscriptions.list({
                 customer: user.stripeCustomerId,
                 status: 'active',
                 limit: 1
@@ -399,7 +449,7 @@ export class BillingService {
             }
 
             const subscription = subscriptions.data[0];
-            await this.stripe.subscriptions.update(subscription.id, {
+            await (await this.getStripe()).subscriptions.update(subscription.id, {
                 cancel_at_period_end: !enabled
             });
 
@@ -499,7 +549,7 @@ export class BillingService {
         try {
             // 1. Ensure/Create Stripe Customer
             if (!user.stripeCustomerId) {
-                const customer = await this.stripe.customers.create({
+                const customer = await (await this.getStripe()).customers.create({
                     email: user.email,
                     name: `${user.firstName} ${user.lastName}`,
                     payment_method: paymentMethodId,
@@ -508,8 +558,8 @@ export class BillingService {
                 user.stripeCustomerId = customer.id;
             } else if (paymentMethodId) {
                 // Update payment method if provided
-                await this.stripe.paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
-                await this.stripe.customers.update(user.stripeCustomerId, {
+                await (await this.getStripe()).paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
+                await (await this.getStripe()).customers.update(user.stripeCustomerId, {
                     invoice_settings: { default_payment_method: paymentMethodId },
                 });
             }
@@ -524,7 +574,7 @@ export class BillingService {
 
             // 2. Create Subscription
             if (!priceId.includes('mock') && !process.env.STRIPE_SECRET_KEY?.includes('placeholder')) {
-                await this.stripe.subscriptions.create({
+                await (await this.getStripe()).subscriptions.create({
                     customer: user.stripeCustomerId!,
                     items: [{ price: priceId }],
                     discounts: activeDiscount?.stripeCouponId ? [{ coupon: activeDiscount.stripeCouponId }] : undefined,
@@ -543,6 +593,21 @@ export class BillingService {
             user.subscriptionExpiresAt = expiresAt;
             user.billingCycle = billingCycle;
             await user.save();
+
+            // LOG REVENUE TRANSACTION (Simulate amount from tier if it's a mock)
+            const plan = await this.planRepo.findOne({ where: { tier } });
+            const amount = billingCycle === 'YEARLY' ? plan?.yearlyPrice : plan?.monthlyPrice;
+
+            await this.transactionRepo.create({
+                userId: user.id,
+                chapterId: user.chapterId,
+                type: TransactionType.SUBSCRIPTION,
+                amount: amount || 0,
+                currency: 'USD',
+                status: TransactionStatus.COMPLETED,
+                membershipTier: tier,
+                referenceNumber: `SUB-${Date.now()}`,
+            } as any);
 
             return { 
                 message: `${tier} subscription active.`, 
@@ -571,7 +636,7 @@ export class BillingService {
         let estimatedMonthlyRevenue = 0;
 
         try {
-            const subscriptions = await this.stripe.subscriptions.list({ status: 'active', limit: 100 });
+            const subscriptions = await (await this.getStripe()).subscriptions.list({ status: 'active', limit: 100 });
             activeSubscriptions = subscriptions.data.length;
 
             for (const sub of subscriptions.data) {

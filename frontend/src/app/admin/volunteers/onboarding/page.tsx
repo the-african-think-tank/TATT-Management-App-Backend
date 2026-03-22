@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
     PlusCircle, 
     ArrowLeft,
@@ -33,6 +34,7 @@ interface Volunteer {
 }
 
 export default function OnboardingPage() {
+    const router = useRouter();
     const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -97,7 +99,11 @@ export default function OnboardingPage() {
                     </div>
                 ) : (
                     volunteers.map((agent) => (
-                        <div key={agent.id} className="bg-surface border border-border rounded-[2.5rem] p-6 flex flex-col md:flex-row gap-6 hover:border-tatt-lime/40 transition-all group overflow-hidden relative">
+                        <div 
+                            key={agent.id} 
+                            onClick={() => router.push(`/admin/volunteers/${agent.id}`)}
+                            className="bg-surface border border-border rounded-[2.5rem] p-6 flex flex-col md:flex-row gap-6 hover:border-tatt-lime/40 transition-all group overflow-hidden relative cursor-pointer"
+                        >
                             {/* Avatar and Info */}
                             <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-background border border-border rounded-3xl w-full md:w-32">
                                 <div className="size-16 rounded-full bg-tatt-lime/10 text-tatt-lime flex items-center justify-center font-black text-xl border border-tatt-lime/20 mb-3 group-hover:scale-110 transition-transform">

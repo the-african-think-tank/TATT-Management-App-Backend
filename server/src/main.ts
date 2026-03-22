@@ -11,6 +11,7 @@ import * as fs from 'fs';
 
 import { ConfigService } from '@nestjs/config';
 
+// Trigger restart at 2026-03-19T14:40
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         cors: false, // we configure CORS explicitly below so one source of truth

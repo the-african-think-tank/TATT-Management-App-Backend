@@ -52,6 +52,9 @@ export class Order extends Model<Order> {
     @Column({ type: DataType.TEXT, allowNull: true })
     notes?: string;
 
+    @Column({ type: DataType.STRING, allowNull: true })
+    stripeCheckoutSessionId?: string;
+
     @ForeignKey(() => Product)
     @Column({ type: DataType.UUID, allowNull: true })
     productId?: string;

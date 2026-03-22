@@ -187,6 +187,25 @@ export class ChaptersService implements OnApplicationBootstrap {
         };
     }
 
+    async getAllActivities(page = 1, limit = 20) {
+        const offset = (page - 1) * limit;
+        const { count, rows } = await this.activityRepository.findAndCountAll({
+            where: { isPublished: true },
+            include: [
+                { model: Chapter, as: 'chapter', attributes: ['name', 'code'] },
+                { model: User, as: 'author', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
+                { model: User, as: 'volunteerManager', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
+            ],
+            order: [['eventDate', 'ASC'], ['createdAt', 'DESC']], // Upcoming first
+            limit,
+            offset,
+        });
+        return {
+            data: rows,
+            meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) },
+        };
+    }
+
     async createChapterActivity(chapterId: string, author: User, dto: CreateChapterActivityDto) {
         await this.getChapterById(chapterId);
         const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN].includes(author.systemRole);

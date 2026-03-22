@@ -8,6 +8,8 @@ import {
     useUnreadMessageCount,
     useVolunteerStats,
 } from "@/hooks/use-queries";
+import api from "@/services/api";
+import { useEffect, useState } from "react";
 import {
     Calendar as CalendarIcon,
     Users,
@@ -16,8 +18,6 @@ import {
     UserCheck,
     Mail,
     ClipboardList,
-    GraduationCap,
-    Ticket,
     Shield,
     FileText,
     Award,
@@ -25,12 +25,14 @@ import {
     Download,
     ChevronDown,
     Loader2,
-    Lock
+    Lock,
+    Handshake
 } from "lucide-react";
 
 
 import Link from "next/link";
 import MembershipCard from "@/components/molecules/MembershipCard";
+import { MemberBenefits } from "@/components/organisms/member-benefits";
 
 const safeDate = (dateStr: string) => {
     try {
@@ -43,6 +45,22 @@ const safeDate = (dateStr: string) => {
 
 export default function DashboardPage() {
     const { user } = useAuth();
+    const [partnerships, setPartnerships] = useState<any[]>([]);
+    const [loadingPartnerships, setLoadingPartnerships] = useState(true);
+
+    useEffect(() => {
+        const fetchPartnerships = async () => {
+            try {
+                const { data } = await api.get("/partnerships/my-benefits");
+                setPartnerships(data);
+            } catch (error) {
+                console.error("Failed to fetch dashboard partnerships:", error);
+            } finally {
+                setLoadingPartnerships(false);
+            }
+        };
+        if (user) fetchPartnerships();
+    }, [user]);
 
     // ── TanStack Query hooks ────────────────────────────────────────────────
     const { data: connectionData, isLoading: networkLoading } = useConnections();
@@ -217,111 +235,99 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left: DBU Academy, Business Spotlight, Benefits */}
                 <div className="lg:col-span-2 space-y-8">
-                    {/* DBU Career Academy */}
+                    {/* Available Partners */}
                     <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
+                        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="size-10 rounded-lg bg-foreground flex items-center justify-center text-tatt-lime">
-                                    <GraduationCap className="h-5 w-5" />
+                                <div className="size-9 rounded-lg bg-foreground flex items-center justify-center text-tatt-lime shrink-0">
+                                    <Handshake className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-foreground">DBU Career Academy</h3>
-                                    <p className="text-sm text-tatt-gray font-medium">Employee Upskilling & Licensing</p>
+                                    <h3 className="font-bold text-base text-foreground tracking-tight">Available Partners</h3>
+                                    <p className="text-xs text-tatt-gray font-medium">Curated benefits &amp; offers from TATT partners</p>
                                 </div>
                             </div>
-                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                Active Portal
-                            </span>
+                            <Link href="/dashboard/partnerships" className="text-[10px] font-black text-tatt-lime hover:underline uppercase tracking-widest shrink-0">
+                                View All
+                            </Link>
                         </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                                <div>
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="font-bold text-foreground">License Usage</span>
-                                        <span className="font-medium text-tatt-gray">24 / 30 Licenses</span>
-                                    </div>
-                                    <div className="w-full bg-background h-3 rounded-full overflow-hidden">
-                                        <div className="bg-tatt-lime h-full w-[80%] rounded-full" />
-                                    </div>
-                                    <p className="text-xs text-tatt-gray mt-3 italic">
-                                        "You are saving $400 per license compared to retail rates."
-                                    </p>
+
+                        <div className="p-4 space-y-3">
+                            {loadingPartnerships ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className="h-20 bg-background rounded-xl animate-pulse border border-border" />
+                                ))
+                            ) : partnerships.length === 0 ? (
+                                <div className="py-10 flex flex-col items-center justify-center text-center text-tatt-gray">
+                                    <Handshake className="size-10 opacity-20 mb-3" />
+                                    <p className="text-sm font-bold">No partners available yet</p>
+                                    <p className="text-xs mt-1 italic">Check back soon — new partnerships are added regularly.</p>
                                 </div>
-                                <div className="bg-background p-4 rounded-lg flex flex-col items-center justify-center text-center">
-                                    <p className="text-xs font-black uppercase text-tatt-gray mb-1">
-                                        Exclusive Kiongozi Offer
-                                    </p>
-                                    <p className="text-2xl font-black text-foreground mb-3">
-                                        $99<span className="text-sm font-medium">/year per license</span>
-                                    </p>
-                                    <button className="w-full bg-tatt-lime text-tatt-black font-black py-2 rounded-lg hover:brightness-105 transition-all text-sm shadow-sm">
-                                        Purchase More Licenses
-                                    </button>
-                                </div>
-                            </div>
+                            ) : (
+                                partnerships.slice(0, 4).map((p) => (
+                                    <div
+                                        key={p.id}
+                                        className={`relative flex items-center gap-4 p-4 rounded-xl border transition-all group ${
+                                            p.isLocked
+                                                ? "bg-background border-border"
+                                                : "bg-surface border-border hover:border-tatt-lime hover:shadow-sm"
+                                        }`}
+                                    >
+                                        {/* Logo */}
+                                        <div className={`size-12 rounded-lg border border-border flex items-center justify-center overflow-hidden shrink-0 ${p.isLocked ? "grayscale opacity-60" : "bg-background"}`}>
+                                            {p.logoUrl ? (
+                                                <img src={p.logoUrl} alt={p.name} className="size-full object-cover" />
+                                            ) : (
+                                                <Handshake className="size-5 text-tatt-gray" />
+                                            )}
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className={`font-bold text-sm truncate ${p.isLocked ? "text-tatt-gray" : "text-foreground"}`}>{p.name}</h4>
+                                                {p.isLocked && <Lock size={11} className="text-tatt-gray shrink-0" />}
+                                            </div>
+                                            <p className="text-[11px] text-tatt-gray mt-0.5 line-clamp-1 font-medium leading-snug">{p.description}</p>
+                                            <span className="mt-1.5 inline-block text-[9px] font-black uppercase tracking-widest text-tatt-lime">{p.category}</span>
+                                        </div>
+
+                                        {/* CTA */}
+                                        <div className="shrink-0">
+                                            {p.isLocked ? (
+                                                <div className="flex flex-col items-end gap-1.5">
+                                                    <Link
+                                                        href={`/dashboard/partnerships/${p.id}`}
+                                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border border-border bg-surface text-foreground hover:bg-foreground hover:text-background transition-all"
+                                                    >
+                                                        View Details
+                                                    </Link>
+                                                    <Link href="/dashboard/upgrade" className="text-[9px] font-bold text-tatt-gray hover:text-tatt-lime transition-colors underline uppercase tracking-wider">
+                                                        Upgrade to unlock
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                <Link
+                                                    href={`/dashboard/partnerships/${p.id}`}
+                                                    className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide bg-tatt-lime text-tatt-black hover:brightness-105 transition-all shadow-sm"
+                                                >
+                                                    Access Benefit
+                                                </Link>
+                                            )}
+                                        </div>
+
+                                        {/* Locked overlay shimmer */}
+                                        {p.isLocked && (
+                                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+                                        )}
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
 
-                    {/* Business Spotlight */}
-                    <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold text-lg text-foreground">Annual Business Spotlight</h3>
-                            <div className="flex items-center gap-2">
-                                <span className="size-2 bg-tatt-lime rounded-full animate-pulse" />
-                                <span className="text-sm font-bold text-tatt-lime uppercase">Scheduled: Oct 2024</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6 p-4 bg-background rounded-xl">
-                            <div className="size-24 rounded-lg bg-surface border border-border flex items-center justify-center p-4">
-                                <div className="w-full h-full bg-foreground flex items-center justify-center rounded text-tatt-lime font-black text-xl">
-                                    {companyName.slice(0, 2).toUpperCase()}
-                                </div>
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-black text-foreground">{companyName} Spotlight</h4>
-                                <p className="text-sm text-tatt-gray mt-1 leading-relaxed">
-                                    Your business can be featured across the TATT network. Ensure your media kit is
-                                    ready.
-                                </p>
-                                <div className="flex gap-4 mt-4">
-                                    <button className="px-4 py-2 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90">
-                                        Manage Spotlight Content
-                                    </button>
-                                    <button className="px-4 py-2 border border-border rounded-lg text-xs font-bold hover:bg-background transition-colors">
-                                        Preview Feature
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Exclusive Member Benefits */}
-                    <div>
-                        <h3 className="font-bold text-lg text-foreground mb-4">Exclusive Member Benefits</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
-                                <Ticket className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
-                                <div>
-                                    <p className="font-bold text-sm text-foreground">Free Vendor Tables</p>
-                                    <p className="text-xs text-tatt-gray">2 credits available</p>
-                                </div>
-                            </div>
-                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
-                                <Megaphone className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
-                                <div>
-                                    <p className="font-bold text-sm text-foreground">Pitch Event Access</p>
-                                    <p className="text-xs text-tatt-gray">VIP Entry to Q4 Summit</p>
-                                </div>
-                            </div>
-                            <div className="bg-surface p-4 rounded-xl border border-border flex items-start gap-3 hover:border-tatt-lime transition-colors cursor-pointer group">
-                                <Shield className="h-5 w-5 text-tatt-lime group-hover:scale-110 transition-transform shrink-0" />
-                                <div>
-                                    <p className="font-bold text-sm text-foreground">Talent Access</p>
-                                    <p className="text-xs text-tatt-gray">Pre-vetted shortlist</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Member Benefits */}
+                    <MemberBenefits />
                 </div>
 
                 {/* Right column */}
@@ -383,36 +389,9 @@ export default function DashboardPage() {
                             )}
                         </div>
                     </div>
-
-                    {/* Quick Resources */}
-                    <div className="bg-surface rounded-xl border border-border shadow-sm p-6">
-                        <h4 className="font-bold text-foreground mb-4">Quick Resources</h4>
-                        <div className="space-y-4">
-                            <Link href="/dashboard/resources" className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
-                                    <span className="text-sm font-medium text-foreground">Business Toolkit 2024</span>
-                                </div>
-                                <Download className="h-4 w-4 text-tatt-gray" />
-                            </Link>
-                            <Link href="/dashboard/network" className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <Award className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
-                                    <span className="text-sm font-medium text-foreground">Network Directory</span>
-                                </div>
-                                <ChevronDown className="h-4 w-4 text-tatt-gray rotate-[-90deg]" />
-                            </Link>
-                            <Link href="/dashboard/feed" className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <MessageSquare className="h-5 w-5 text-tatt-gray group-hover:text-tatt-lime" />
-                                    <span className="text-sm font-medium text-foreground">Executive Roundtable</span>
-                                </div>
-                                <ChevronDown className="h-4 w-4 text-tatt-gray rotate-[-90deg]" />
-                            </Link>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     );
 }
+

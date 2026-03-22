@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
     IdCard,
     Users,
@@ -21,68 +22,23 @@ import {
     ChevronLeft,
     ChevronRight,
     ArrowRight,
-    ChevronDown
+    Search as SearchIcon,
+    LayoutDashboard,
+    Trash2,
+    Ticket,
+    Activity,
+    Shield,
+    Save
 } from "lucide-react";
 import api from "@/services/api";
 import toast from "react-hot-toast";
 
-const StrategicSelect = ({ value, onChange, options, placeholder, icon: Icon }: any) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const selectedOption = options.find((opt: any) => opt.value === value);
-
-    return (
-        <div className="relative inline-block text-left" ref={containerRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all text-[11px] font-black uppercase tracking-widest min-w-[180px] justify-between ${
-                    isOpen ? 'border-tatt-lime bg-tatt-lime/5 ring-4 ring-tatt-lime/5' : 'border-border bg-background hover:border-tatt-lime/50'
-                }`}
-            >
-                <div className="flex items-center gap-2">
-                    {Icon && <Icon size={14} className="text-tatt-gray" />}
-                    <span>{selectedOption ? selectedOption.label : placeholder}</span>
-                </div>
-                <ChevronDown size={14} className={`text-tatt-gray transition-transform duration-300 ${isOpen ? 'rotate-180 text-tatt-lime' : ''}`} />
-            </button>
-
-            {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="max-h-[300px] overflow-y-auto py-2 backdrop-blur-xl bg-surface/80">
-                        {options.map((opt: any) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => {
-                                    onChange(opt.value);
-                                    setIsOpen(false);
-                                }}
-                                className={`w-full text-left px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-tatt-lime hover:text-tatt-black transition-all ${
-                                    value === opt.value ? 'bg-tatt-lime/10 text-tatt-lime' : 'text-tatt-gray'
-                                }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
+type TabType = "OVERVIEW" | "PLANS" | "DISCOUNTS" | "MEMBERS";
 
 export default function MembershipCenterPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<TabType>("OVERVIEW");
     const [data, setData] = useState<any>({
         tiers: [],
         subscribers: [],
@@ -104,15 +60,10 @@ export default function MembershipCenterPage() {
         validUntil: "",
         applicablePlans: ["KIONGOZI"]
     });
-    const [editingPlan, setEditingPlan] = useState<any>(null);
-    const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
     const [isCreatingPromo, setIsCreatingPromo] = useState(false);
+    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
-    const fetchAllData = async () => {
+    const fetchAllData = useCallback(async () => {
         setLoading(true);
         try {
             const query = new URLSearchParams(filters as any).toString();
@@ -141,51 +92,14 @@ export default function MembershipCenterPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
 
-    const handleFilterChange = async (key: string, value: any) => {
-        const newFilters = { ...filters, [key]: value };
-        if (key !== 'page') newFilters.page = 1; // Reset to page 1 on filter change
-        setFilters(newFilters);
+    useEffect(() => {
+        fetchAllData();
+    }, [fetchAllData]);
 
-        // Instant refetch for subscribers when filters change
-        try {
-            const query = new URLSearchParams(newFilters as any).toString();
-            const res = await api.get(`/membership-center/subscribers?${query}`);
-            setData((prev: any) => ({ 
-                ...prev, 
-                subscribers: res.data.members || [],
-                pagination: {
-                    total: res.data.total || 0,
-                    page: res.data.page || 1,
-                    totalPages: res.data.totalPages || 1
-                }
-            }));
-        } catch (err) {
-            toast.error("Filter update failed");
-        }
-    };
-
-    const handleUpdatePlan = async () => {
-        if (!editingPlan) return;
-        setIsUpdatingPlan(true);
-        try {
-            if (editingPlan.id) {
-                await api.patch(`/membership-center/tiers/${editingPlan.id}`, editingPlan);
-                toast.success(`${editingPlan.name} updated successfully`);
-            } else {
-                const payload = { ...editingPlan };
-                if (payload.tier === 'NEW') payload.tier = payload.name.toUpperCase().replace(/\s+/g, '_');
-                await api.post("/membership-center/tiers", payload);
-                toast.success(`${editingPlan.name} created successfully`);
-            }
-            setEditingPlan(null);
-            fetchAllData();
-        } catch (err) {
-            toast.error("Failed to save plan");
-        } finally {
-            setIsUpdatingPlan(false);
-        }
+    const handleFilterChange = (key: string, value: any) => {
+        setFilters(prev => ({ ...prev, [key]: value, page: key === 'page' ? value : 1 }));
     };
 
     const handleApplyCampaign = async () => {
@@ -213,7 +127,21 @@ export default function MembershipCenterPage() {
         }
     };
 
-    if (loading) {
+    const toggleMemberSelection = (id: string) => {
+        setSelectedMembers(prev => 
+            prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
+        );
+    };
+
+    const toggleAllMembers = () => {
+        if (selectedMembers.length === data.subscribers.length) {
+            setSelectedMembers([]);
+        } else {
+            setSelectedMembers(data.subscribers.map((s: any) => s.id));
+        }
+    };
+
+    if (loading && data.tiers.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
                 <Loader2 className="size-12 animate-spin text-tatt-lime" />
@@ -223,508 +151,570 @@ export default function MembershipCenterPage() {
     }
 
     return (
-        <div className="space-y-8 pb-12 animate-in fade-in duration-700">
-            {/* Header */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-700">
+            {/* Page Title & Actions */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
-                    <h2 className="text-4xl font-black text-foreground tracking-tight underline decoration-tatt-lime/30 underline-offset-8">Membership Center (V2-ACTIVE)</h2>
-                    <p className="text-tatt-gray mt-2 font-medium">Oversee subscription growth, plans, and active promotions.</p>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Membership Management</h2>
+                    <p className="text-xs text-tatt-gray font-medium mt-1 uppercase tracking-widest">Efficiency-first administration for TATT membership</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray size-4 group-focus-within:text-tatt-lime transition-colors" />
-                        <input
-                            className="pl-10 pr-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-tatt-lime outline-none transition-all w-64"
-                            placeholder="Find member..."
-                            value={filters.search}
-                            onChange={(e) => handleFilterChange("search", e.target.value)}
-                        />
-                    </div>
-                    <button className="p-2.5 rounded-xl bg-surface border border-border text-tatt-gray relative hover:border-tatt-lime transition-all">
-                        <Bell size={20} />
-                        <span className="absolute top-2 right-2 size-2.5 bg-red-500 rounded-full ring-2 ring-surface animate-bounce"></span>
+                <div className="flex space-x-3 w-full md:w-auto">
+                    <button className="flex-1 md:flex-none bg-tatt-black text-tatt-lime px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center space-x-2 border border-white/5 shadow-lg">
+                        <Download size={14} />
+                        <span>Export Data</span>
                     </button>
-                </div>
-            </header>
-
-            {/* Growth Statistics */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 bg-surface p-8 rounded-[2.5rem] border border-border shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="font-black text-xl text-foreground italic">Subscription Performance</h3>
-                            <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-widest mt-1">Real-time Tier Velocity</p>
-                        </div>
-                        <select className="bg-background border border-border rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-tatt-lime transition-all">
-                            <option>Last 6 Months</option>
-                            <option>Year to Date</option>
-                        </select>
-                    </div>
-
-                    <div className="h-64 flex items-end justify-between gap-4 px-4">
-                        {data.analytics.labels.map((label: string, idx: number) => {
-                            const ubuntu = data.analytics.tierGrowth['UBUNTU']?.[idx] || 0;
-                            const imani = data.analytics.tierGrowth['IMANI']?.[idx] || 0;
-                            const kiongozi = data.analytics.tierGrowth['KIONGOZI']?.[idx] || 0;
-                            
-                            // Simple normalization: find max across all data points
-                            const allValues = Object.values(data.analytics.tierGrowth).flat() as number[];
-                            const maxVal = Math.max(...allValues, 10); // Minimum max of 10 for scale
-                            
-                            return (
-                                <div key={idx} className="flex-1 flex flex-col justify-end items-center group h-full space-y-1">
-                                    <div className="w-full flex justify-center items-end gap-1.5 h-[80%]">
-                                        {/* Ubuntu Bar */}
-                                        <div
-                                            className="w-1.5 md:w-3 bg-tatt-lime/20 rounded-full transition-all duration-500 group-hover:bg-tatt-lime/40"
-                                            style={{ height: `${(ubuntu / maxVal) * 100}%` }}
-                                        ></div>
-                                        {/* Imani Bar */}
-                                        <div
-                                            className="w-1.5 md:w-3 bg-tatt-lime/50 rounded-full transition-all duration-500 group-hover:bg-tatt-lime/70"
-                                            style={{ height: `${(imani / maxVal) * 100}%` }}
-                                        ></div>
-                                        {/* Kiongozi Bar */}
-                                        <div
-                                            className="w-1.5 md:w-3 bg-tatt-lime rounded-full transition-all duration-500 shadow-lg shadow-tatt-lime/20"
-                                            style={{ height: `${(kiongozi / maxVal) * 100}%` }}
-                                        ></div>
-                                    </div>
-                                    <span className="text-[10px] font-black text-tatt-gray tracking-tighter">{label}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="flex flex-wrap gap-6 mt-8 pt-6 border-t border-border">
-                        <div className="flex items-center gap-2.5">
-                            <div className="size-3 rounded-full bg-tatt-lime shadow-sm shadow-tatt-lime/50"></div>
-                            <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Kiongozi</span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                            <div className="size-3 rounded-full bg-tatt-lime/50"></div>
-                            <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Imani</span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                            <div className="size-3 rounded-full bg-tatt-lime/20"></div>
-                            <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Ubuntu</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-tatt-lime p-8 rounded-[2.5rem] border border-tatt-lime text-tatt-black flex flex-col justify-between shadow-2xl shadow-tatt-lime/20 group overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                        <ArrowUpRight size={120} strokeWidth={3} />
-                    </div>
-                    <div>
-                        <p className="text-tatt-black/60 text-xs font-black uppercase tracking-[0.2em]">Total Growth Rate</p>
-                        <h4 className="text-6xl font-black mt-3 leading-tight tracking-tighter">{data.analytics.totalGrowthRate}</h4>
-                        <p className="mt-6 text-tatt-black/80 text-sm font-bold leading-relaxed">
-                            Membership acquisition is trending at {data.analytics.totalGrowthRate} this month. Keep up the strategic momentum!
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Plans and Discounts */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Plans Management */}
-                <div className="xl:col-span-2 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-black text-foreground italic flex items-center gap-3">
-                            <IdCard className="text-tatt-lime" /> Active Membership Plans
-                        </h3>
-                        <button 
-                            onClick={() => setEditingPlan({ name: "", monthlyPrice: "", tier: "NEW", features: [""] })}
-                            className="text-tatt-lime hover:text-white transition-colors text-xs font-black uppercase tracking-widest flex items-center gap-2 bg-tatt-lime/10 px-4 py-2 rounded-xl group"
-                        >
-                            <Plus size={16} className="group-hover:rotate-90 transition-transform" /> Add new plan
-                        </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {data.tiers.map((tier: any) => (
-                            <div
-                                key={tier.id}
-                                className={`bg-surface p-6 rounded-[2rem] border transition-all h-full flex flex-col justify-between group cursor-pointer ${tier.tier === 'IMANI' ? 'border-tatt-lime ring-4 ring-tatt-lime/5 scale-[1.02]' : 'border-border hover:border-tatt-lime/50'
-                                    }`}
-                            >
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest ${tier.tier === 'IMANI' ? 'bg-tatt-lime text-tatt-black' : 'bg-background text-tatt-gray'
-                                            }`}>
-                                            {tier.tier === 'IMANI' ? 'Popular' : 'Active'}
-                                        </span>
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingPlan({...tier});
-                                            }}
-                                            className="text-tatt-gray hover:text-tatt-lime transition-colors"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xl font-black text-foreground">{tier.name}</h4>
-                                        <div className="flex items-baseline gap-1 mt-1">
-                                            {tier.activeDiscount ? (
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-baseline gap-2">
-                                                        <p className="text-3xl font-black text-tatt-lime">
-                                                            ${tier.activeDiscount.type === 'percentage' 
-                                                                ? (tier.monthlyPrice * (1 - tier.activeDiscount.value / 100)).toFixed(0)
-                                                                : (Math.max(0, tier.monthlyPrice - tier.activeDiscount.value / 100)).toFixed(0)}
-                                                        </p>
-                                                        <p className="text-sm font-black text-tatt-gray line-through decoration-red-500/50">${Number(tier.monthlyPrice).toFixed(0)}</p>
-                                                    </div>
-                                                    <span className="text-[9px] font-black text-red-500 uppercase tracking-widest mt-1">
-                                                        PROMO: {tier.activeDiscount.name} ({tier.activeDiscount.type === 'percentage' ? `${tier.activeDiscount.value}% OFF` : `$${(tier.activeDiscount.value/100).toFixed(2)} OFF`}) 
-                                                        {tier.activeDiscount.validUntil && ` • VALID UNTIL ${new Date(tier.activeDiscount.validUntil).toLocaleDateString()}`}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <p className="text-3xl font-black text-tatt-lime">${Number(tier.monthlyPrice).toFixed(0)}</p>
-                                            )}
-                                            <span className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">/mo</span>
-                                        </div>
-                                    </div>
-                                    <ul className="space-y-3 pt-4 border-t border-border">
-                                        {(tier.features || []).slice(0, 3).map((perk: string, i: number) => (
-                                            <li key={i} className="flex items-start gap-2 text-[11px] font-bold text-tatt-gray leading-tight">
-                                                <CheckCircle2 size={14} className="text-tatt-lime shrink-0 mt-0.5" />
-                                                {perk}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <button 
-                                    onClick={() => setEditingPlan({...tier})}
-                                    className="mt-6 w-full py-3 rounded-xl border border-border group-hover:border-tatt-lime transition-all text-[10px] font-black uppercase tracking-widest group-hover:bg-tatt-lime group-hover:text-tatt-black"
-                                >
-                                    Manage Perks
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Create Promo */}
-                <div className="xl:col-span-1 space-y-6">
-                    <h3 className="text-2xl font-black text-foreground italic flex items-center gap-3">
-                        <Tag className="text-tatt-lime" /> Create Promotion
-                    </h3>
-                    <div className="bg-surface border border-border p-8 rounded-[2.5rem] shadow-sm space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray ml-1">Strategy Name</label>
-                            <input
-                                className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-tatt-lime outline-none transition-all"
-                                placeholder="Summer Growth Drive"
-                                type="text"
-                                value={promoForm.name}
-                                onChange={(e) => setPromoForm({ ...promoForm, name: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray ml-1">Benefit (%)</label>
-                                <input
-                                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm font-black text-tatt-lime focus:ring-2 focus:ring-tatt-lime outline-none transition-all"
-                                    placeholder="20"
-                                    type="number"
-                                    value={promoForm.value}
-                                    onChange={(e) => setPromoForm({ ...promoForm, value: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray ml-1">Valid Until</label>
-                                <input
-                                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-tatt-lime outline-none transition-all"
-                                    type="date"
-                                    value={promoForm.validUntil}
-                                    onChange={(e) => setPromoForm({ ...promoForm, validUntil: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray ml-1">Applicable Tiers</label>
-                            <div className="grid grid-cols-1 gap-3">
-                                {['UBUNTU', 'IMANI', 'KIONGOZI'].map((tier) => (
-                                    <label key={tier} className="flex items-center justify-between p-4 bg-background border border-border rounded-2xl cursor-pointer hover:border-tatt-lime transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${promoForm.applicablePlans.includes(tier) ? 'bg-tatt-lime border-tatt-lime' : 'border-tatt-gray/30'
-                                                }`}>
-                                                {promoForm.applicablePlans.includes(tier) && <Check size={14} className="text-tatt-black stroke-[4px]" />}
-                                            </div>
-                                            <span className="text-xs font-black uppercase tracking-widest">{tier}</span>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            className="hidden"
-                                            checked={promoForm.applicablePlans.includes(tier)}
-                                            onChange={() => {
-                                                const current = promoForm.applicablePlans;
-                                                const next = current.includes(tier) ? current.filter(t => t !== tier) : [...current, tier];
-                                                setPromoForm({ ...promoForm, applicablePlans: next });
-                                            }}
-                                        />
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <button 
-                            onClick={handleApplyCampaign}
-                            disabled={isCreatingPromo}
-                            className="w-full bg-tatt-lime text-tatt-black py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] hover:scale-[1.02] shadow-xl shadow-tatt-lime/20 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
-                        >
-                            {isCreatingPromo ? <Loader2 className="animate-spin" size={16} /> : "Apply Campaign"} <ArrowRight size={16} />
-                        </button>
-                    </div>
+                    <button 
+                        onClick={() => router.push('/admin/membership-center/new')}
+                        className="flex-1 md:flex-none bg-tatt-lime text-tatt-black px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-tatt-lime/20"
+                    >
+                        <Plus size={14} />
+                        <span>Quick Create</span>
+                    </button>
                 </div>
             </div>
 
-            {/* Member Directory */}
-            <section className="bg-surface border border-border rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col">
-                <div className="p-8 border-b border-border">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <h3 className="text-2xl font-black text-foreground italic flex items-center gap-3">
-                            <Users className="text-tatt-lime" /> Member Directory
-                        </h3>
-                        <div className="flex flex-wrap gap-4">
-                            <StrategicSelect 
-                                value={filters.tier}
-                                onChange={(val: string) => handleFilterChange("tier", val)}
-                                placeholder="Filter Plan"
-                                icon={IdCard}
-                                options={[
-                                    { value: "", label: "Plan: All" },
-                                    { value: "FREE", label: "Free" },
-                                    { value: "UBUNTU", label: "Ubuntu" },
-                                    { value: "IMANI", label: "Imani" },
-                                    { value: "KIONGOZI", label: "Kiongozi" },
-                                ]}
-                            />
-                            <StrategicSelect 
-                                value={filters.chapterId}
-                                onChange={(val: string) => handleFilterChange("chapterId", val)}
-                                placeholder="Filter Chapter"
-                                icon={Users}
-                                options={[
-                                    { value: "", label: "Chapter: All" },
-                                    ...data.chapters.map((c: any) => ({ value: c.id, label: c.name }))
-                                ]}
-                            />
-                            <button className="flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-black/5">
-                                <Filter size={14} /> Advanced Filter
-                            </button>
-                        </div>
-                    </div>
+            {/* Navigation Tabs */}
+            <div className="bg-surface border-b border-border flex space-x-8 px-2 overflow-x-auto scrollbar-hide sticky top-0 md:static z-10 bg-background/80 backdrop-blur-md md:bg-transparent">
+                {[
+                    { id: "OVERVIEW", label: "Overview", icon: LayoutDashboard },
+                    { id: "PLANS", label: "Perks", icon: IdCard },
+                    { id: "DISCOUNTS", label: "Discounts", icon: Tag },
+                    { id: "MEMBERS", label: "Members", icon: Users },
+                ].map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as TabType)}
+                        className={`py-4 px-1 text-[10px] font-black uppercase tracking-[0.2em] flex items-center space-x-2 transition-all border-b-2 ${
+                            activeTab === tab.id ? "border-tatt-lime text-foreground" : "border-transparent text-tatt-gray hover:text-foreground"
+                        }`}
+                    >
+                        <tab.icon size={14} />
+                        <span>{tab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            <div className="space-y-6">
+                {/* Growth Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard 
+                        label="Total Members" 
+                        value={data.analytics?.stats?.total || 0} 
+                        change={data.analytics?.totalGrowthRate || "0%"} 
+                        isPositive={!data.analytics?.totalGrowthRate?.startsWith("-")} 
+                        onClick={() => {
+                            setActiveTab("MEMBERS");
+                            handleFilterChange("tier", "");
+                        }}
+                    />
+                    <StatCard 
+                        label="Ubuntu Growth" 
+                        value={data.analytics?.stats?.ubuntu || 0} 
+                        change={data.analytics?.stats?.ubuntuRate || "0%"} 
+                        isPositive={!data.analytics?.stats?.ubuntuRate?.startsWith("-")} 
+                        onClick={() => {
+                            setActiveTab("MEMBERS");
+                            handleFilterChange("tier", "UBUNTU");
+                        }}
+                    />
+                    <StatCard 
+                        label="Imani Growth" 
+                        value={data.analytics?.stats?.imani || 0} 
+                        change={data.analytics?.stats?.imaniRate || "0%"} 
+                        isPositive={!data.analytics?.stats?.imaniRate?.startsWith("-")} 
+                        onClick={() => {
+                            setActiveTab("MEMBERS");
+                            handleFilterChange("tier", "IMANI");
+                        }}
+                    />
+                    <StatCard 
+                        label="Kiongozi Growth" 
+                        value={data.analytics?.stats?.kiongozi || 0} 
+                        change={data.analytics?.stats?.kiongoziRate || "0%"} 
+                        isPositive={!data.analytics?.stats?.kiongoziRate?.startsWith("-")} 
+                        onClick={() => {
+                            setActiveTab("MEMBERS");
+                            handleFilterChange("tier", "KIONGOZI");
+                        }}
+                    />
                 </div>
 
-                <div className="overflow-x-auto overflow-y-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-background/50 border-b border-border">
-                            <tr>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Member Entity</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Current Tier</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Chapter</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Billing</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Status</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray text-right">Scope</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {data.subscribers.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 opacity-30">
-                                            <Users size={48} />
-                                            <p className="text-sm font-black uppercase tracking-widest italic">No active subscriptions detected</p>
+                {["OVERVIEW", "PLANS", "DISCOUNTS"].includes(activeTab) && (
+                    <div className="grid grid-cols-12 gap-6">
+                        {/* Membership Plans Table (as part of overview) */}
+                        {activeTab === "OVERVIEW" && (
+                            <div className="col-span-12 space-y-6">
+                                <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
+                                    <div className="px-6 py-4 bg-surface/50 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div className="flex items-center space-x-4">
+                                        <label className="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedMembers.length === data.subscribers.length && data.subscribers.length > 0}
+                                                onChange={toggleAllMembers}
+                                                className="rounded border-border text-tatt-lime focus:ring-tatt-lime w-4 h-4 bg-background" 
+                                            />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Select All</span>
+                                        </label>
+                                        <div className="hidden md:block h-4 w-px bg-border"></div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button disabled={selectedMembers.length === 0} className="bg-background border border-border text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-neutral-dark/5 disabled:opacity-50 transition-all">Bulk Archive</button>
+                                            <button disabled={selectedMembers.length === 0} className="bg-background border border-border text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-neutral-dark/5 disabled:opacity-50 transition-all">Reassign Tier</button>
                                         </div>
-                                    </td>
-                                </tr>
-                            ) : data.subscribers.map((sub: any) => (
-                                <tr key={sub.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="size-11 rounded-2xl bg-tatt-lime/10 flex items-center justify-center font-black text-xs text-tatt-lime border border-tatt-lime/20 group-hover:scale-110 transition-transform">
-                                                {(sub.firstName?.[0] || '')}{(sub.lastName?.[0] || '') || '??'}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-foreground">{sub.firstName || 'Anonymous'} {sub.lastName || 'Member'}</p>
-                                                <p className="text-[10px] text-tatt-gray font-bold lowercase">{sub.email}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${sub.communityTier === 'KIONGOZI' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
-                                            sub.communityTier === 'IMANI' ? 'bg-tatt-lime/10 text-tatt-lime border-tatt-lime/20' :
-                                                'bg-tatt-gray/10 text-tatt-gray border-tatt-gray/20'
-                                            }`}>
-                                            {sub.communityTier}
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-xs font-black text-tatt-gray uppercase tracking-tighter truncate max-w-[150px]">
-                                        {sub.chapter?.name || 'Unassigned'}
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black text-foreground leading-none">{sub.billingCycle}</span>
-                                                {sub.hasAutoPayEnabled ? (
-                                                    <span className="bg-green-500/10 text-green-500 text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Autopay</span>
-                                                ) : (
-                                                    <span className="bg-tatt-gray/10 text-tatt-gray text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Manual</span>
-                                                )}
-                                            </div>
-                                            <span className="text-[9px] font-bold text-tatt-gray flex items-center gap-1 uppercase">
-                                                <Calendar size={10} /> {sub.subscriptionExpiresAt ? new Date(sub.subscriptionExpiresAt).toLocaleDateString() : 'Active'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-green-500 uppercase tracking-widest italic leading-none">
-                                            <div className="size-1.5 rounded-full bg-green-500 animate-pulse"></div> Active Flow
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <button className="p-2 text-tatt-gray hover:text-tatt-lime transition-all rounded-lg hover:bg-tatt-lime/10">
-                                            <MoreVertical size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {(data.pagination?.totalPages || 1) > 1 && (
-                    <div className="p-8 bg-background/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest italic">
-                            Viewing {(filters.page - 1) * filters.limit + 1} - {Math.min(filters.page * filters.limit, data.pagination.total)} of {data.pagination.total} Global Membership Entities
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => handleFilterChange("page", filters.page - 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-surface disabled:opacity-30 transition-all font-black uppercase text-[10px]" 
-                                disabled={filters.page === 1}
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <div className="flex gap-1.5 mx-2">
-                                {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
-                                    <button 
-                                        key={p}
-                                        onClick={() => handleFilterChange("page", p)}
-                                        className={`size-8 rounded-xl font-black text-xs transition-all ${
-                                            filters.page === p 
-                                                ? "bg-tatt-lime text-tatt-black shadow-lg shadow-tatt-lime/20" 
-                                                : "border border-border hover:border-tatt-lime text-tatt-gray"
-                                        }`}
-                                    >
-                                        {p}
-                                    </button>
-                                ))}
-                            </div>
-                            <button 
-                                onClick={() => handleFilterChange("page", filters.page + 1)}
-                                className="p-2 rounded-xl border border-border hover:bg-surface disabled:opacity-30 transition-all font-black uppercase text-[10px]"
-                                disabled={filters.page === data.pagination.totalPages}
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </section>
-
-            {/* Plan Edit Modal */}
-            {editingPlan && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-surface w-full max-w-2xl rounded-[2.5rem] border border-border shadow-2xl p-8 space-y-8 animate-in slide-in-from-bottom-8 duration-500 overflow-y-auto max-h-[90vh]">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-3xl font-black italic text-foreground tracking-tight">
-                                {editingPlan.id ? `Edit ${editingPlan.name} membership` : 'Create new membership plan'}
-                            </h3>
-                            <button onClick={() => setEditingPlan(null)} className="p-2 hover:bg-background rounded-full transition-colors text-tatt-gray hover:text-foreground">
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Plan Display Name</label>
-                                <input 
-                                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-tatt-lime outline-none"
-                                    value={editingPlan.name}
-                                    onChange={(e) => setEditingPlan({...editingPlan, name: e.target.value})}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Monthly Price ($)</label>
-                                <input 
-                                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-xl font-black text-tatt-lime focus:ring-2 focus:ring-tatt-lime outline-none"
-                                    type="number"
-                                    value={editingPlan.monthlyPrice}
-                                    onChange={(e) => setEditingPlan({...editingPlan, monthlyPrice: e.target.value})}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Membership Perks</label>
-                                <button 
-                                    onClick={() => setEditingPlan({...editingPlan, features: [...(editingPlan.features || []), '']})}
-                                    className="text-[10px] font-black text-tatt-lime hover:underline uppercase tracking-widest"
-                                >
-                                    + Add New Perk
-                                </button>
-                            </div>
-                            <div className="space-y-3">
-                                {(editingPlan.features || []).map((perk: string, idx: number) => (
-                                    <div key={idx} className="flex gap-2">
-                                        <input 
-                                            className="flex-1 bg-background border border-border rounded-2xl px-5 py-3 text-sm font-medium focus:ring-2 focus:ring-tatt-lime outline-none"
-                                            value={perk}
-                                            onChange={(e) => {
-                                                const newFeatures = [...editingPlan.features];
-                                                newFeatures[idx] = e.target.value;
-                                                setEditingPlan({...editingPlan, features: newFeatures});
-                                            }}
-                                        />
-                                        <button 
-                                            onClick={() => {
-                                                const newFeatures = editingPlan.features.filter((_: any, i: number) => i !== idx);
-                                                setEditingPlan({...editingPlan, features: newFeatures});
-                                            }}
-                                            className="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-colors"
-                                        >
-                                            <X size={18} />
+                                    </div>
+                                    <div className="flex items-center space-x-2 w-full md:w-auto justify-between md:justify-end">
+                                        <span className="text-[10px] font-black uppercase text-tatt-lime italic tracking-widest">{selectedMembers.length} selected</span>
+                                        <button className="p-1.5 rounded-lg hover:bg-background transition-all text-tatt-gray">
+                                            <MoreVertical size={14} />
                                         </button>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm border-collapse">
+                                        <thead className="bg-background/30">
+                                            <tr>
+                                                <th className="w-12 px-6 py-4"></th>
+                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Plan Name</th>
+                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Price (USD)</th>
+                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Assigned Perks</th>
+                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Active Status</th>
+                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {data.tiers.map((tier: any) => (
+                                                <tr key={tier.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <input 
+                                                            type="checkbox"
+                                                            checked={selectedMembers.includes(tier.id)}
+                                                            onChange={() => toggleMemberSelection(tier.id)}
+                                                            className="rounded border-border text-tatt-lime focus:ring-tatt-lime w-4 h-4 bg-background" 
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <input 
+                                                            className="bg-transparent border-none p-0 text-sm font-black focus:ring-0 w-full focus:bg-background rounded px-2 -ml-2 transition-all" 
+                                                            type="text" 
+                                                            value={tier.name} 
+                                                            readOnly 
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex items-center space-x-1">
+                                                            <span className="text-tatt-gray text-xs">$</span>
+                                                            <span className="text-sm font-black text-foreground">{tier.monthlyPrice}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {(tier.features || []).slice(0, 2).map((perk: string, i: number) => (
+                                                                <span key={i} className="bg-background border border-border px-2 py-0.5 rounded text-[10px] font-bold flex items-center group/perk">
+                                                                    {perk}
+                                                                    <button className="ml-1 text-tatt-gray hover:text-red-500 opacity-0 group-hover/perk:opacity-100 transition-all">×</button>
+                                                                </span>
+                                                            ))}
+                                                            <button 
+                                                                onClick={() => router.push('/admin/membership-center/' + tier.id)}
+                                                                className="text-tatt-lime text-[10px] font-black px-2 border border-dashed border-tatt-lime/40 rounded hover:bg-tatt-lime/5 transition-all"
+                                                            >
+                                                                + ADD
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-all ${tier.status === 'ACTIVE' ? 'bg-tatt-lime' : 'bg-tatt-gray/20'}`}>
+                                                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-tatt-black transition-all ${tier.status === 'ACTIVE' ? 'right-0.5' : 'left-0.5'}`}></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-right">
+                                                        <div className="flex items-center justify-end space-x-1">
+                                                            <button 
+                                                                onClick={() => router.push('/admin/membership-center/' + tier.id)}
+                                                                className="p-1.5 text-tatt-gray hover:text-tatt-lime transition-all opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button className="p-1.5 text-tatt-gray hover:text-foreground transition-all">
+                                                                <MoreVertical size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-6 py-4 bg-background/20 border-t border-border flex justify-between items-center">
+                                    <span className="text-[10px] text-tatt-gray font-black uppercase tracking-widest italic">Showing {data.tiers.length} global membership plans</span>
+                                    <div className="flex items-center space-x-4">
+                                        <button className="text-[10px] font-black text-tatt-lime hover:underline uppercase tracking-widest disabled:opacity-30">Previous</button>
+                                        <div className="flex space-x-2">
+                                            <span className="px-2 py-0.5 bg-tatt-lime text-tatt-black text-[10px] font-black rounded">1</span>
+                                        </div>
+                                        <button className="text-[10px] font-black text-tatt-lime hover:underline uppercase tracking-widest disabled:opacity-30">Next</button>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Plan Perks Breakdown Tab */}
+                        {activeTab === "PLANS" && (
+                            <div className="col-span-12 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {data.tiers.map((tier: any) => (
+                                        <div key={tier.id} className="bg-surface rounded-2xl p-6 border border-border shadow-sm flex flex-col group hover:border-tatt-lime transition-all">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="text-xl font-black text-foreground tracking-tight">{tier.name || 'Unnamed Plan'}</h3>
+                                                    <span className="text-[10px] font-black uppercase text-tatt-lime tracking-widest">{tier.status}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => router.push('/admin/membership-center/' + tier.id)}
+                                                    className="p-2 text-tatt-gray hover:text-foreground hover:bg-background rounded-lg transition-all"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="flex-1 space-y-4">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray italic border-b border-border pb-2 block">Integrated Perks & Benefits</span>
+                                                <div className="space-y-2.5">
+                                                    {(tier.accessControls || tier.features || []).map((perk: string, i: number) => (
+                                                        <div key={i} className="flex items-start gap-3">
+                                                            <div className="mt-0.5 size-4 rounded-full bg-tatt-lime/10 text-tatt-lime flex items-center justify-center shrink-0">
+                                                                <Check size={10} strokeWidth={4} />
+                                                            </div>
+                                                            <span className="text-xs font-bold text-foreground leading-tight">{perk}</span>
+                                                        </div>
+                                                    ))}
+                                                    {(!tier.accessControls || tier.accessControls.length === 0) && (!tier.features || tier.features.length === 0) && (
+                                                        <p className="text-[10px] text-tatt-gray italic">No perks allocated yet.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <button 
+                                                onClick={() => router.push('/admin/membership-center/' + tier.id)}
+                                                className="w-full mt-6 py-3 bg-background border border-border group-hover:bg-tatt-lime group-hover:text-tatt-black group-hover:border-tatt-lime text-tatt-gray text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                                            >
+                                                Manage Benefits
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Breakdown Footer */}
+                        {activeTab === "OVERVIEW" && (
+                            <div className="col-span-12 lg:col-span-7 bg-surface rounded-2xl p-6 border border-border">
+                                <div className="flex justify-between items-center mb-6">
+                                    <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic underline decoration-tatt-lime/40">Regional Breakdown</span>
+                                    <button className="text-tatt-lime text-[10px] font-black uppercase tracking-widest hover:underline">Full Analytics</button>
+                                </div>
+                            <div className="space-y-6">
+                                {data.chapters.length > 0 ? data.chapters.slice(0, 5).map((chapter: any, i: number) => {
+                                    const maxVal = Math.max(...data.chapters.map((c: any) => parseInt(c.memberCount) || 1), 10);
+                                    return (
+                                        <div key={chapter.id} className="flex items-center justify-between group">
+                                            <span className="text-xs font-bold w-32 truncate">{chapter.name}</span>
+                                            <div className="flex items-center space-x-4 flex-1 mx-6">
+                                                <div className="flex-1 bg-background h-1.5 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="bg-tatt-lime h-full relative group-hover:brightness-110 transition-all duration-1000" 
+                                                        style={{ width: `${((parseInt(chapter.memberCount) || 0) / maxVal) * 100}%` }}
+                                                    >
+                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 animate-pulse"></div>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-black text-foreground w-12 text-right tracking-tighter">{(parseInt(chapter.memberCount) || 0).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : (
+                                    <div className="p-10 text-center text-tatt-gray italic uppercase text-[10px] font-bold tracking-widest opacity-30">
+                                        No regional data localized
+                                    </div>
+                                )}
                             </div>
                         </div>
+                        )}
 
-                        <div className="flex items-center gap-4 pt-4">
-                            <button 
-                                onClick={handleUpdatePlan}
-                                disabled={isUpdatingPlan}
-                                className="flex-1 bg-tatt-lime text-tatt-black py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 flex items-center justify-center gap-2"
-                            >
-                                {isUpdatingPlan ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />} 
-                                Save
-                            </button>
-                            <button 
-                                onClick={() => setEditingPlan(null)}
-                                className="flex-1 bg-background text-tatt-gray py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] border border-border hover:bg-surface transition-all"
-                            >
-                                Cancel
-                            </button>
-                        </div>
+                        {/* Live Promotions */}
+                        {["OVERVIEW", "DISCOUNTS"].includes(activeTab) && (
+                            <>
+                                {activeTab === "DISCOUNTS" && (
+                                    <div className="col-span-12 lg:col-span-5 bg-surface rounded-2xl p-6 border border-border sticky top-6">
+                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Launch Global Campaign</span>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Campaign Alias</label>
+                                                <input 
+                                                    value={promoForm.name}
+                                                    onChange={(e) => setPromoForm({...promoForm, name: e.target.value})}
+                                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-tatt-lime outline-none" placeholder="e.g. SUMMER_SALE_15" 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Discount Scale (%)</label>
+                                                <input 
+                                                    value={promoForm.value}
+                                                    onChange={(e) => setPromoForm({...promoForm, value: e.target.value})}
+                                                    type="number" className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-tatt-lime outline-none" placeholder="15" 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Valid Until</label>
+                                                <input 
+                                                    value={promoForm.validUntil}
+                                                    onChange={(e) => setPromoForm({...promoForm, validUntil: e.target.value})}
+                                                    type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={handleApplyCampaign}
+                                                disabled={isCreatingPromo || !promoForm.name || !promoForm.value}
+                                                className="w-full mt-4 py-3 bg-tatt-lime text-tatt-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:brightness-105 transition-all shadow-lg active:scale-95 disabled:opacity-50 flex justify-center"
+                                            >
+                                                {isCreatingPromo ? <Loader2 className="animate-spin size-4" /> : 'Deploy Campaign'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div className={`col-span-12 ${activeTab === "DISCOUNTS" ? "lg:col-span-7" : "lg:col-span-5"}`}>
+                                    <div className="bg-surface rounded-2xl p-6 border border-border mb-6">
+                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Tier-Specific Deductions</span>
+                                        <div className="space-y-3">
+                                            {data.tiers.filter((t: any) => t.yearlyDiscountPercent || t.eventDiscountPercent).map((tier: any) => (
+                                                <div key={tier.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-background border border-border rounded-xl">
+                                                    <div className="mb-3 sm:mb-0">
+                                                        <div className="text-[11px] font-black text-foreground tracking-widest uppercase">{tier.name}</div>
+                                                        <div className="text-[9px] text-tatt-gray font-bold uppercase tracking-tighter mt-0.5">Assigned Discounts</div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {tier.yearlyDiscountPercent > 0 && (
+                                                            <span className="bg-tatt-lime/10 text-tatt-lime px-2.5 py-1 rounded text-[9px] font-black tracking-widest uppercase">
+                                                                {tier.yearlyDiscountPercent}% Annual Off
+                                                            </span>
+                                                        )}
+                                                        {tier.eventDiscountPercent > 0 && (
+                                                            <span className="bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded text-[9px] font-black tracking-widest uppercase">
+                                                                {tier.eventDiscountPercent}% Event Off
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {data.tiers.filter((t: any) => t.yearlyDiscountPercent || t.eventDiscountPercent).length === 0 && (
+                                                <div className="p-4 text-center bg-background rounded-xl border border-dashed border-border flex flex-col items-center justify-center">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">No plan-specific discounts active</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-surface rounded-2xl p-6 border border-border">
+                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Live Global Promotions</span>
+                                        <div className="space-y-3 mb-6">
+                                            {data.discounts.map((discount: any) => (
+                                                <div key={discount.id} className="flex items-center justify-between p-4 bg-background border border-border rounded-xl group hover:border-tatt-lime transition-all">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="p-2 bg-tatt-lime/10 rounded-lg text-tatt-lime">
+                                                            <Ticket size={16} />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[11px] font-black text-foreground tracking-widest uppercase">{discount.code}</div>
+                                                            <div className="text-[9px] text-tatt-gray font-bold uppercase tracking-tighter mt-0.5">
+                                                                {discount.discountType === 'percentage' ? `${discount.value}% OFF` : `$${(discount.value/100).toFixed(2)} OFF`} • {discount.usageCount || 0} uses
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button className="text-tatt-gray hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {data.discounts.length === 0 ? (
+                                                <div className="p-8 mt-2 text-center bg-background rounded-xl border border-dashed border-border flex flex-col items-center justify-center gap-4">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">No global campaigns active</p>
+                                                    {activeTab !== "DISCOUNTS" && (
+                                                        <button 
+                                                            onClick={() => setActiveTab("DISCOUNTS")}
+                                                            className="px-6 py-2 bg-tatt-lime text-tatt-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:brightness-105 transition-all shadow-sm active:scale-95"
+                                                        >
+                                                            Create Promotion
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                activeTab === "OVERVIEW" && (
+                                                    <button 
+                                                        onClick={() => setActiveTab("DISCOUNTS")}
+                                                        className="w-full py-3 bg-tatt-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-tatt-lime hover:text-tatt-black transition-all shadow-lg active:scale-95 mt-4"
+                                                    >
+                                                        Manage Promotions
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                        </>
+                    )}
                     </div>
-                </div>
-            )}
+                )}
+
+                {activeTab === "MEMBERS" && (
+                    <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                         <div className="p-6 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface/50">
+                            <div className="relative w-full md:w-80">
+                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
+                                <input
+                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-xs focus:ring-2 focus:ring-tatt-lime outline-none transition-all"
+                                    placeholder="Search by name or email..."
+                                    value={filters.search}
+                                    onChange={(e) => handleFilterChange("search", e.target.value)}
+                                />
+                            </div>
+                            <div className="flex gap-4 w-full md:w-auto overflow-x-auto pb-1">
+                                <FilterSelect 
+                                    value={filters.tier} 
+                                    onChange={(v) => handleFilterChange("tier", v)}
+                                    options={[
+                                        { label: "All Tiers", value: "" },
+                                        { label: "FREE", value: "FREE" },
+                                        { label: "UBUNTU", value: "UBUNTU" },
+                                        { label: "IMANI", value: "IMANI" },
+                                        { label: "KIONGOZI", value: "KIONGOZI" },
+                                    ]}
+                                />
+                                <FilterSelect 
+                                    value={filters.chapterId} 
+                                    onChange={(v) => handleFilterChange("chapterId", v)}
+                                    options={[
+                                        { label: "All Chapters", value: "" },
+                                        ...data.chapters.map((c: any) => ({ label: c.name, value: c.id }))
+                                    ]}
+                                />
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-background/50">
+                                    <tr>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Member Identity</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Active Tier</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Region</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Cycle</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Sync Status</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray text-right">Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {data.subscribers.map((member: any) => (
+                                        <tr key={member.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="size-10 rounded-xl bg-tatt-black text-tatt-lime flex items-center justify-center font-black text-xs border border-white/5">
+                                                        {(member.firstName?.[0] || '')}{(member.lastName?.[0] || '') || '??'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[13px] font-black text-foreground leading-none">{member.firstName} {member.lastName}</p>
+                                                        <p className="text-[10px] text-tatt-gray font-bold mt-1 tracking-tighter">{member.email}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-background border ${
+                                                    member.communityTier === 'KIONGOZI' ? 'text-tatt-lime border-tatt-lime shadow-sm shadow-tatt-lime/10' : 'text-tatt-gray border-border'
+                                                }`}>
+                                                    {member.communityTier}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-[10px] font-bold text-tatt-gray uppercase tracking-widest">{member.chapter?.name || "Global"}</td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-foreground uppercase tracking-widest">{member.billingCycle || "FREE"}</span>
+                                                    <span className="text-[8px] text-tatt-gray font-bold uppercase mt-1">Next: {member.subscriptionExpiresAt ? new Date(member.subscriptionExpiresAt).toLocaleDateString() : 'Infinite'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-1.5 text-[9px] font-black text-green-500 uppercase tracking-widest">
+                                                    <div className="size-1.5 rounded-full bg-green-500"></div>
+                                                    Connected
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <button className="text-tatt-gray hover:text-foreground">
+                                                    <MoreVertical size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Pagination */}
+                        {data.pagination.totalPages > 1 && (
+                            <div className="p-6 border-t border-border flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray italic">Batch Page {data.pagination.page} / {data.pagination.totalPages}</span>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => handleFilterChange("page", filters.page - 1)}
+                                        disabled={filters.page === 1}
+                                        className="p-2 border border-border rounded-lg hover:bg-background disabled:opacity-30"
+                                    >
+                                        <ChevronLeft size={14} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleFilterChange("page", filters.page + 1)}
+                                        disabled={filters.page === data.pagination.totalPages}
+                                        className="p-2 border border-border rounded-lg hover:bg-background disabled:opacity-30"
+                                    >
+                                        <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Spacing for layout */}
+            <div className="h-12"></div>
         </div>
+    );
+}
+
+function StatCard({ label, value, change, isPositive, onClick }: { label: string, value: string | number, change: string, isPositive: boolean, onClick?: () => void }) {
+    return (
+        <div 
+            onClick={onClick}
+            className={`bg-surface p-6 rounded-[2rem] border border-border shadow-sm group hover:border-tatt-lime transition-all ${onClick ? 'cursor-pointer active:scale-95' : ''}`}
+        >
+            <div className="text-[10px] font-black text-tatt-gray uppercase tracking-[0.2em] mb-3 group-hover:text-foreground transition-colors">{label}</div>
+            <div className="flex items-baseline space-x-3">
+                <span className="text-3xl font-black tracking-tighter italic">{typeof value === 'number' ? value.toLocaleString() : value}</span>
+                <div className={`flex items-center gap-0.5 text-[10px] font-black italic tracking-tighter ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                    {isPositive ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowUpRight className="rotate-90" size={10} strokeWidth={3} />}
+                    {change}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FilterSelect({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: {label: string, value: string}[] }) {
+    return (
+        <select 
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="bg-background border border-border rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-tatt-lime cursor-pointer whitespace-nowrap"
+        >
+            {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+        </select>
     );
 }

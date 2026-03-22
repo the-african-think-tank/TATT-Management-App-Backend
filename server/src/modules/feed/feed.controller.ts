@@ -112,6 +112,12 @@ export class FeedController {
         return this.feedService.getActiveCuration();
     }
 
+    @ApiOperation({ summary: 'Get available feed topics' })
+    @Get('topics')
+    async getTopics() {
+        return this.feedService.getTopics();
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     //  FEED — single post
     // ═══════════════════════════════════════════════════════════════════════════
