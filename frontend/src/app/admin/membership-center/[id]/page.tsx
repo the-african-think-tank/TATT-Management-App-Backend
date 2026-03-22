@@ -296,8 +296,11 @@ export default function EditMembershipPlanPage() {
                                             checked={control.enabled} 
                                             onChange={(e) => {
                                                 const newCtrls = [...planData.accessControls];
-                                                newCtrls[i].enabled = e.target.checked;
-                                                setPlanData({ ...planData, accessControls: newCtrls });
+                                                const ctrl = newCtrls[i];
+                                                if (ctrl) {
+                                                    ctrl.enabled = e.target.checked;
+                                                    setPlanData({ ...planData, accessControls: newCtrls });
+                                                }
                                             }}
                                             className="mt-1 w-4 h-4 rounded border-border text-tatt-lime focus:ring-tatt-lime bg-surface accent-tatt-lime cursor-pointer" 
                                             type="checkbox" 
@@ -307,8 +310,11 @@ export default function EditMembershipPlanPage() {
                                                 value={control.title}
                                                 onChange={(e) => {
                                                     const newCtrls = [...planData.accessControls];
-                                                    newCtrls[i].title = e.target.value;
-                                                    setPlanData({ ...planData, accessControls: newCtrls });
+                                                    const ctrl = newCtrls[i];
+                                                    if (ctrl) {
+                                                        ctrl.title = e.target.value;
+                                                        setPlanData({ ...planData, accessControls: newCtrls });
+                                                    }
                                                 }}
                                                 className="w-full bg-transparent border-none p-0 text-sm font-black text-foreground focus:ring-0 placeholder:text-tatt-gray/40 outline-none"
                                                 placeholder="Control Title"
@@ -317,8 +323,11 @@ export default function EditMembershipPlanPage() {
                                                 value={control.subtitle}
                                                 onChange={(e) => {
                                                     const newCtrls = [...planData.accessControls];
-                                                    newCtrls[i].subtitle = e.target.value;
-                                                    setPlanData({ ...planData, accessControls: newCtrls });
+                                                    const ctrl = newCtrls[i];
+                                                    if (ctrl) {
+                                                        ctrl.subtitle = e.target.value;
+                                                        setPlanData({ ...planData, accessControls: newCtrls });
+                                                    }
                                                 }}
                                                 className="w-full bg-transparent border-none p-0 text-[10px] uppercase tracking-widest text-tatt-gray font-bold mt-1 focus:ring-0 placeholder:text-tatt-gray/30 outline-none"
                                                 placeholder="Target Description"
