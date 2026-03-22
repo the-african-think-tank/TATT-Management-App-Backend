@@ -270,7 +270,7 @@ function CompleteRegistrationForm() {
                 <div className="pt-4">
                     <button
                         type="submit"
-                        disabled={loading || !token || hibp.status === "checking" || (password && hibp.status === "pwned")}
+                        disabled={loading || !token || hibp.status === "checking" || (!!password && hibp.status === "pwned")}
                         className="w-full h-16 bg-tatt-lime text-tatt-black font-black rounded-2xl shadow-xl shadow-tatt-lime/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-4 uppercase tracking-[0.2em] text-xs disabled:opacity-50"
                     >
                         {loading ? <Loader2 className="animate-spin" /> : (
@@ -280,7 +280,7 @@ function CompleteRegistrationForm() {
                             </>
                         )}
                     </button>
-                    {(password && hibp.status === "pwned") && (
+                    {(!!password && hibp.status === "pwned") && (
                       <p className="text-center text-[10px] font-bold text-red-500 mt-4 uppercase tracking-wider animate-pulse">
                         Security Notice: Change password to proceed
                       </p>

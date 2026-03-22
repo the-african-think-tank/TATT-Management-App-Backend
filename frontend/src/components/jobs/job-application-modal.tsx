@@ -173,7 +173,7 @@ export function JobApplicationModal({
                   {job.companyLogoUrl ? (
                     <img src={job.companyLogoUrl} alt={employerName} className="w-full h-full rounded-2xl object-cover" />
                   ) : (
-                    employerName[0].toUpperCase()
+                    employerName.charAt(0).toUpperCase()
                   )}
                 </div>
                 <div>
@@ -231,7 +231,7 @@ export function JobApplicationModal({
                   </h4>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div className="size-14 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime font-black border border-tatt-lime/20 shrink-0 text-xl">
-                      {employerName[0].toUpperCase()}
+                      {employerName.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h5 className="font-extrabold text-foreground text-lg">{employerName}</h5>
