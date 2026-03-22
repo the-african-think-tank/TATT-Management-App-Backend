@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from '../entities/user.entity';
-import { SystemRole, CommunityTier } from '../enums/roles.enum';
+import { SystemRole, CommunityTier, AccountFlags } from '../enums/roles.enum';
 import { Op } from 'sequelize';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { ProfessionalInterest } from '../../interests/entities/interest.entity';
@@ -9,6 +9,7 @@ import { UpdateProfileDto } from './dto/users.dto';
 
 @Injectable()
 export class UsersService {
+    private readonly logger = new Logger(UsersService.name);
     constructor(
         @InjectModel(User) private userRepository: typeof User,
     ) { }
@@ -62,7 +63,7 @@ export class UsersService {
         const user = await this.userRepository.findByPk(userId, {
             include: [
                 { model: Chapter, attributes: ['id', 'name', 'code'] },
-                { model: ProfessionalInterest, attributes: ['id', 'name'], through: { attributes: [] } }
+                { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
             ],
             attributes: { exclude: ['password', 'twoFactorSecret', 'pendingTotpSecret'] }
         });
@@ -92,6 +93,36 @@ export class UsersService {
 
         if (interests) {
             await (user as any).setInterests(interests);
+        }
+
+        // --- Profile Completion Checker ---
+        // Check if mandatory fields are present to mark profile as complete
+        const updatedUser = await this.userRepository.findByPk(userId, {
+            include: [{ model: ProfessionalInterest, as: 'interests', attributes: ['id'] }]
+        });
+
+        if (updatedUser) {
+            const hasBasicInfo = !!(updatedUser.firstName && updatedUser.lastName);
+            const hasProfessionalInfo = !!(updatedUser.professionTitle && updatedUser.industry);
+            const hasBio = !!(updatedUser.professionalHighlight && updatedUser.professionalHighlight.length > 2);
+            const hasInterests = !!(updatedUser.interests && updatedUser.interests.length > 0);
+
+            // Logic: Basic + Professional + (Bio OR Interests) is enough to consider "setup"
+            if (hasBasicInfo && hasProfessionalInfo && (hasBio || hasInterests)) {
+                if (!updatedUser.flags.includes(AccountFlags.PROFILE_COMPLETED)) {
+                    const newFlags = [...updatedUser.flags, AccountFlags.PROFILE_COMPLETED];
+                    updatedUser.set('flags', newFlags);
+                    await updatedUser.save();
+                    this.logger.log(`User ${userId} marked as PROFILE_COMPLETED`);
+                }
+            } else {
+                // Remove flag if they clear mandatory fields
+                if (updatedUser.flags.includes(AccountFlags.PROFILE_COMPLETED)) {
+                    const newFlags = updatedUser.flags.filter(f => f !== AccountFlags.PROFILE_COMPLETED);
+                    updatedUser.set('flags', newFlags);
+                    await updatedUser.save();
+                }
+            }
         }
 
         return this.getProfile(userId);

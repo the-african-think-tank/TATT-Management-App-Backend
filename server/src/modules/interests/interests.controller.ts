@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { InterestsService } from './interests.service';
 import { CreateInterestDto } from './dto/interests.dto';
@@ -38,5 +38,23 @@ export class InterestsController {
     @HttpCode(HttpStatus.OK)
     async findAll() {
         return this.interestsService.getAllInterests();
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update a professional interest (Admin only)' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Patch(':id')
+    async update(@Param('id') id: string, @Body() dto: CreateInterestDto) {
+        return this.interestsService.updateInterest(id, dto);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a professional interest (Admin only)' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Delete(':id')
+    async remove(@Param('id') id: string) {
+        return this.interestsService.deleteInterest(id);
     }
 }

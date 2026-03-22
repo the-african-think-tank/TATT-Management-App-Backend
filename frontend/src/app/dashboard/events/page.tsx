@@ -33,6 +33,7 @@ interface Event {
     imageUrl?: string;
     isForAllMembers: boolean;
     basePrice: number;
+    targetMembershipTiers?: string[];
     locations: Array<{
         chapterId: string;
         address: string;
@@ -170,9 +171,14 @@ export default function EventsPage() {
                                             {event.type}
                                         </span>
                                         {!event.isForAllMembers && (
-                                            <span className="bg-black/60 backdrop-blur-md text-tatt-lime px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-tatt-lime/30">
-                                                <Lock className="size-3" /> PRIVATE
+                                            <span className="bg-black/60 backdrop-blur-md text-amber-500 px-2.5 py-1 rounded-lg text-[9px] font-black flex items-center gap-1.5 border border-amber-500/30 uppercase tracking-widest">
+                                                <Lock className="size-3" /> Restricted Node
                                             </span>
+                                        )}
+                                        {!event.isForAllMembers && event.targetMembershipTiers && !event.targetMembershipTiers.includes(user?.communityTier || "") && (
+                                            <div className="bg-red-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-black flex items-center gap-1.5 uppercase tracking-widest shadow-lg">
+                                                <Lock className="size-3" /> Tier Locked
+                                            </div>
                                         )}
                                     </div>
 
@@ -215,14 +221,12 @@ export default function EventsPage() {
                                         <div>
                                             {isFree ? (
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black text-tatt-lime uppercase tracking-widest">Included for you</span>
-                                                    <span className="text-xl font-black text-foreground">FREE PASS</span>
+                                                    <span className="text-[10px] font-black text-tatt-lime uppercase tracking-widest leading-none mb-1">Full Access</span>
+                                                    <span className="text-xl font-black text-foreground italic uppercase italic tracking-tighter">FREE PASS</span>
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col">
-                                                    {hasDiscount && (
-                                                        <span className="text-[10px] font-black text-tatt-lime uppercase tracking-widest">Your Member Price</span>
-                                                    )}
+                                                    <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Entry Ticket</span>
                                                     <div className="flex items-baseline gap-2">
                                                         <span className="text-2xl font-black text-foreground">${Number(price).toFixed(2)}</span>
                                                         {hasDiscount && (
@@ -234,7 +238,7 @@ export default function EventsPage() {
                                         </div>
                                         <Link
                                             href={`/dashboard/events/${event.id}`}
-                                            className="bg-tatt-black text-white   size-12 rounded-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all shadow-lg"
+                                            className={`size-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isFree ? 'bg-tatt-black text-white hover:bg-tatt-lime hover:text-tatt-black' : 'bg-tatt-lime text-tatt-black hover:scale-110 active:scale-95'}`}
                                         >
                                             <ArrowRight className="size-5" />
                                         </Link>

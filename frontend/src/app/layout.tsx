@@ -33,6 +33,8 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from 'react-hot-toast';
+import QueryProvider from "@/context/query-provider";
+import { CartProvider } from "@/context/cart-context";
 
 export default function RootLayout({
   children,
@@ -45,9 +47,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Toaster position="top-right" />
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

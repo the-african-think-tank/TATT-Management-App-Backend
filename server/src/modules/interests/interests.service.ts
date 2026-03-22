@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, OnApplicationBootstrap, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { ProfessionalInterest } from './entities/interest.entity';
 import { CreateInterestDto } from './dto/interests.dto';
@@ -42,5 +42,19 @@ export class InterestsService implements OnApplicationBootstrap {
 
     async getAllInterests() {
         return this.interestRepository.findAll({ order: [['name', 'ASC']] });
+    }
+
+    async updateInterest(id: string, dto: CreateInterestDto) {
+        const interest = await this.interestRepository.findByPk(id);
+        if (!interest) throw new NotFoundException('Interest not found');
+        await interest.update(dto);
+        return { message: 'Interest updated', data: interest };
+    }
+
+    async deleteInterest(id: string) {
+        const interest = await this.interestRepository.findByPk(id);
+        if (!interest) throw new NotFoundException('Interest not found');
+        await interest.destroy();
+        return { message: 'Interest deleted' };
     }
 }

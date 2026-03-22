@@ -20,7 +20,9 @@ import {
     Menu,
     X,
     Trello,
-    Zap
+    Zap,
+    Banknote,
+    DollarSign
 } from "lucide-react";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
@@ -49,6 +51,14 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
     const bottomLinks = [
         { name: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
     ];
+
+    const adminLinks = [
+        { name: "Revenue Center", href: "/admin/revenue", icon: Banknote, role: "SUPERADMIN" },
+        { name: "Jobs Center", href: "/admin/jobs", icon: Briefcase, role: "ADMIN" },
+    ];
+
+    const isAdmin = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN" || user?.role === "SUPERADMIN" || user?.role === "ADMIN";
+    const isSuperAdmin = user?.systemRole === "SUPERADMIN" || user?.role === "SUPERADMIN";
 
     return (
         <>
@@ -138,6 +148,34 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
                             );
                         })}
                     </div>
+
+                    {isAdmin && (
+                        <div className="pt-4 mt-4 border-t border-border space-y-1">
+                            <p className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray opacity-50">Admin Control</p>
+                            {adminLinks.map((link) => {
+                                if (link.role === "SUPERADMIN" && !isSuperAdmin) return null;
+                                
+                                const Icon = link.icon;
+                                const isActive = pathname === link.href;
+                                return (
+                                    <Link
+                                        key={link.name}
+                                        href={link.href}
+                                        onClick={closeSidebar}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm
+                                            ${isActive
+                                                ? "bg-tatt-lime/10 border-l-4 border-tatt-lime text-tatt-lime font-semibold"
+                                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                                            }
+                                        `}
+                                    >
+                                        <Icon className="h-5 w-5 shrink-0" />
+                                        <span>{link.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-4 border-t border-border">

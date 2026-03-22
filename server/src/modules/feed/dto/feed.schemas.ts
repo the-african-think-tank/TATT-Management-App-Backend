@@ -125,6 +125,15 @@ export class PostCardSchema {
 
     @ApiProperty({ example: '2026-02-22T19:30:00.000Z', format: 'date-time' })
     updatedAt: string;
+
+    @ApiPropertyOptional({ example: 'https://careers.google.com/jobs/123' })
+    jobLink?: string;
+
+    @ApiPropertyOptional({ example: 'Nairobi, Kenya' })
+    jobLocation?: string;
+
+    @ApiPropertyOptional({ example: 'Google Africa' })
+    jobCompany?: string;
 }
 
 // ─── Feed paginated response wrapper ─────────────────────────────────────────

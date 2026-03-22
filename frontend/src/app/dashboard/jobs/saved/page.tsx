@@ -4,10 +4,12 @@ import { useAuth } from "@/context/auth-context";
 import api from "@/services/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, ArrowLeft, Bookmark } from "lucide-react";
+import { Loader2, ArrowLeft, Bookmark, Lock } from "lucide-react";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobApplicationModal } from "@/components/jobs/job-application-modal";
 import type { JobListing } from "@/types/jobs";
+
+const PAID_TIERS = ["UBUNTU", "IMANI", "KIONGOZI"];
 
 export default function SavedJobsPage() {
   const { user } = useAuth();
@@ -16,8 +18,10 @@ export default function SavedJobsPage() {
   const [loading, setLoading] = useState(true);
   const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
 
+  const isPaid = PAID_TIERS.includes(user?.communityTier ?? "");
+
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || !isPaid) {
       setLoading(false);
       return;
     }
@@ -45,6 +49,22 @@ export default function SavedJobsPage() {
       return next;
     });
   };
+
+  // Gate for non-paid users
+  if (!loading && !isPaid) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-8">
+        <div className="size-16 rounded-2xl bg-tatt-lime/10 border border-tatt-lime/20 flex items-center justify-center mb-6">
+          <Lock className="size-8 text-tatt-lime" />
+        </div>
+        <h1 className="text-2xl font-black text-foreground mb-2">Members Only</h1>
+        <p className="text-tatt-gray text-sm max-w-sm mb-6">Saved roles are available to paid TATT members. Upgrade to access the full Job Board.</p>
+        <Link href="/dashboard/upgrade" className="px-6 py-3 bg-tatt-lime text-black font-black text-xs uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-lg shadow-tatt-lime/20">
+          Upgrade Now
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">

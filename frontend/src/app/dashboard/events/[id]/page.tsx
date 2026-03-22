@@ -15,6 +15,8 @@ import {
     Loader2,
     CheckCircle,
     ExternalLink,
+    Lock,
+    Trophy
 } from "lucide-react";
 import type { EventItem } from "@/types/events";
 
@@ -64,6 +66,8 @@ export default function EventDetailPage() {
     const [registering, setRegistering] = useState(false);
     const [registrationDone, setRegistrationDone] = useState(false);
     const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+    const [attendees, setAttendees] = useState<any[]>([]);
+    const [loadingAttendees, setLoadingAttendees] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -83,7 +87,21 @@ export default function EventDetailPage() {
                 setLoading(false);
             }
         };
+
+        const fetchAttendees = async () => {
+            setLoadingAttendees(true);
+            try {
+                const { data } = await api.get(`/events/${id}/attendees`);
+                setAttendees(data || []);
+            } catch (err) {
+                console.error("Failed to load attendees", err);
+            } finally {
+                setLoadingAttendees(false);
+            }
+        };
+
         fetchEvent();
+        fetchAttendees();
     }, [id]);
 
     const handleRegister = async (isBusinessRegistration = false) => {
@@ -137,6 +155,29 @@ export default function EventDetailPage() {
     const firstLocation = event.locations?.[0];
     const address = firstLocation?.address ?? "Virtual event";
     const isVirtual = address.toLowerCase().includes("zoom") || address.toLowerCase().includes("virtual");
+
+    // Price calculation logic
+    const calculatePrice = () => {
+        if (!event) return 0;
+        const bPrice = Number(event.basePrice || 0);
+        if (!user) return bPrice;
+
+        if (user.communityTier === "KIONGOZI") return 0;
+
+        if (user.communityTier === "IMANI") {
+            if (event.type === "WORKSHOP") return 0;
+            if (event.type === "MIXER") return bPrice * 0.75;
+        }
+
+        if (user.communityTier === "UBUNTU") {
+            return bPrice * 0.85;
+        }
+
+        return bPrice;
+    };
+
+    const price = calculatePrice();
+    const isEligible = event.isForAllMembers || (event.targetMembershipTiers && event.targetMembershipTiers.includes(user?.communityTier || ""));
 
     return (
         <div className="min-h-screen w-full bg-background text-foreground">
@@ -206,6 +247,49 @@ export default function EventDetailPage() {
                                 ) : null}
                             </dl>
                         </div>
+
+                        {/* Who's Going Section */}
+                        <div className="bg-surface rounded-xl border border-border p-6 sm:p-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-tatt-lime flex items-center gap-2">
+                                    <Users className="size-4" /> Who's Joining
+                                </h3>
+                                <span className="text-xs font-bold text-tatt-gray">
+                                    {attendees.length} Thinking Partners
+                                </span>
+                            </div>
+
+                            {loadingAttendees ? (
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="size-6 animate-spin text-tatt-lime" />
+                                </div>
+                            ) : attendees.length === 0 ? (
+                                <div className="text-center py-8 bg-background/50 rounded-2xl border border-dashed border-border">
+                                    <p className="text-xs text-tatt-gray italic font-medium">Be the first to join this gathering!</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {attendees.map((reg) => (
+                                        <div key={reg.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-background transition-colors group">
+                                            <div className="size-10 rounded-full overflow-hidden border border-border shrink-0 group-hover:border-tatt-lime/50 transition-colors">
+                                                {reg.user.profilePicture ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={reg.user.profilePicture} alt={reg.user.firstName} className="size-full object-cover" />
+                                                ) : (
+                                                    <div className="size-full bg-tatt-lime/10 flex items-center justify-center text-tatt-lime text-[10px] font-black uppercase italic">
+                                                        {reg.user.firstName?.[0]}{reg.user.lastName?.[0]}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black text-foreground truncate">{reg.user.firstName} {reg.user.lastName}</p>
+                                                <p className="text-[8px] font-bold text-tatt-gray truncate uppercase tracking-tighter">{reg.user.professionTitle || "Member"}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="lg:col-span-1">
@@ -233,28 +317,64 @@ export default function EventDetailPage() {
                                     {error && (
                                         <p className="text-sm text-foreground font-medium mb-4">{error}</p>
                                     )}
-                                    <div className="space-y-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRegister(false)}
-                                            disabled={registering}
-                                            className="w-full min-h-[48px] py-3 bg-tatt-lime text-tatt-black font-bold rounded-lg hover:brightness-95 disabled:opacity-60 flex items-center justify-center gap-2 touch-manipulation"
-                                        >
-                                            {registering ? (
-                                                <Loader2 className="h-5 w-5 animate-spin" />
-                                            ) : null}
-                                            Register
-                                        </button>
-                                        {user?.communityTier === "KIONGOZI" ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRegister(true)}
-                                                disabled={registering}
-                                                className="w-full min-h-[48px] py-3 border-2 border-tatt-lime text-tatt-lime font-bold rounded-lg hover:bg-tatt-lime/10 disabled:opacity-60 flex items-center justify-center gap-2 touch-manipulation"
-                                            >
-                                                Register as Business
-                                            </button>
-                                        ) : null}
+                                    <div className="space-y-4">
+                                        {!isEligible ? (
+                                            <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center space-y-3">
+                                                <Lock className="size-10 text-red-500 mx-auto" />
+                                                <h3 className="text-sm font-black uppercase tracking-widest text-red-500">Tier Restriction</h3>
+                                                <p className="text-xs font-medium text-tatt-gray italic">
+                                                    This gathering is exclusive to {event.targetMembershipTiers?.join(", ")} members. Upgrade your tier to gain access.
+                                                </p>
+                                                <Link 
+                                                    href="/dashboard/upgrade"
+                                                    className="inline-block text-[10px] font-black uppercase tracking-[0.2em] text-tatt-lime hover:underline"
+                                                >
+                                                    View Upgrades
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-background/50 border border-border rounded-2xl p-6 space-y-6">
+                                                <div className="flex flex-col items-center text-center">
+                                                    <div className="size-16 rounded-full bg-tatt-lime/10 flex items-center justify-center text-tatt-lime mb-4">
+                                                        <Trophy size={32} />
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest mb-1">Your Entry Ticket</p>
+                                                    <h3 className="text-4xl font-black italic tracking-tighter text-foreground">
+                                                        {price === 0 ? "INCLUDED" : `$${price.toFixed(2)}`}
+                                                    </h3>
+                                                    {price < event.basePrice && (
+                                                        <p className="text-[10px] font-black text-tatt-lime uppercase tracking-widest mt-2 bg-tatt-lime/10 px-3 py-1 rounded-full border border-tatt-lime/20">
+                                                            {Math.round((1 - price/event.basePrice) * 100)}% Member Discount Applied
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRegister(false)}
+                                                    disabled={registering}
+                                                    className="w-full py-4 bg-tatt-lime text-tatt-black font-black uppercase tracking-[0.2em] text-[10px] rounded-xl hover:brightness-110 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 transition-all shadow-xl shadow-tatt-lime/20"
+                                                >
+                                                    {registering ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <CheckCircle className="h-4 w-4" />
+                                                    )}
+                                                    {price === 0 ? "Confirm Enrollment" : "Purchase Ticket"}
+                                                </button>
+
+                                                {user?.communityTier === "KIONGOZI" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRegister(true)}
+                                                        disabled={registering}
+                                                        className="w-full py-4 border-2 border-dashed border-border text-foreground font-black uppercase tracking-[0.2em] text-[10px] rounded-xl hover:bg-white/5 transition-all"
+                                                    >
+                                                        Register Business Entity
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </>
                             )}

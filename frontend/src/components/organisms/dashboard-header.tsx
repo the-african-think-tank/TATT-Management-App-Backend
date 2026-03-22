@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { Search, Bell, Menu, LogOut, User as UserIcon } from "lucide-react";
+import { Search, Bell, Menu, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { NotificationDropdown } from "./notification-dropdown";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
 export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
     const { user, logout } = useAuth();
+    const isAdmin = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN";
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +42,15 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
             </div>
 
             <div className="flex items-center gap-4 lg:gap-6">
+                {isAdmin && (
+                    <Link 
+                        href="/admin/settings" 
+                        className="p-2 hover:bg-black/5 rounded-lg text-tatt-gray hover:text-tatt-lime transition-all group"
+                        title="Platform Settings"
+                    >
+                        <Settings className="h-5 w-5 group-hover:rotate-45 transition-transform duration-300" />
+                    </Link>
+                )}
                 <NotificationDropdown />
                 <div className="relative" ref={dropdownRef}>
                     <div
@@ -69,13 +79,14 @@ export function DashboardHeader({ onMenuClick }: { onMenuClick: () => void }) {
                     {dropdownOpen && (
                         <div className="absolute right-0 mt-3 w-48 bg-white  rounded-lg shadow-xl border border-border py-2 z-50 animate-in fade-in slide-in-from-top-2">
                             <Link
-                                href="/dashboard/settings"
+                                href={`/dashboard/network/${user?.id}`}
                                 className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-black/5  transition-colors"
                                 onClick={() => setDropdownOpen(false)}
                             >
                                 <UserIcon className="h-4 w-4" />
-                                Go to Profile
+                                My Public Profile
                             </Link>
+
                             <button
                                 onClick={() => {
                                     setDropdownOpen(false);

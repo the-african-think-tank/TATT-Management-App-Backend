@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsInt, IsArray, IsUUID, IsDateString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
 import { ApplicationStatus } from '../entities/volunteer-application.entity';
 import { ActivityStatus } from '../entities/volunteer-activity.entity';
+import { VolunteerGrade, VolunteerStatus } from '../entities/volunteer-stat.entity';
 
 export class CreateVolunteerRoleDto {
     @ApiProperty({ example: 'Youth Mentor' })
@@ -137,4 +138,74 @@ export class CreateTrainingResourceDto {
     @ApiPropertyOptional({ example: ['https://s3.amazon.com/training.pdf'] })
     @IsArray() @IsString({ each: true }) @IsOptional()
     mediaUrls?: string[];
+}
+
+export class AddVolunteerFeedbackDto {
+    @ApiProperty({ example: 4 })
+    @IsInt() @IsNotEmpty()
+    rating: number;
+
+    @ApiProperty({ example: 'Great job!' })
+    @IsString() @IsNotEmpty()
+    comment: string;
+
+    @ApiPropertyOptional({ example: 'Food Drive' })
+    @IsString() @IsOptional()
+    eventLabel?: string;
+}
+
+export class UpdateVolunteerStatsDto {
+    @ApiPropertyOptional()
+    @IsOptional()
+    totalHours?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    impactPoints?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    eventsCompleted?: number;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    attendanceRate?: number;
+
+    @ApiPropertyOptional({ enum: VolunteerGrade })
+    @IsEnum(VolunteerGrade)
+    @IsOptional()
+    grade?: VolunteerGrade;
+
+    @ApiPropertyOptional({ enum: VolunteerStatus })
+    @IsEnum(VolunteerStatus)
+    @IsOptional()
+    status?: VolunteerStatus;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    certifications?: any[];
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    phone?: string;
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    languages?: string;
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    emergencyContactName?: string;
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    emergencyContactRelation?: string;
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    emergencyContactPhone?: string;
+
+    @ApiPropertyOptional()
+    @IsString() @IsOptional()
+    adminNotes?: string;
 }

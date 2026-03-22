@@ -14,7 +14,10 @@ import { Op } from 'sequelize';
 import Stripe from 'stripe';
 import { MailService } from '../../common/mail/mail.service';
 import { NotificationsService } from '../notifications/services/notifications.service';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { BroadcastsService } from '../notifications/services/broadcasts.service';
+import { BroadcastAudience } from '../notifications/entities/broadcast.entity';
 
 @Injectable()
 export class EventsService {
@@ -29,10 +32,12 @@ export class EventsService {
         @InjectModel(User) private userRepo: typeof User,
         private mailService: MailService,
         private notificationsService: NotificationsService,
-    ) {
-        this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-            apiVersion: '2025-01-27.acacia' as any,
-        });
+        private broadcastsService: BroadcastsService,
+        private settingsService: SystemSettingsService,
+    ) { }
+
+    private async getStripe() {
+        return this.settingsService.getStripeInstance();
     }
 
     async createEvent(admin: User, dto: CreateEventDto) {
@@ -76,42 +81,33 @@ export class EventsService {
     }
 
     private async notifyMembers(event: Event) {
-        const where: any = { isActive: true };
-        if (!event.isForAllMembers && event.targetMembershipTiers && event.targetMembershipTiers.length > 0) {
-            where.communityTier = { [Op.in]: event.targetMembershipTiers };
-        }
-
-        const users = await this.userRepo.findAll({
-            where,
-            attributes: ['id', 'email', 'firstName'],
-        });
-
         const dateStr = event.dateTime.toLocaleString();
+        const chapterIds = event.locations?.map(loc => loc.chapterId) || [];
 
-        // Notify in background
-        users.forEach(user => {
-            // Email
-            this.mailService.sendEventNotification(
-                user.email,
-                user.firstName,
-                event.title,
-                dateStr,
-                event.type,
-                event.id
-            ).catch(err => this.logger.error(`Failed to notify ${user.email} about event ${event.id}`, err.stack));
-
-            // In-app
-            this.notificationsService.create(
-                (user as any).id, // need to fetch id too
-                NotificationType.EVENT_REMINDER,
-                'New Community Event',
-                `A new ${event.type} "${event.title}" has been scheduled for ${dateStr}.`,
-                { eventId: event.id },
-                false // Email already sent above
-            ).catch(() => { });
-        });
-
-        this.logger.log(`Queued notifications for ${users.length} members for event: ${event.title}`);
+        try {
+            if (event.isForAllMembers || chapterIds.length === 0) {
+                await this.broadcastsService.createSystemBroadcast({
+                    title: `New Community Event: ${event.title}`,
+                    message: `A new ${event.type.toLowerCase()} "${event.title}" has been scheduled for ${dateStr}.`,
+                    audienceType: event.targetMembershipTiers?.length ? BroadcastAudience.TIER_SPECIFIC : BroadcastAudience.ALL,
+                    targetTier: event.targetMembershipTiers?.[0],
+                    type: NotificationType.EVENT_REMINDER
+                });
+            } else {
+                for (const chapterId of chapterIds) {
+                    await this.broadcastsService.createSystemBroadcast({
+                        title: `Local Chapter Event: ${event.title}`,
+                        message: `A new ${event.type.toLowerCase()} "${event.title}" has been scheduled in your chapter for ${dateStr}.`,
+                        audienceType: BroadcastAudience.CHAPTER_SPECIFIC,
+                        targetChapterId: chapterId,
+                        type: NotificationType.EVENT_REMINDER
+                    });
+                }
+            }
+            this.logger.log(`Automated broadcast(s) dispatched for event: ${event.title}`);
+        } catch (error) {
+            this.logger.error(`Failed to dispatch automated broadcasts for event ${event.id}: ${error.message}`);
+        }
     }
 
     async getEvents(viewer: User, upcoming?: boolean) {
@@ -190,7 +186,7 @@ export class EventsService {
         });
 
         if (amountToPay > 0) {
-            const session = await this.stripe.checkout.sessions.create({
+            const session = await (await this.getStripe()).checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [
                     {

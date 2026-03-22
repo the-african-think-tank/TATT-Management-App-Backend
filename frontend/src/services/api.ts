@@ -1,28 +1,34 @@
 import axios from 'axios';
+import { tokenStore } from './token-store';
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
     withCredentials: true,
+    timeout: 15000,
 });
 
-// Interceptor for JWT
+// ─── Request Interceptor ─────────────────────────────────────────────────────
+// Reads the token from the secure in-memory store (not localStorage).
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = tokenStore.get();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
 
-// Interceptor for handling expired tokens
+// ─── Response Interceptor ─────────────────────────────────────────────────────
+// Handles expired/invalid tokens globally. Clears the in-memory token and
+// redirects to the login page so users are never stuck in a broken state.
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            console.log("Token expired or unauthorized. Logging out...");
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/';
+            console.warn('[API] 401 Unauthorized – clearing session');
+            tokenStore.clear();
+            if (typeof window !== 'undefined') {
+                window.location.href = '/';
+            }
         }
         return Promise.reject(error);
     }

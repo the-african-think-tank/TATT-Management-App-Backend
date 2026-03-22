@@ -6,6 +6,7 @@ import { User } from '../../iam/entities/user.entity';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { PostLike } from './post-like.entity';
 import { PostComment } from './post-comment.entity';
+import { FeedTopic } from './feed-topic.entity';
 
 export enum ContentFormat {
     PLAIN = 'PLAIN',    // Raw plain text
@@ -18,6 +19,7 @@ export enum PostType {
     RESOURCE = 'RESOURCE',    // Premium knowledge resource (articles, guides)
     EVENT = 'EVENT',       // Upcoming chapter or global event
     ANNOUNCEMENT = 'ANNOUNCEMENT', // Org-wide announcement (admin-authored)
+    JOB = 'JOB',                   // Job listing (member-authored)
 }
 
 import { PostUpvote } from './post-upvote.entity';
@@ -111,10 +113,34 @@ export class Post extends Model<Post> {
     @BelongsTo(() => Chapter, 'chapterId')
     chapter: Chapter;
 
+    // ─── JOB POST METADATA ────────────────────────────────────────────────────────
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobLink?: string;
+
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobLocation?: string;
+
+    @Column({ type: DataType.STRING, allowNull: true })
+    jobCompany?: string;
+
+    // ─── EVENT POST METADATA ─────────────────────────────────────────────────────
+    @Column({ type: DataType.STRING, allowNull: true })
+    eventType?: string; // e.g. WEBINAR, WORKSHOP, CONFERENCE, IN_PERSON
+
+    @Column({ type: DataType.DATE, allowNull: true })
+    eventDate?: Date;
+
+    @Column({ type: DataType.STRING, allowNull: true })
+    eventUrl?: string;
+
     // ─── PUBLISH STATE ────────────────────────────────────────────────────────
     @Default(true)
     @Column(DataType.BOOLEAN)
     isPublished: boolean;
+
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    isShadowBanned: boolean;
 
     // ─── REPOSTING ────────────────────────────────────────────────────────────
     @ForeignKey(() => Post)
@@ -123,6 +149,14 @@ export class Post extends Model<Post> {
 
     @BelongsTo(() => Post, 'parentPostId')
     parentPost?: Post;
+
+    // ─── TOPIC ────────────────────────────────────────────────────────────
+    @ForeignKey(() => FeedTopic)
+    @Column({ type: DataType.UUID, allowNull: true })
+    topicId?: string;
+
+    @BelongsTo(() => FeedTopic, 'topicId')
+    topic?: FeedTopic;
 
     // ─── ASSOCIATIONS ─────────────────────────────────────────────────────────
     @HasMany(() => PostLike, 'postId')

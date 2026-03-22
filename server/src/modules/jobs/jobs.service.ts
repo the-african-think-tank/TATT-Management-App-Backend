@@ -4,8 +4,11 @@ import { Op, WhereOptions } from 'sequelize';
 import { JobListing } from './entities/job-listing.entity';
 import { JobApplication } from './entities/job-application.entity';
 import { SavedJob } from './entities/saved-job.entity';
+import { JobAlert } from './entities/job-alert.entity';
 import { User } from '../iam/entities/user.entity';
 import { ApplyJobDto } from './dto/jobs.dto';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 export type MarketInsights = {
     topCategory: { name: string; growth: string } | null;
@@ -19,7 +22,9 @@ export class JobsService {
         @InjectModel(JobListing) private jobRepo: typeof JobListing,
         @InjectModel(JobApplication) private applicationRepo: typeof JobApplication,
         @InjectModel(SavedJob) private savedRepo: typeof SavedJob,
+        @InjectModel(JobAlert) private alertRepo: typeof JobAlert,
         @InjectModel(User) private userRepo: typeof User,
+        private readonly notificationsService: NotificationsService,
     ) {}
 
     async getListings(params: { category?: string; type?: string; location?: string; search?: string; page?: number; limit?: number }) {
@@ -43,6 +48,13 @@ export class JobsService {
         const offset = (page - 1) * limit;
         const { count, rows } = await this.jobRepo.findAndCountAll({
             where,
+            include: [
+                {
+                    model: User,
+                    as: 'postedBy',
+                    attributes: ['id', 'firstName', 'lastName', 'email', 'communityTier', 'businessName', 'businessRole', 'businessProfileLink', 'industry'],
+                },
+            ],
             order: [['createdAt', 'DESC']],
             limit,
             offset,
@@ -51,7 +63,15 @@ export class JobsService {
     }
 
     async getListingById(id: string) {
-        const job = await this.jobRepo.findByPk(id);
+        const job = await this.jobRepo.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'postedBy',
+                    attributes: ['id', 'firstName', 'lastName', 'email', 'communityTier', 'businessName', 'businessRole', 'businessProfileLink', 'industry'],
+                },
+            ],
+        });
         if (!job) throw new NotFoundException('Job not found');
         return job;
     }
@@ -123,4 +143,200 @@ export class JobsService {
             topEmployers: topEmployers.length > 0 ? topEmployers : [{ name: 'EcoTech', initials: 'ET' }, { name: 'Nile Fintech', initials: 'NF' }, { name: 'SolarPath', initials: 'SP' }],
         };
     }
+
+    // --- Job Alerts Methods ---
+
+    async getJobAlerts(userId: string) {
+        return this.alertRepo.findAll({
+            where: { userId },
+            order: [['createdAt', 'DESC']],
+        });
+    }
+
+    async createMemberListing(userId: string, dto: import('./dto/jobs.dto').CreateJobDto) {
+        const job = await this.jobRepo.create({
+            ...dto,
+            postedById: userId,
+            isActive: true, // Assuming direct activation for now, can be PENDING if moderation needed
+            isNew: true,
+            isFlagged: false,
+        } as any);
+        await this.triggerAlertsForJob(job.id);
+        return job;
+    }
+
+    async createJobAlert(userId: string, dto: { keyword: string; category?: string }) {
+        if (!dto.keyword.trim()) {
+            throw new BadRequestException('Keyword is required for job alert.');
+        }
+
+        const alert = await this.alertRepo.create({
+            userId,
+            keyword: dto.keyword.trim(),
+            category: dto.category || null,
+        });
+
+        // Add a system notification to confirm the setup
+        try {
+            await this.notificationsService.create(
+                userId,
+                NotificationType.SYSTEM_ALERT,
+                'Job Alert Created',
+                `You will now receive notifications for jobs matching: "${dto.keyword}"${dto.category ? ` in ${dto.category}` : ''}.`,
+                { actionUrl: '/dashboard/jobs' },
+                false // don't send email just for setup
+            );
+        } catch(e) { /* ignore if notification fails */ }
+
+        return alert;
+    }
+
+    async deleteJobAlert(userId: string, alertId: string) {
+        const alert = await this.alertRepo.findOne({ where: { id: alertId, userId } });
+        if (!alert) throw new NotFoundException('Alert not found');
+        
+        await alert.destroy();
+        return { message: 'Alert removed successfully.' };
+    }
+
+    async triggerAlertsForJob(jobId: string) {
+        const job = await this.jobRepo.findByPk(jobId);
+        if (!job || !job.isActive) return;
+
+        // Fetch all alerts
+        const allAlerts = await this.alertRepo.findAll();
+        const matchedUsers = new Set<string>();
+
+        // Find users whose alerts match this job (simple matching by keyword in title/desc)
+        const jobText = `${job.title} ${job.description || ''} ${job.companyName || ''}`.toLowerCase();
+        
+        for (const alert of allAlerts) {
+            const matchesCategory = alert.category ? job.category?.toLowerCase().includes(alert.category.toLowerCase()) : true;
+            const matchesKeyword = jobText.includes(alert.keyword.toLowerCase());
+
+            if (matchesCategory && matchesKeyword) {
+                matchedUsers.add(alert.userId);
+            }
+        }
+
+        for (const userId of matchedUsers) {
+            try {
+                await this.notificationsService.create(
+                    userId,
+                    NotificationType.SYSTEM_ALERT,
+                    'New Job Matches Your Alert',
+                    `${job.companyName} just posted a new role: ${job.title}. This matched one of your job alerts. Check it out now!`,
+                    { actionUrl: `/dashboard/jobs/${job.id}` },
+                    true // send email
+                );
+            } catch (e) {
+                // Log and continue
+                console.error(`Failed to send job alert to user ${userId}`, e);
+            }
+        }
+
+        return { matchedUsers: Array.from(matchedUsers) };
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // ADMIN METHODS
+    // ════════════════════════════════════════════════════════════════════════════
+
+    async getAdminListings(params: { search?: string; status?: string; type?: string; page?: number; limit?: number }) {
+        const { search, status, type, page = 1, limit = 20 } = params;
+        const where: any = {};
+        if (status === 'active') where.isActive = true;
+        else if (status === 'inactive') where.isActive = false;
+        else if (status === 'flagged') where.isFlagged = true;
+        if (type && type !== 'all') where.type = { [Op.iLike]: `%${type}%` };
+        if (search?.trim()) {
+            where[Op.or] = [
+                { title: { [Op.iLike]: `%${search.trim()}%` } },
+                { companyName: { [Op.iLike]: `%${search.trim()}%` } },
+            ];
+        }
+        const offset = (page - 1) * limit;
+        const { count, rows } = await this.jobRepo.findAndCountAll({
+            where,
+            include: [{ model: this.userRepo, as: 'postedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'communityTier'] }],
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset,
+            paranoid: false,
+        });
+        return { data: rows, meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) || 0 } };
+    }
+
+    async getAdminStats() {
+        const [total, active, flagged, applications] = await Promise.all([
+            this.jobRepo.count({ paranoid: false }),
+            this.jobRepo.count({ where: { isActive: true } }),
+            this.jobRepo.count({ where: { isFlagged: true } }),
+            this.applicationRepo.count(),
+        ]);
+        return { total, active, inactive: total - active, flagged, applications };
+    }
+
+    async adminCreateListing(dto: import('./dto/jobs.dto').CreateJobDto) {
+        const job = await this.jobRepo.create({
+            title: dto.title, companyName: dto.companyName, location: dto.location,
+            type: dto.type, category: dto.category, description: dto.description,
+            requirements: dto.requirements, qualifications: dto.qualifications,
+            companyLogoUrl: dto.companyLogoUrl, companyWebsite: dto.companyWebsite,
+            salaryLabel: dto.salaryLabel, salaryMin: dto.salaryMin, salaryMax: dto.salaryMax,
+            isActive: true, isNew: true, isFlagged: false,
+            postedById: dto.postedById ?? null,
+        } as any);
+        await this.triggerAlertsForJob(job.id);
+        return job;
+    }
+
+    async adminFlagListing(jobId: string, reason?: string) {
+        const job = await this.jobRepo.findByPk(jobId, { paranoid: false });
+        if (!job) throw new NotFoundException('Job not found');
+        await job.update({ isFlagged: true, flagReason: reason ?? null });
+        if (job.postedById) {
+            try {
+                await this.notificationsService.create(
+                    job.postedById, NotificationType.SYSTEM_ALERT,
+                    'Your Job Listing Has Been Flagged',
+                    `Your listing "${job.title}" has been flagged for review${reason ? `: ${reason}` : '.'}`,
+                    { actionUrl: '/dashboard/jobs' }, true
+                );
+            } catch (e) { /* non-critical */ }
+        }
+        return job;
+    }
+
+    async adminUnlistListing(jobId: string, reason?: string) {
+        const job = await this.jobRepo.findByPk(jobId, { paranoid: false });
+        if (!job) throw new NotFoundException('Job not found');
+        await job.update({ isActive: false, flagReason: reason ?? job.flagReason });
+        if (job.postedById) {
+            try {
+                await this.notificationsService.create(
+                    job.postedById, NotificationType.SYSTEM_ALERT,
+                    'Your Job Listing Has Been Unlisted',
+                    `Your listing "${job.title}" has been removed from the TATT Job Board${reason ? ` — Reason: ${reason}` : '.'}`,
+                    { actionUrl: '/dashboard/jobs' }, true
+                );
+            } catch (e) { /* non-critical */ }
+        }
+        return job;
+    }
+
+    async adminRestoreListing(jobId: string) {
+        const job = await this.jobRepo.findByPk(jobId, { paranoid: false });
+        if (!job) throw new NotFoundException('Job not found');
+        await job.update({ isActive: true, isFlagged: false, flagReason: null });
+        return job;
+    }
+
+    async adminDeleteListing(jobId: string) {
+        const job = await this.jobRepo.findByPk(jobId, { paranoid: false });
+        if (!job) throw new NotFoundException('Job not found');
+        await job.destroy({ force: true });
+        return { message: 'Job permanently deleted.' };
+    }
 }
+

@@ -16,7 +16,7 @@ import { UserSeederService } from './user-seeder.service';
         JwtModule.registerAsync({
             useFactory: () => ({
                 secret: process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
-                signOptions: { expiresIn: '7d' },
+                signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1h') as any },
             }),
         }),
         SecurityModule, // Provides SecurityPolicyService + TwoFactorService

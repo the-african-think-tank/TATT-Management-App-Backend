@@ -21,6 +21,16 @@ interface Plan {
     features: string[];
     isPopular: boolean;
     hasYearlyDiscount: boolean;
+    yearlyDiscountPercent?: number;
+    eventDiscountPercent?: number;
+    accessControls?: { title: string; subtitle: string; enabled: boolean }[];
+    activeDiscount?: {
+        code: string;
+        name: string;
+        value: number;
+        type: 'percentage' | 'fixed';
+        validUntil?: string;
+    };
 }
 
 const TIER_RANK: Record<string, number> = {
@@ -120,7 +130,7 @@ export default function UpgradePage() {
                         <span className={`text-sm font-bold transition-colors ${isYearly ? "text-white" : "text-white/40"}`}>
                             Yearly{" "}
                             <span className="text-tatt-lime bg-tatt-lime/10 border border-tatt-lime/20 px-2 py-0.5 rounded-full text-xs ml-1">
-                                Save 20% + 1 Month Free
+                                Unlocked Discounts
                             </span>
                         </span>
                     </div>
@@ -181,14 +191,14 @@ export default function UpgradePage() {
                                                 Current Plan
                                             </div>
                                         )}
-                                        {isYearly && plan.hasYearlyDiscount && !plan.isPopular && (
+                                        {isYearly && plan.hasYearlyDiscount && !plan.isPopular && plan.yearlyDiscountPercent && (
                                             <div className="absolute top-0 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
-                                                1 Month Free
+                                                Save {plan.yearlyDiscountPercent}%
                                             </div>
                                         )}
-                                        {isYearly && plan.hasYearlyDiscount && plan.isPopular && (
+                                        {isYearly && plan.hasYearlyDiscount && plan.isPopular && plan.yearlyDiscountPercent && (
                                             <div className="absolute top-7 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
-                                                1 Month Free
+                                                Save {plan.yearlyDiscountPercent}%
                                             </div>
                                         )}
 
@@ -204,28 +214,57 @@ export default function UpgradePage() {
                                             {/* Price */}
                                             <div className="mb-6">
                                                 <div className="flex items-baseline gap-1">
-                                                    <span className={`text-4xl font-black ${isFree ? "text-tatt-gray" : plan.isPopular ? "text-tatt-lime" : "text-foreground"}`}>
-                                                ${fmt(displayPrice)}
-                                            </span>
+                                                    {plan.activeDiscount ? (
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-baseline gap-2">
+                                                                <span className={`text-4xl font-black ${isFree ? "text-tatt-gray" : plan.isPopular ? "text-tatt-lime" : "text-foreground"}`}>
+                                                                    ${fmt(isYearly 
+                                                                        ? (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value / 100))
+                                                                        : (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value / 100))
+                                                                    )}
+                                                                </span>
+                                                                <span className="text-sm font-black text-tatt-gray line-through decoration-red-500/50">${fmt(displayPrice)}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-1">
+                                                                {plan.activeDiscount.name} Applied 
+                                                                {plan.activeDiscount.validUntil && ` • Ends ${new Date(plan.activeDiscount.validUntil).toLocaleDateString()}`}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className={`text-4xl font-black ${isFree ? "text-tatt-gray" : plan.isPopular ? "text-tatt-lime" : "text-foreground"}`}>
+                                                            ${fmt(displayPrice)}
+                                                        </span>
+                                                    )}
                                                     <span className="text-tatt-gray font-bold text-sm">/{period}</span>
                                                 </div>
-                                                {!isFree && isYearly && plan.hasYearlyDiscount && (
+                                                {!isFree && isYearly && plan.hasYearlyDiscount && !plan.activeDiscount && (
                                                     <p className="text-xs text-tatt-gray mt-1">
-                                                    <span className="line-through">${fmt(plan.monthlyPrice * 12)}/yr</span>
-                                                    {" → "}
-                                                    <span className="font-black text-tatt-lime-dark">${fmt(plan.yearlyPrice)}/yr</span>
-                                                </p>
+                                                        <span className="line-through">${fmt(plan.monthlyPrice * 12)}/yr</span>
+                                                        {" → "}
+                                                        <span className="font-black text-tatt-lime-dark">${fmt(plan.yearlyPrice)}/yr</span>
+                                                    </p>
                                                 )}
                                             </div>
 
-                                            {/* Features */}
                                             <ul className="flex-1 space-y-3 mb-6">
                                                 {plan.features.map((feature, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2.5 text-sm">
+                                                    <li key={`feat-${idx}`} className="flex items-start gap-2.5 text-sm">
                                                         <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
                                                         <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{feature}</span>
                                                     </li>
                                                 ))}
+                                                {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
+                                                    <li key={`ctrl-${idx}`} className="flex items-start gap-2.5 text-sm">
+                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{control.title}</span>
+                                                    </li>
+                                                ))}
+                                                {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
+                                                    <li className="flex items-start gap-2.5 text-sm">
+                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{plan.eventDiscountPercent}% off TATT Events</span>
+                                                    </li>
+                                                )}
                                             </ul>
 
                                             {/* CTA */}

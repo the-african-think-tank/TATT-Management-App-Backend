@@ -11,6 +11,10 @@ export interface ResourceCard {
   minTier: string;
   tags: string[];
   createdAt: string;
+  isPartnership?: boolean;
+  isLocked?: boolean;
+  redemptionLink?: string;
+  buttonLabel?: string;
 }
 
 export interface ResourcesListMeta {

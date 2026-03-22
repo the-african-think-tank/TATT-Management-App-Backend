@@ -13,38 +13,16 @@ import {
     Eye,
     Check,
     TrendingUp,
-    TrendingDown,
     Activity,
     AlertCircle,
     RefreshCw
 } from "lucide-react";
-import api from "@/services/api";
+import { useAdminDashboardOverview } from "@/hooks/use-queries";
 
 export default function AdminDashboardOverview() {
-    const [data, setData] = React.useState<any>(null);
-    const [loading, setLoading] = React.useState(true);
+    const { data, isLoading, isError, error, refetch } = useAdminDashboardOverview();
 
-    const [error, setError] = React.useState<string | null>(null);
-
-    React.useEffect(() => {
-        const fetchDashboardData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const res = await api.get("/dashboard/overview");
-                setData(res.data);
-            } catch (error: any) {
-                console.error("Failed to fetch dashboard overview data", error);
-                setError(error.response?.data?.message || "Internal server error occurred while fetching dashboard statistics.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDashboardData();
-    }, []);
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex h-96 w-full flex-col items-center justify-center space-y-4">
                 <RefreshCw className="size-10 animate-spin text-tatt-lime" />
@@ -53,14 +31,14 @@ export default function AdminDashboardOverview() {
         );
     }
 
-    if (error) {
+    if (isError) {
         return (
             <div className="flex h-96 w-full flex-col items-center justify-center space-y-4 text-center px-6">
                 <div className="size-16 rounded-full bg-red-100 flex items-center justify-center mb-2">
                     <AlertCircle className="size-8 text-red-600" />
                 </div>
                 <h3 className="text-xl font-black text-foreground">Dashboard Load Failed</h3>
-                <p className="text-tatt-gray max-w-sm">{error}</p>
+                <p className="text-tatt-gray max-w-sm">{(error as Error)?.message || 'An unexpected error occurred.'}</p>
                 <button
                     onClick={() => window.location.reload()}
                     className="mt-4 px-6 py-2 bg-tatt-lime text-tatt-black font-bold rounded-xl uppercase tracking-widest text-xs hover:brightness-105 transition-all"

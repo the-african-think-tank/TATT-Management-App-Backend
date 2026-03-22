@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, X, Check, Trash2, Info, MessageSquare, UserPlus, CreditCard, Calendar, AlertTriangle } from "lucide-react";
+import { Bell, X, Check, Trash2, Info, MessageSquare, UserPlus, CreditCard, Calendar, AlertTriangle, Megaphone, Heart } from "lucide-react";
 import api from "@/services/api";
 import { Notification, NotificationType } from "@/types/notifications";
 import { formatDistanceToNow } from "date-fns";
@@ -85,6 +85,10 @@ export function NotificationDropdown() {
                 return <Calendar className="size-4 text-orange-500" />;
             case NotificationType.SYSTEM_ALERT:
                 return <AlertTriangle className="size-4 text-red-500" />;
+            case NotificationType.SYSTEM_ANNOUNCEMENT:
+                return <Megaphone className="size-4 text-tatt-lime" />;
+            case NotificationType.VOLUNTEER_ROLE:
+                return <Heart className="size-4 text-pink-500" />;
             default:
                 return <Info className="size-4 text-tatt-gray" />;
         }
@@ -103,6 +107,10 @@ export function NotificationDropdown() {
             case NotificationType.SUBSCRIPTION_EXPIRING:
             case NotificationType.SUBSCRIPTION_DOWNGRADE:
                 return `/dashboard/settings/subscription`;
+            case NotificationType.SYSTEM_ANNOUNCEMENT:
+                return `/dashboard`;
+            case NotificationType.VOLUNTEER_ROLE:
+                return `/member/volunteering`;
             default:
                 return "#";
         }

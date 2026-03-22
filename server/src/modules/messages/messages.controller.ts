@@ -211,4 +211,16 @@ export class MessagesController {
     ) {
         return this.messagesService.getPartnerProfile(req.user.id, connectionId);
     }
+
+    @ApiOperation({
+        summary: 'Admin initiate conversation without connection',
+    })
+    @Post('admin/initiate/:targetUserId')
+    @HttpCode(HttpStatus.OK)
+    async initiateAdminMessage(
+        @Request() req,
+        @Param('targetUserId', ParseUUIDPipe) targetUserId: string,
+    ) {
+        return this.messagesService.initiateAdminConversation(req.user, targetUserId);
+    }
 }

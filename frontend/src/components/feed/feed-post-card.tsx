@@ -9,13 +9,19 @@ import {
     Lock,
     Send,
     Loader2,
+    MoreVertical,
+    Trash2,
+    AlertCircle
 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+
 import type { FeedPost } from "@/types/feed";
 
 type FeedPostCardProps = {
     post: FeedPost;
     onLikeToggle: () => void;
     onCommentAdded: () => void;
+    onDelete?: () => void;
 };
 
 function formatDate(iso: string) {
@@ -36,8 +42,14 @@ function formatDate(iso: string) {
     }
 }
 
-export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCardProps) {
+export function FeedPostCard({ post, onLikeToggle, onCommentAdded, onDelete }: FeedPostCardProps) {
+    const { user } = useAuth();
+    const isStaff = user?.systemRole !== "COMMUNITY_MEMBER";
+    const isProfileComplete = isStaff || user?.flags?.includes("PROFILE_COMPLETED");
+
     const [liking, setLiking] = useState(false);
+
+    const [showOptions, setShowOptions] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<Array<{
         id: string;
@@ -79,8 +91,11 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
 
     const handleSubmitComment = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isProfileComplete) return;
+        
         const trimmed = newComment.trim();
         if (!trimmed || submittingComment) return;
+
         setSubmittingComment(true);
         try {
             await api.post(`/feed/${post.id}/comments`, { content: trimmed });
@@ -99,7 +114,16 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
             setSubmittingComment(false);
         }
     };
-
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this post?")) return;
+        try {
+            await api.delete(`/feed/${post.id}`);
+            if (onDelete) onDelete();
+        } catch {
+            // handle error
+        }
+        setShowOptions(false);
+    };
     const handleToggleComments = () => {
         const next = !showComments;
         setShowComments(next);
@@ -139,6 +163,26 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
                             </Link>
                         )}
                         <span className="text-tatt-gray text-xs ml-auto shrink-0">{formatDate(post.createdAt)}</span>
+                        
+                        <div className="relative ml-2">
+                            <button
+                                onClick={() => setShowOptions(!showOptions)}
+                                className="p-1 hover:bg-background rounded-full transition-colors"
+                            >
+                                <MoreVertical className="h-4 w-4 text-tatt-gray" />
+                            </button>
+                            {showOptions && (
+                                <div className="absolute right-0 mt-1 w-32 bg-background border border-border rounded-lg shadow-lg z-10 py-1">
+                                    <button
+                                        onClick={handleDelete}
+                                        className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     {post.isPremium && (
                         <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold text-tatt-lime">
@@ -263,16 +307,24 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
                                 </ul>
                             )}
                             <form onSubmit={handleSubmitComment} className="flex flex-col sm:flex-row gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Write a comment..."
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    className="flex-1 min-w-0 px-3 py-2.5 sm:py-2 rounded-lg border border-border bg-background text-foreground text-sm placeholder:text-tatt-gray focus:outline-none focus:ring-2 focus:ring-tatt-lime"
-                                />
+                                <div className="flex-1 relative group">
+                                    <input
+                                        type="text"
+                                        placeholder={isProfileComplete ? "Write a comment..." : "Setup profile to comment..."}
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        disabled={!isProfileComplete}
+                                        className={`w-full px-3 py-2.5 sm:py-2 rounded-lg border border-border bg-background text-foreground text-sm placeholder:text-tatt-gray focus:outline-none focus:ring-2 focus:ring-tatt-lime ${!isProfileComplete ? "cursor-not-allowed opacity-60" : ""}`}
+                                    />
+                                    {!isProfileComplete && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-tatt-gray">
+                                            <AlertCircle className="h-4 w-4" />
+                                        </div>
+                                    )}
+                                </div>
                                 <button
                                     type="submit"
-                                    disabled={!newComment.trim() || submittingComment}
+                                    disabled={!newComment.trim() || submittingComment || !isProfileComplete}
                                     className="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-4 py-2.5 sm:py-2 bg-tatt-lime text-tatt-black font-bold rounded-lg text-sm hover:brightness-95 disabled:opacity-50 flex items-center justify-center gap-1 touch-manipulation"
                                 >
                                     {submittingComment ? (
@@ -283,6 +335,13 @@ export function FeedPostCard({ post, onLikeToggle, onCommentAdded }: FeedPostCar
                                     Reply
                                 </button>
                             </form>
+                            {!isProfileComplete && (
+                                <p className="text-[10px] text-tatt-gray flex items-center gap-1.5 px-1 font-medium italic">
+                                    <AlertCircle className="size-3 text-tatt-lime" />
+                                    Identity verification required. Please complete your professional profile in <Link href="/dashboard/settings" className="text-tatt-lime hover:underline font-bold">Settings</Link> to join the discussion.
+                                </p>
+                            )}
+
                         </div>
                     )}
                 </div>
