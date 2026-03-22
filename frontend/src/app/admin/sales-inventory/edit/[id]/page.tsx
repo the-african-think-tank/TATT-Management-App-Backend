@@ -144,7 +144,10 @@ export default function EditProductPage() {
     const updateVariant = (index: number, field: keyof Variant, value: any) => {
         setVariants(prev => {
             const next = [...prev];
-            const updated = { ...next[index], [field]: value };
+            const currentItem = next[index];
+            if (!currentItem) return prev;
+
+            const updated = { ...currentItem, [field]: value } as Variant;
             if (field === 'size' || field === 'color') {
                 updated.sku = generateSKU(updated.size, updated.color);
             }
