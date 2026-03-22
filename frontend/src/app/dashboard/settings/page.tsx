@@ -454,7 +454,12 @@ export default function SettingsPage() {
             
             // 1. Upload the image
             const response = await api.post("/uploads/media", uploadFormData);
-            const imageUrl = response.data.files[0].url;
+            const imageUrl = response.data.files?.[0]?.url;
+            
+            if (!imageUrl) {
+                toast.error("Failed to retrieve upload URL", { id: 'upload' });
+                return;
+            }
             
             // 2. Update the user profile immediately for a live feel
             const { employer, ...payload } = formData;
