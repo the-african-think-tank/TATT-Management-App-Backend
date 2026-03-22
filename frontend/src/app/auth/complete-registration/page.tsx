@@ -100,8 +100,9 @@ function CompleteRegistrationForm() {
 
         // Check against policy
         const failedRules = dynamicRules.filter(r => !r.test(password));
-        if (failedRules.length > 0) {
-            toast.error(`Password fails requirements: ${failedRules[0].label}`);
+        const firstFailed = failedRules[0];
+        if (firstFailed) {
+            toast.error(`Password fails requirements: ${firstFailed.label}`);
             return;
         }
 
