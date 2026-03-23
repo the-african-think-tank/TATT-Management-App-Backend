@@ -55,8 +55,11 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
                     .sort((a, b) => b.length - a.length)
                     .find(route => pathname === route || (pathname?.startsWith(route + "/")));
                 
-                if (matchedRoute && rolePermissions[matchedRoute]) {
-                    allowed = rolePermissions[matchedRoute].includes(user?.systemRole as string);
+                if (matchedRoute) {
+                    const permissionsList = rolePermissions[matchedRoute];
+                    if (permissionsList && user?.systemRole) {
+                        allowed = permissionsList.includes(user.systemRole);
+                    }
                 } else if (pathname === "/admin") {
                     allowed = true;
                 }
