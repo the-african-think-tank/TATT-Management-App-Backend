@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, Param, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param, Patch, Body, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/users.dto';
 import { UsersService } from './users.service';
@@ -64,5 +64,13 @@ export class UsersController {
     @Patch(':id')
     async update(@Param('id') id: string, @Body() updateData: UpdateUserDto) {
         return this.usersService.update(id, updateData);
+    }
+
+    @ApiOperation({ summary: 'Delete user' })
+    @ApiResponse({ status: 200, description: 'User deleted successfully.' })
+    @Roles(SystemRole.SUPERADMIN)
+    @Delete(':id')
+    async remove(@Param('id') id: string) {
+        return this.usersService.remove(id);
     }
 }

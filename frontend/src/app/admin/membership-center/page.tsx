@@ -141,6 +141,17 @@ export default function MembershipCenterPage() {
         }
     };
 
+    const handleDeleteDiscount = async (id: string) => {
+        if (!confirm("Are you sure you want to remove this promotion? This will also delete it from Stripe.")) return;
+        try {
+            await api.delete(`/membership-center/discounts/${id}`);
+            toast.success("Promotion removed successfully");
+            fetchAllData();
+        } catch (err) {
+            toast.error("Failed to remove promotion");
+        }
+    };
+
     if (loading && data.tiers.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -277,7 +288,6 @@ export default function MembershipCenterPage() {
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Plan Name</th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Price (USD)</th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Assigned Perks</th>
-                                                <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Active Status</th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray text-right">Actions</th>
                                             </tr>
                                         </thead>
@@ -308,9 +318,9 @@ export default function MembershipCenterPage() {
                                                     </td>
                                                     <td className="px-4 py-4">
                                                         <div className="flex flex-wrap gap-1.5">
-                                                            {(tier.features || []).slice(0, 2).map((perk: string, i: number) => (
+                                                            {(tier.features || []).slice(0, 2).map((perk: any, i: number) => (
                                                                 <span key={i} className="bg-background border border-border px-2 py-0.5 rounded text-[10px] font-bold flex items-center group/perk">
-                                                                    {perk}
+                                                                    {typeof perk === 'string' ? perk : (perk?.title || 'Perk')}
                                                                     <button className="ml-1 text-tatt-gray hover:text-red-500 opacity-0 group-hover/perk:opacity-100 transition-all">×</button>
                                                                 </span>
                                                             ))}
@@ -320,11 +330,6 @@ export default function MembershipCenterPage() {
                                                             >
                                                                 + ADD
                                                             </button>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-all ${tier.status === 'ACTIVE' ? 'bg-tatt-lime' : 'bg-tatt-gray/20'}`}>
-                                                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-tatt-black transition-all ${tier.status === 'ACTIVE' ? 'right-0.5' : 'left-0.5'}`}></div>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4 text-right">
@@ -381,12 +386,14 @@ export default function MembershipCenterPage() {
                                             <div className="flex-1 space-y-4">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray italic border-b border-border pb-2 block">Integrated Perks & Benefits</span>
                                                 <div className="space-y-2.5">
-                                                    {(tier.accessControls || tier.features || []).map((perk: string, i: number) => (
+                                                    {(tier.accessControls || tier.features || []).map((perk: any, i: number) => (
                                                         <div key={i} className="flex items-start gap-3">
                                                             <div className="mt-0.5 size-4 rounded-full bg-tatt-lime/10 text-tatt-lime flex items-center justify-center shrink-0">
                                                                 <Check size={10} strokeWidth={4} />
                                                             </div>
-                                                            <span className="text-xs font-bold text-foreground leading-tight">{perk}</span>
+                                                            <span className="text-xs font-bold text-foreground leading-tight">
+                                                                {typeof perk === 'string' ? perk : (perk?.title || 'Perk')}
+                                                            </span>
                                                         </div>
                                                     ))}
                                                     {(!tier.accessControls || tier.accessControls.length === 0) && (!tier.features || tier.features.length === 0) && (
@@ -485,37 +492,6 @@ export default function MembershipCenterPage() {
                                 )}
                                 
                                 <div className={`col-span-12 ${activeTab === "DISCOUNTS" ? "lg:col-span-7" : "lg:col-span-5"}`}>
-                                    <div className="bg-surface rounded-2xl p-6 border border-border mb-6">
-                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Tier-Specific Deductions</span>
-                                        <div className="space-y-3">
-                                            {data.tiers.filter((t: any) => t.yearlyDiscountPercent || t.eventDiscountPercent).map((tier: any) => (
-                                                <div key={tier.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-background border border-border rounded-xl">
-                                                    <div className="mb-3 sm:mb-0">
-                                                        <div className="text-[11px] font-black text-foreground tracking-widest uppercase">{tier.name}</div>
-                                                        <div className="text-[9px] text-tatt-gray font-bold uppercase tracking-tighter mt-0.5">Assigned Discounts</div>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {tier.yearlyDiscountPercent > 0 && (
-                                                            <span className="bg-tatt-lime/10 text-tatt-lime px-2.5 py-1 rounded text-[9px] font-black tracking-widest uppercase">
-                                                                {tier.yearlyDiscountPercent}% Annual Off
-                                                            </span>
-                                                        )}
-                                                        {tier.eventDiscountPercent > 0 && (
-                                                            <span className="bg-blue-500/10 text-blue-500 px-2.5 py-1 rounded text-[9px] font-black tracking-widest uppercase">
-                                                                {tier.eventDiscountPercent}% Event Off
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {data.tiers.filter((t: any) => t.yearlyDiscountPercent || t.eventDiscountPercent).length === 0 && (
-                                                <div className="p-4 text-center bg-background rounded-xl border border-dashed border-border flex flex-col items-center justify-center">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">No plan-specific discounts active</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
                                     <div className="bg-surface rounded-2xl p-6 border border-border">
                                         <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Live Global Promotions</span>
                                         <div className="space-y-3 mb-6">
@@ -532,7 +508,10 @@ export default function MembershipCenterPage() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <button className="text-tatt-gray hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50">
+                                                    <button 
+                                                        onClick={() => handleDeleteDiscount(discount.id)}
+                                                        className="text-tatt-gray hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50"
+                                                    >
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>

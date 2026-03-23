@@ -11,8 +11,12 @@ import {
 import api from "@/services/api";
 import { toast, Toaster } from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/context/auth-context";
 
 export default function CommunityFeedPage() {
+    const { user } = useAuth();
+    const canModerate = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN" || user?.systemRole === "MODERATOR";
+
     const [stats, setStats] = useState({ reportsHandled: 0, activeDiscussions: 0, flaggedUsers: 0 });
     const [liveFeed, setLiveFeed] = useState<any[]>([]);
     const [reports, setReports] = useState<any[]>([]);
@@ -298,14 +302,16 @@ export default function CommunityFeedPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-1">
-                                            <button onClick={() => handleDeletePost(post.id)} className="p-2 hover:bg-red-50 text-tatt-gray hover:text-red-500 transition-all rounded-lg" title="Delete Post">
-                                                <Trash2 className="size-4" />
-                                            </button>
-                                            <button onClick={() => handleShadowBanPost(post.id, post.isShadowBanned)} className={`p-2 transition-all rounded-lg ${post.isShadowBanned ? 'bg-orange-50 text-orange-500' : 'hover:bg-tatt-lime/10 text-tatt-gray hover:text-tatt-lime'}`} title={post.isShadowBanned ? "Restore Reach" : "Shadow Ban Post"}>
-                                                <Zap className="size-4" />
-                                            </button>
-                                        </div>
+                                        {canModerate && (
+                                            <div className="flex gap-1">
+                                                <button onClick={() => handleDeletePost(post.id)} className="p-2 hover:bg-red-50 text-tatt-gray hover:text-red-500 transition-all rounded-lg" title="Delete Post">
+                                                    <Trash2 className="size-4" />
+                                                </button>
+                                                <button onClick={() => handleShadowBanPost(post.id, post.isShadowBanned)} className={`p-2 transition-all rounded-lg ${post.isShadowBanned ? 'bg-orange-50 text-orange-500' : 'hover:bg-tatt-lime/10 text-tatt-gray hover:text-tatt-lime'}`} title={post.isShadowBanned ? "Restore Reach" : "Shadow Ban Post"}>
+                                                    <Zap className="size-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="text-foreground leading-relaxed text-sm mb-6 whitespace-pre-wrap">
                                         {post.content}
@@ -331,22 +337,24 @@ export default function CommunityFeedPage() {
                 <aside className="col-span-12 lg:col-span-4 space-y-8">
                     
                     {/* Reported Content Alert Widget */}
-                    {reports.length > 0 ? (
-                        <div className="bg-red-500 text-white rounded-xl p-6 shadow-lg shadow-red-500/20 relative overflow-hidden group">
-                            <AlertCircle className="absolute -right-4 -bottom-4 size-32 opacity-10 group-hover:scale-110 transition-transform" />
-                            <div className="text-[10px] tracking-[0.15em] uppercase font-bold opacity-80 mb-2">Pending Moderation</div>
-                            <div className="text-4xl font-black mb-1">{reports.length}</div>
-                            <div className="text-sm font-medium mb-4">Reported posts require review</div>
-                            <Link href="/admin/feed-moderation" className="block w-full text-center bg-white text-red-600 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all">
-                                REVIEW QUEUE
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="bg-surface rounded-xl p-6 shadow-sm border border-border relative overflow-hidden group flex flex-col items-center justify-center h-48">
-                            <ShieldCheck className="text-tatt-lime size-12 mb-3" />
-                            <div className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray mb-1">Queue Empty</div>
-                            <div className="text-xl font-black text-foreground text-center line-clamp-2 leading-tight">No Pending Reports</div>
-                        </div>
+                    {canModerate && (
+                        reports.length > 0 ? (
+                            <div className="bg-red-500 text-white rounded-xl p-6 shadow-lg shadow-red-500/20 relative overflow-hidden group">
+                                <AlertCircle className="absolute -right-4 -bottom-4 size-32 opacity-10 group-hover:scale-110 transition-transform" />
+                                <div className="text-[10px] tracking-[0.15em] uppercase font-bold opacity-80 mb-2">Pending Moderation</div>
+                                <div className="text-4xl font-black mb-1">{reports.length}</div>
+                                <div className="text-sm font-medium mb-4">Reported posts require review</div>
+                                <Link href="/admin/feed-moderation" className="block w-full text-center bg-white text-red-600 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all">
+                                    REVIEW QUEUE
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="bg-surface rounded-xl p-6 shadow-sm border border-border relative overflow-hidden group flex flex-col items-center justify-center h-48">
+                                <ShieldCheck className="text-tatt-lime size-12 mb-3" />
+                                <div className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray mb-1">Queue Empty</div>
+                                <div className="text-xl font-black text-foreground text-center line-clamp-2 leading-tight">No Pending Reports</div>
+                            </div>
+                        )
                     )}
 
                     {/* Trending Insights Manager */}

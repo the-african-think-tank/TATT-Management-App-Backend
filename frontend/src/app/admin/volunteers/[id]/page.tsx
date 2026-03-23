@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { 
     ChevronLeft, Mail, Edit, PlusCircle, TrendingUp, Star, 
     Calendar, Phone, Globe, CheckCircle, MapPin, 
-    ChevronRight, Loader2, Save, Send
+    ChevronRight, Loader2, Save, Send, X
 } from "lucide-react";
 import api from "@/services/api";
 import toast from "react-hot-toast";
@@ -22,6 +22,27 @@ export default function VolunteerProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [adminNotes, setAdminNotes] = useState("");
     const [startingChat, setStartingChat] = useState(false);
+    
+    // Modals
+    const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+    const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+    
+    // Form Inputs
+    const [activityForm, setActivityForm] = useState({
+        title: "",
+        description: "",
+        dueDate: "",
+        estimatedHours: 1,
+        impactPoints: 20
+    });
+    const [roleForm, setRoleForm] = useState({
+        grade: "SILVER",
+        status: "ACTIVE",
+        currentRoleId: "",
+        attendanceRate: 100
+    });
 
     // Load Data
     useEffect(() => {
@@ -30,6 +51,12 @@ export default function VolunteerProfilePage() {
                 const res = await api.get(`/volunteers/admin/profile/${id}`);
                 setProfile(res.data);
                 setAdminNotes(res.data.stats?.adminNotes || "");
+                setRoleForm({
+                    grade: res.data.stats?.grade || "SILVER",
+                    status: res.data.stats?.status || "ACTIVE",
+                    currentRoleId: res.data.stats?.currentRoleId || "",
+                    attendanceRate: res.data.stats?.attendanceRate || 100
+                });
             } catch (err: any) {
                 toast.error("Failed to load volunteer profile");
                 console.error(err);
@@ -39,6 +66,32 @@ export default function VolunteerProfilePage() {
         };
         fetchProfile();
     }, [id]);
+
+    const fetchRoles = async () => {
+        try {
+            const res = await api.get("/volunteers/roles");
+            setAvailableRoles(res.data);
+        } catch (err) {
+            toast.error("Failed to load roles");
+        }
+    };
+
+    const fetchTemplates = async () => {
+        try {
+            const res = await api.get(`/volunteers/admin/activity-templates?chapterId=${profile?.user?.chapterId}`);
+            setAvailableTemplates(res.data);
+        } catch (err) {
+            toast.error("Failed to load activity templates");
+        }
+    };
+
+    useEffect(() => {
+        if (showEditRoleModal) fetchRoles();
+    }, [showEditRoleModal]);
+
+    useEffect(() => {
+        if (showAssignModal && profile?.user?.chapterId) fetchTemplates();
+    }, [showAssignModal, profile?.user?.chapterId]);
 
     const handleSaveNote = async () => {
         setSavingNote(true);
@@ -58,6 +111,37 @@ export default function VolunteerProfilePage() {
             toast.error("Failed to save notes");
         } finally {
             setSavingNote(false);
+        }
+    };
+
+    const handleUpdateRole = async () => {
+        try {
+            await api.patch(`/volunteers/admin/profile/${id}/stats`, roleForm);
+            toast.success("Volunteer role updated");
+            setShowEditRoleModal(false);
+            // Reload profile
+            const res = await api.get(`/volunteers/admin/profile/${id}`);
+            setProfile(res.data);
+        } catch (err) {
+            toast.error("Failed to update role");
+        }
+    };
+
+    const handleAssignActivity = async () => {
+        try {
+            await api.post(`/volunteers/activities`, {
+                ...activityForm,
+                assignedToId: id,
+                chapterId: profile.user.chapterId
+            });
+            toast.success("Activity assigned successfully");
+            setShowAssignModal(false);
+            setActivityForm({ title: "", description: "", dueDate: "", estimatedHours: 1, impactPoints: 20 });
+            // Reload profile
+            const res = await api.get(`/volunteers/admin/profile/${id}`);
+            setProfile(res.data);
+        } catch (err) {
+            toast.error("Failed to assign activity");
         }
     };
 
@@ -144,6 +228,11 @@ export default function VolunteerProfilePage() {
                                 <span className="bg-tatt-lime/20 text-tatt-lime-dark px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                                     {stats?.grade || 'Member'}
                                 </span>
+                                {stats?.currentRole && (
+                                    <span className="bg-background border border-border px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-tatt-gray">
+                                        Role: {stats.currentRole.name}
+                                    </span>
+                                )}
                             </div>
                             <p className="text-tatt-gray text-sm font-bold">Active member since {memberSince} • {stats?.eventsCompleted || 0} events completed</p>
                         </div>
@@ -157,11 +246,17 @@ export default function VolunteerProfilePage() {
                             {startingChat ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                             Message
                         </button>
-                        <button className="flex items-center justify-center gap-2 px-4 py-3 bg-background hover:bg-surface border border-border rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                        <button 
+                            onClick={() => setShowEditRoleModal(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-background hover:bg-surface border border-border rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm"
+                        >
                             <Edit size={16} />
                             Edit Role
                         </button>
-                        <button className="col-span-2 flex items-center justify-center gap-2 px-6 py-3 bg-tatt-lime text-tatt-black hover:bg-tatt-lime-vibrant rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-tatt-lime/20 hover:scale-[1.02] active:scale-[0.98]">
+                        <button 
+                            onClick={() => setShowAssignModal(true)}
+                            className="col-span-2 flex items-center justify-center gap-2 px-6 py-3 bg-tatt-lime text-tatt-black hover:bg-tatt-lime-vibrant rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-tatt-lime/20 hover:scale-[1.02] active:scale-[0.98]"
+                        >
                             <PlusCircle size={16} />
                             Assign Activity
                         </button>
@@ -366,6 +461,151 @@ export default function VolunteerProfilePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            {showEditRoleModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm">
+                    <div className="bg-surface rounded-2xl border border-border w-full max-w-md p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black uppercase tracking-tight">Edit Role & Grade</h3>
+                            <button onClick={() => setShowEditRoleModal(false)} className="p-1 hover:bg-background rounded-lg"><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Assigned Volunteer Role</label>
+                                <select 
+                                    value={roleForm.currentRoleId}
+                                    onChange={(e) => setRoleForm({ ...roleForm, currentRoleId: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                >
+                                    <option value="">No specific role assigned</option>
+                                    {availableRoles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.chapter?.name})</option>)}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Impact Grade</label>
+                                    <select 
+                                        value={roleForm.grade}
+                                        onChange={(e) => setRoleForm({ ...roleForm, grade: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                    >
+                                        <option value="SILVER">SILVER</option>
+                                        <option value="BRONZE">BRONZE</option>
+                                        <option value="GOLD">GOLD</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Status</label>
+                                    <select 
+                                        value={roleForm.status}
+                                        onChange={(e) => setRoleForm({ ...roleForm, status: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                    >
+                                        <option value="ACTIVE">ACTIVE</option>
+                                        <option value="TRAINING">TRAINING</option>
+                                        <option value="INACTIVE">INACTIVE</option>
+                                        <option value="SUSPENDED">SUSPENDED</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Attendance Rate (%)</label>
+                                <input 
+                                    type="number"
+                                    value={roleForm.attendanceRate}
+                                    onChange={(e) => setRoleForm({ ...roleForm, attendanceRate: Number(e.target.value) })}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                />
+                            </div>
+                            <button onClick={handleUpdateRole} className="w-full py-4 bg-tatt-lime text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-4">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAssignModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm">
+                    <div className="bg-surface rounded-2xl border border-border w-full max-w-md p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black uppercase tracking-tight">Assign Activity</h3>
+                            <button onClick={() => setShowAssignModal(false)} className="p-1 hover:bg-background rounded-lg"><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Select from Chapter Pool</label>
+                                <select 
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none mb-4"
+                                    onChange={(e) => {
+                                        const template = availableTemplates.find(t => t.id === e.target.value);
+                                        if (template) {
+                                            setActivityForm({
+                                                ...activityForm,
+                                                title: template.title,
+                                                description: template.description,
+                                                estimatedHours: template.estimatedHours,
+                                                impactPoints: template.impactPoints
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <option value="">-- Choose a predefined activity --</option>
+                                    {availableTemplates.map(t => <option key={t.id} value={t.id}>{t.title} ({t.impactPoints} pts)</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Activity Title</label>
+                                <input 
+                                    placeholder="e.g. Community Outreach"
+                                    value={activityForm.title}
+                                    onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Description</label>
+                                <textarea 
+                                    placeholder="Brief task overview..."
+                                    rows={3}
+                                    value={activityForm.description}
+                                    onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none resize-none"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Estimated Hours</label>
+                                    <input 
+                                        type="number"
+                                        value={activityForm.estimatedHours}
+                                        onChange={(e) => setActivityForm({ ...activityForm, estimatedHours: Number(e.target.value) })}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Impact Points</label>
+                                    <input 
+                                        type="number"
+                                        value={activityForm.impactPoints}
+                                        onChange={(e) => setActivityForm({ ...activityForm, impactPoints: Number(e.target.value) })}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Due Date</label>
+                                <input 
+                                    type="date"
+                                    value={activityForm.dueDate}
+                                    onChange={(e) => setActivityForm({ ...activityForm, dueDate: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                />
+                            </div>
+                            <button onClick={handleAssignActivity} className="w-full py-4 bg-tatt-lime text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-4">Assign Task</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

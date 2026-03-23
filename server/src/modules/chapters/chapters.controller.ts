@@ -117,6 +117,16 @@ export class ChaptersController {
     }
 
     @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a chapter (Superadmin only)' })
+    @ApiParam({ name: 'id', format: 'uuid' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.SUPERADMIN)
+    @Delete(':id')
+    async remove(@Param('id') id: string) {
+        return this.chaptersService.deleteChapter(id);
+    }
+
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Create a new chapter (Admin only)' })
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)

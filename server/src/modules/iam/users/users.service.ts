@@ -59,6 +59,12 @@ export class UsersService {
         return user.update(updateData);
     }
 
+    async remove(id: string) {
+        const user = await this.findOne(id);
+        await user.destroy();
+        return { message: 'User permanently deleted' };
+    }
+
     async getProfile(userId: string) {
         const user = await this.userRepository.findByPk(userId, {
             include: [

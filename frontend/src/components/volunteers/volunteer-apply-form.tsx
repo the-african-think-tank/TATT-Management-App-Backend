@@ -83,6 +83,10 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
     const [reasonForApplying, setReasonForApplying] = useState("");
     const [questionsForAdmin, setQuestionsForAdmin] = useState("");
 
+    // Role Details (if applicable)
+    const [role, setRole] = useState<any>(null);
+    const [roleLoading, setRoleLoading] = useState(false);
+
     // Completion %
     const completion = Math.min(
         100,
@@ -96,7 +100,18 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
 
     useEffect(() => {
         api.get("/chapters").then((r) => setChapters(r.data)).catch(() => {});
-    }, []);
+        
+        if (roleId) {
+            setRoleLoading(true);
+            api.get(`/volunteers/roles/${roleId}`)
+                .then((r) => {
+                    setRole(r.data);
+                    if (r.data.chapterId) setSelectedChapterId(r.data.chapterId);
+                })
+                .catch(() => {})
+                .finally(() => setRoleLoading(false));
+        }
+    }, [roleId]);
 
     const toggleSkill = (skill: string) => {
         setSelectedSkills((prev) =>
@@ -172,11 +187,32 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
     return (
         <form onSubmit={handleSubmit} className="space-y-0">
             {/* Page header */}
-            <div className="mb-8 text-center">
-                <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-2">Join the TATT Volunteer Network</h2>
-                <p className="text-tatt-gray text-sm max-w-lg mx-auto">
-                    Empower your community. Complete the details below to begin your journey with our global movement.
+            <div className="mb-8 text-center sm:text-left">
+                <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-2">
+                    {role ? (
+                        <>Applying for <span className="text-tatt-lime italic uppercase tracking-tighter">{role.name}</span></>
+                    ) : (
+                        "Join the TATT Volunteer Network"
+                    )}
+                </h2>
+                <p className="text-tatt-gray text-sm max-w-lg">
+                    {role 
+                        ? `You are applying for a strategic role within the ${role.chapter?.name || 'Global'} hub. Please provide your details below.`
+                        : "Empower your community. Complete the details below to begin your journey with our global movement."
+                    }
                 </p>
+                
+                {role && (
+                    <div className="mt-4 p-4 rounded-2xl bg-surface border border-border flex items-center gap-4 animate-in slide-in-from-left duration-500">
+                        <div className="size-12 rounded-xl bg-tatt-lime flex items-center justify-center text-tatt-black">
+                            <MapPin size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-tatt-gray tracking-widest">{role.location}</p>
+                            <p className="text-xs font-bold text-foreground">{role.weeklyHours}h/wk Commitment Required</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {error && (

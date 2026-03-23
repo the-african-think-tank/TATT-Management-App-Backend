@@ -1,5 +1,6 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { User } from '../../iam/entities/user.entity';
+import { VolunteerRole } from './volunteer-role.entity';
 
 export enum VolunteerGrade {
     SILVER = 'SILVER',
@@ -47,6 +48,13 @@ export class VolunteerStat extends Model<VolunteerStat> {
     /** Attendance rate 0–100 */
     @Column({ type: DataType.DECIMAL(5, 2), defaultValue: 100 })
     attendanceRate: number;
+
+    @ForeignKey(() => VolunteerRole)
+    @Column({ type: DataType.UUID, allowNull: true })
+    currentRoleId: string;
+
+    @BelongsTo(() => VolunteerRole)
+    currentRole: VolunteerRole;
 
     /** Chapter rank position (e.g. 3 means #3 in that chapter) */
     @Column({ type: DataType.INTEGER, allowNull: true })
