@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { MembershipService } from './membership.service';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
@@ -57,6 +57,13 @@ export class MembershipController {
     @Patch('discounts/:id')
     async updateDiscount(@Param('id') id: string, @Body() dto: any) {
         return this.membershipService.updateDiscount(id, dto);
+    }
+
+    @ApiOperation({ summary: 'Delete a discount' })
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Delete('discounts/:id')
+    async removeDiscount(@Param('id') id: string) {
+        return this.membershipService.removeDiscount(id);
     }
 
     // --- Subscribed Members Endpoints ---

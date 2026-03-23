@@ -10,6 +10,7 @@ import { VolunteerFeedback } from './entities/volunteer-feedback.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Connection, ConnectionStatus } from '../connections/entities/connection.entity';
+import { ActivityTemplate } from './entities/activity-template.entity';
 import { AccountFlags } from '../iam/enums/roles.enum';
 import {
     CreateVolunteerRoleDto,
@@ -41,6 +42,7 @@ export class VolunteersService {
         @InjectModel(VolunteerFeedback) private feedbackModel: typeof VolunteerFeedback,
         @InjectModel(User) private userModel: typeof User,
         @InjectModel(Connection) private connectionRepo: typeof Connection,
+        @InjectModel(ActivityTemplate) private activityTemplateModel: typeof ActivityTemplate,
         private notificationsService: NotificationsService,
         private broadcastsService: BroadcastsService,
         private mailService: MailService,
@@ -58,6 +60,14 @@ export class VolunteersService {
         // Notify relevant chapter members
         this.notifyMembersForRole(role);
 
+        return role;
+    }
+
+    async getRoleById(id: string) {
+        const role = await this.roleModel.findByPk(id, {
+            include: [{ model: Chapter }]
+        });
+        if (!role) throw new NotFoundException('Role not found');
         return role;
     }
 
@@ -81,6 +91,16 @@ export class VolunteersService {
         return this.roleModel.findAll({ where, include: ['chapter'] });
     }
 
+    async getAllRoles(chapterId?: string) {
+        const where: any = {};
+        if (chapterId) where.chapterId = chapterId;
+        return this.roleModel.findAll({
+            where,
+            include: ['chapter'],
+            order: [['createdAt', 'DESC']]
+        });
+    }
+
     async closeRole(roleId: string) {
         const role = await this.roleModel.findByPk(roleId);
         if (!role) throw new NotFoundException('Role not found');
@@ -98,7 +118,40 @@ export class VolunteersService {
         });
         if (existing) throw new BadRequestException('You already have a pending application.');
 
-        return this.applicationModel.create({ ...dto, userId });
+        const application = await this.applicationModel.create({ ...dto, userId });
+        const user = await this.userModel.findByPk(userId);
+        
+        // Notify Admins, Super Admins, and Regional Admins
+        try {
+            const admins = await this.userModel.findAll({
+                where: {
+                    systemRole: {
+                        [Op.in]: ['SUPERADMIN', 'ADMIN', 'REGIONAL_ADMIN']
+                    }
+                }
+            });
+
+            let roleName = 'General Volunteering';
+            if (dto.roleId) {
+                const role = await this.roleModel.findByPk(dto.roleId);
+                if (role) roleName = role.name;
+            }
+
+            const message = `${user?.firstName} ${user?.lastName} has applied for: ${roleName}`;
+
+            await Promise.all(admins.map(admin => 
+                this.notificationsService.create(
+                    admin.id,
+                    NotificationType.VOLUNTEER_APPLICATION,
+                    'New Volunteer Application',
+                    message
+                )
+            ));
+        } catch (error) {
+            this.logger.error('Failed to notify admins of new volunteer application', error.stack);
+        }
+
+        return application;
     }
 
     async getMyApplications(userId: string) {
@@ -169,12 +222,35 @@ export class VolunteersService {
     }
 
     // ─── ACTIVITIES ────────────────────────────────────────────────────────────
+    
+    async getActivityTemplates(chapterId?: string) {
+        const where: any = { isActive: true };
+        if (chapterId) where.chapterId = chapterId;
+        return this.activityTemplateModel.findAll({ where });
+    }
+
+    async createActivityTemplate(adminId: string, dto: any) {
+        return this.activityTemplateModel.create({ ...dto } as any);
+    }
 
     async createActivity(adminId: string, dto: CreateActivityDto) {
-        return this.activityModel.create({
+        const activity = await this.activityModel.create({
             ...dto,
             dueDate: new Date(dto.dueDate)
         } as any);
+
+        // Notify Volunteer
+        const volunteer = await this.userModel.findByPk(dto.assignedToId);
+        if (volunteer) {
+            await this.notificationsService.create(
+                volunteer.id,
+                NotificationType.VOLUNTEER_ACTIVITY,
+                'New Activity Assigned',
+                `You have been assigned the activity: ${activity.title}`
+            );
+        }
+
+        return activity;
     }
 
     async getVolunteerActivities(volunteerId: string) {
@@ -321,13 +397,14 @@ export class VolunteersService {
         };
     }
 
-    async getAdminApplicationsList(query: { page?: number; limit?: number; search?: string; status?: string }) {
+    async getAdminApplicationsList(query: { page?: number; limit?: number; search?: string; status?: string, roleId?: string }) {
         const page = query.page || 1;
         const limit = query.limit || 10;
         const offset = (page - 1) * limit;
 
         const where: any = {};
         if (query.status) where.status = query.status;
+        if (query.roleId) where.roleId = query.roleId;
         
         const userWhere: any = {};
         if (query.search) {
@@ -379,7 +456,10 @@ export class VolunteersService {
     async getVolunteerProfile(volunteerId: string) {
         const user = await this.userModel.findByPk(volunteerId, {
             attributes: ['id', 'firstName', 'lastName', 'email', 'profilePicture', 'chapterId', 'createdAt'],
-            include: [{ model: VolunteerStat }],
+            include: [{ 
+                model: VolunteerStat,
+                include: [{ model: VolunteerRole, as: 'currentRole' }]
+            }],
         });
         if (!user) throw new NotFoundException('Volunteer not found');
 
@@ -461,8 +541,31 @@ export class VolunteersService {
         payload: Partial<VolunteerStat>,
     ) {
         const [stats] = await this.statModel.findOrCreate({ where: { userId: volunteerId } });
+        const oldRoleId = stats.currentRoleId;
+        const oldGrade = stats.grade;
+
         Object.assign(stats, payload);
         await stats.save();
+
+        // If role or grade changes, notify
+        if ((payload.currentRoleId && payload.currentRoleId !== oldRoleId) || (payload.grade && payload.grade !== oldGrade)) {
+            const user = await this.userModel.findByPk(volunteerId);
+            if (user) {
+                let roleName = 'Updated Role';
+                if (payload.currentRoleId) {
+                    const role = await this.roleModel.findByPk(payload.currentRoleId);
+                    roleName = role?.name || roleName;
+                }
+
+                await this.notificationsService.create(
+                    user.id,
+                    NotificationType.VOLUNTEER_ROLE,
+                    'Strategic Role Assignment',
+                    `You have been assigned the role: ${roleName}`
+                );
+            }
+        }
+
         return stats;
     }
 }

@@ -112,11 +112,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const unreadCount = notifications.filter(n => !n.readAt).length;
 
-    const userHasAccess = (requiredFlag?: string) => {
-        if (!requiredFlag) return true; // No specific flag needed
-        if (!user) return false;
-        if (user.systemRole === 'SUPERADMIN' || user.systemRole === 'ADMIN') return true;
-        return user.flags?.includes(requiredFlag);
+    const userHasAccess = (href: string) => {
+        if (!user || !user.systemRole) return false;
+        if (user.systemRole === 'SUPERADMIN') return true;
+        
+        const rolePermissions: Record<string, string[]> = {
+            "/admin": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"],
+            "/admin/org-management": ["SUPERADMIN", "ADMIN"],
+            "/admin/regional-chapters": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN"],
+            "/admin/feed-moderation": ["SUPERADMIN", "ADMIN", "MODERATOR"],
+            "/admin/community-feed": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"],
+            "/admin/volunteers": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN"],
+            "/admin/events": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN"],
+            "/admin/partnerships": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
+            "/admin/membership-center": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
+            "/admin/jobs": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "MODERATOR"],
+            "/admin/messages": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"],
+            "/admin/revenue": ["SUPERADMIN"],
+            "/admin/sales-inventory": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "SALES"],
+            "/admin/resources": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
+            "/admin/platform": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
+            "/admin/analytics": ["SUPERADMIN", "ADMIN"],
+            "/admin/settings": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"]
+        };
+        
+        const roles = rolePermissions[href];
+        if (roles && roles.includes(user.systemRole)) return true;
+        return false;
     };
 
     const menuItems: MenuGroup[] = [
@@ -188,7 +210,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
                         {menuItems.map((group, idx) => {
-                            const visibleItems = group.items.filter(item => userHasAccess(item.flag));
+                            const visibleItems = group.items.filter(item => userHasAccess(item.href));
                             if (visibleItems.length === 0) return null;
 
                             return (

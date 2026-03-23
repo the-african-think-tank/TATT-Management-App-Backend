@@ -110,19 +110,43 @@ export class VolunteersController {
         return this.volunteersService.getTrainingResources();
     }
 
-    @ApiOperation({ summary: 'Get volunteer stats' })
+    @ApiOperation({ summary: 'Get volunteer role stats' })
     @ApiResponse({ status: 200, type: VolunteerStatSchema })
     @Get('stats')
     async getStats(@Request() req) {
         return this.volunteersService.getStats(req.user.id);
     }
 
-    // ─── VOLUNTEER ADMIN ENDPOINTS ─────────────────────────────────────────────
+    @ApiOperation({
+        summary: 'Get volunteer role details',
+        description: 'Get deep-dive details for a specific role, including chapter information.'
+    })
+    @ApiResponse({ status: 200, type: VolunteerRoleSchema })
+    @Get('roles/:id')
+    async getRoleDetails(@Param('id') id: string) {
+        return this.volunteersService.getRoleById(id);
+    }
+
+    @ApiOperation({ summary: 'Get all volunteer roles (Admin - including drafts)' })
+    @UseGuards(RolesGuard)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
+    @Get('admin/roles')
+    async getAllRoles(@Query('chapterId') chapterId?: string) {
+        return this.volunteersService.getAllRoles(chapterId);
+    }
+
+    @ApiOperation({ summary: 'Get volunteer role (Admin)' })
+    @UseGuards(RolesGuard)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
+    @Get('admin/roles/:id')
+    async getRole(@Param('id') id: string) {
+        return this.volunteersService.getRoleById(id);
+    }
 
     @ApiOperation({ summary: 'Create a new volunteer role (Admin)' })
     @ApiResponse({ status: 201, type: VolunteerRoleSchema })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Post('roles')
     async createRole(@Request() req, @Body() dto: CreateVolunteerRoleDto) {
         return this.volunteersService.createRole(req.user.id, dto);
@@ -131,16 +155,15 @@ export class VolunteersController {
     @ApiOperation({ summary: 'Close a volunteer role (Admin)' })
     @ApiResponse({ status: 200, type: VolunteerMessageResponseSchema })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Patch('roles/:id/close')
     async closeRole(@Param('id') id: string) {
         return this.volunteersService.closeRole(id);
     }
-
     @ApiOperation({ summary: 'Get all applications (Admin)' })
     @ApiResponse({ status: 200, type: [VolunteerApplicationSchema] })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('applications')
     async getApplications(@Request() req, @Query('roleId') roleId?: string) {
         return this.volunteersService.getApplications(req.user.id, roleId);
@@ -149,7 +172,7 @@ export class VolunteersController {
     @ApiOperation({ summary: 'Review/Approve application (Admin)' })
     @ApiResponse({ status: 200, type: VolunteerMessageResponseSchema })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Patch('applications/:id/status')
     async reviewApplication(@Request() req, @Param('id') id: string, @Body() dto: UpdateApplicationStatusDto) {
         return this.volunteersService.updateApplicationStatus(req.user.id, id, dto);
@@ -158,7 +181,7 @@ export class VolunteersController {
     @ApiOperation({ summary: 'Create volunteer activity (Admin)' })
     @ApiResponse({ status: 201, type: VolunteerActivitySchema })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Post('activities')
     async createActivity(@Request() req, @Body() dto: CreateActivityDto) {
         return this.volunteersService.createActivity(req.user.id, dto);
@@ -167,7 +190,7 @@ export class VolunteersController {
     @ApiOperation({ summary: 'Create training resource (Admin)' })
     @ApiResponse({ status: 201, type: TrainingResourceSchema })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Roles(SystemRole.VOLUNTEER_ADMIN, SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Post('training')
     async createTraining(@Request() req, @Body() dto: CreateTrainingResourceDto) {
         return this.volunteersService.createTrainingResource(req.user.id, dto);
@@ -175,7 +198,7 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Get admin dashboard stats (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/stats')
     async getAdminStats() {
         return this.volunteersService.getAdminDashboardStats();
@@ -183,7 +206,7 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Get paginated volunteers list (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/list')
     async getAdminVolunteersList(
         @Query('page') page?: number,
@@ -197,20 +220,21 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Get paginated applications list (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/applications')
     async getAdminApplications(
         @Query('page') page?: number,
         @Query('limit') limit?: number,
         @Query('search') search?: string,
         @Query('status') status?: string,
+        @Query('roleId') roleId?: string,
     ) {
-        return this.volunteersService.getAdminApplicationsList({ page, limit, search, status });
+        return this.volunteersService.getAdminApplicationsList({ page, limit, search, status, roleId });
     }
 
     @ApiOperation({ summary: 'Get training resource stats (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/training-stats')
     async getTrainingStats() {
         return this.volunteersService.getTrainingStats();
@@ -218,7 +242,7 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Get volunteer profile (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/profile/:id')
     async getVolunteerProfile(@Param('id') id: string) {
         return this.volunteersService.getVolunteerProfile(id);
@@ -226,7 +250,7 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Add volunteer feedback (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Post('admin/profile/:id/feedback')
     async addFeedback(@Request() req, @Param('id') id: string, @Body() dto: AddVolunteerFeedbackDto) {
         return this.volunteersService.addFeedback(req.user.id, id, dto);
@@ -234,7 +258,7 @@ export class VolunteersController {
 
     @ApiOperation({ summary: 'Get volunteer feedback (Admin)' })
     @UseGuards(RolesGuard)
-    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN, SystemRole.REGIONAL_ADMIN)
     @Get('admin/profile/:id/feedback')
     async getVolunteerFeedback(@Param('id') id: string, @Query('page') page?: number, @Query('limit') limit?: number) {
         return this.volunteersService.getVolunteerFeedback(id, Number(page) || 1, Number(limit) || 5);
@@ -246,5 +270,13 @@ export class VolunteersController {
     @Patch('admin/profile/:id/stats')
     async updateVolunteerStats(@Param('id') id: string, @Body() dto: UpdateVolunteerStatsDto) {
         return this.volunteersService.updateVolunteerStats(id, dto);
+    }
+
+    @ApiOperation({ summary: 'Get activity templates (Admin)' })
+    @UseGuards(RolesGuard)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.VOLUNTEER_ADMIN)
+    @Get('admin/activity-templates')
+    async getActivityTemplates(@Query('chapterId') chapterId?: string) {
+        return this.volunteersService.getActivityTemplates(chapterId);
     }
 }

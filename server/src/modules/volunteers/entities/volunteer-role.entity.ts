@@ -89,6 +89,13 @@ export class VolunteerRole extends Model<VolunteerRole> {
     })
     isActive: boolean;
 
+    @Column({
+        type: DataType.STRING,
+        allowNull: false,
+        defaultValue: 'Contributor',
+    })
+    grade: string;
+
     @ForeignKey(() => User)
     @Column({
         type: DataType.UUID,

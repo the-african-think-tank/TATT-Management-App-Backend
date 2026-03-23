@@ -12,6 +12,7 @@ import { VolunteerTrainingProgress } from './entities/volunteer-training-progres
 import { VolunteerFeedback } from './entities/volunteer-feedback.entity';
 import { User } from '../iam/entities/user.entity';
 import { Connection } from '../connections/entities/connection.entity';
+import { ActivityTemplate } from './entities/activity-template.entity';
 
 @Module({
     imports: [
@@ -25,6 +26,7 @@ import { Connection } from '../connections/entities/connection.entity';
             VolunteerFeedback,
             User,
             Connection,
+            ActivityTemplate,
         ]),
     ],
     controllers: [VolunteersController],
