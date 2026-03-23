@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Plus,
     Archive as Inventory2,
@@ -22,22 +23,12 @@ import { toast, Toaster } from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 
 export default function ResourcesAdminPage() {
+    const router = useRouter();
     const [resources, setResources] = useState<any[]>([]);
     const [stats, setStats] = useState({ total: 0, videos: 0, guides: 0 });
     const [loading, setLoading] = useState(true);
     const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
     const [activeTab, setActiveTab] = useState<string | null>(null);
-
-    // Modal state
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
-        title: "",
-        type: "DOCUMENT",
-        contentUrl: "",
-        thumbnailUrl: "",
-        minTier: "FREE",
-    });
 
     const fetchResources = async (page = 1, type = activeTab) => {
         setLoading(true);
@@ -65,30 +56,6 @@ export default function ResourcesAdminPage() {
         fetchResources(1, activeTab);
     }, [activeTab]);
 
-    const handleCreateResource = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        try {
-            await api.post("/resources", {
-                ...formData,
-                visibility: "PUBLIC"
-            });
-            toast.success("Resource created successfully!");
-            setIsModalOpen(false);
-            setFormData({
-                title: "",
-                type: "DOCUMENT",
-                contentUrl: "",
-                thumbnailUrl: "",
-                minTier: "FREE",
-            });
-            fetchResources(1, activeTab);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to create resource");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
     const handleDeleteResource = async (id: string) => {
         if (!confirm("Are you sure you want to archive this resource?")) return;
@@ -130,7 +97,7 @@ export default function ResourcesAdminPage() {
                         <p className="mt-1 text-slate-500 text-base">Central control for all educational materials, guides, and partnership content.</p>
                     </div>
                     <button 
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => router.push('/admin/resources/create')}
                         className="flex items-center gap-2 px-5 py-2.5 bg-tatt-lime text-tatt-black rounded-lg font-bold hover:brightness-110 shadow-sm transition-all"
                     >
                         <Plus size={20} />
@@ -300,96 +267,6 @@ export default function ResourcesAdminPage() {
                     </div>
                 </div>
             </section>
-
-            {/* Create Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom-4">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-                            <h3 className="text-xl font-black text-slate-900">Add New Resource</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCreateResource} className="p-6 space-y-5">
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Resource Title <span className="text-red-500">*</span></label>
-                                <input 
-                                    required 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none font-medium"
-                                    placeholder="e.g. 2024 Industry Outlook"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Resource Type</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none font-medium appearance-none"
-                                        value={formData.type}
-                                        onChange={(e) => setFormData({...formData, type: e.target.value})}
-                                    >
-                                        <option value="DOCUMENT">Document</option>
-                                        <option value="VIDEO">Video</option>
-                                        <option value="GUIDE">Guide</option>
-                                        <option value="PARTNERSHIP">Partnership</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Target Membership</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none font-medium appearance-none"
-                                        value={formData.minTier}
-                                        onChange={(e) => setFormData({...formData, minTier: e.target.value})}
-                                    >
-                                        <option value="FREE">Free Members</option>
-                                        <option value="UBUNTU">Ubuntu (Base)</option>
-                                        <option value="IMANI">Imani (Mid)</option>
-                                        <option value="KIONGOZI">Kiongozi (Top)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Link / Content URL</label>
-                                <input 
-                                    type="url"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none font-medium"
-                                    placeholder="https://"
-                                    value={formData.contentUrl}
-                                    onChange={(e) => setFormData({...formData, contentUrl: e.target.value})}
-                                />
-                                <p className="text-[10px] text-slate-400 mt-1.5 font-medium flex items-center gap-1">
-                                    <AlertCircle size={12} /> URLs to Google Drive, YouTube, or external partner portals.
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Thumbnail URL (Optional)</label>
-                                <input 
-                                    type="url"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none font-medium"
-                                    placeholder="https://"
-                                    value={formData.thumbnailUrl}
-                                    onChange={(e) => setFormData({...formData, thumbnailUrl: e.target.value})}
-                                />
-                            </div>
-
-                            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-500 font-bold hover:bg-slate-50 rounded-lg transition-colors">
-                                    Cancel
-                                </button>
-                                <button disabled={isSubmitting} type="submit" className="flex items-center gap-2 px-6 py-2.5 bg-tatt-lime hover:bg-tatt-lime-dark text-tatt-black transition-colors rounded-lg font-bold disabled:opacity-50">
-                                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                                    Deploy to Hub
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

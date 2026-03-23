@@ -67,6 +67,20 @@ export class ChaptersService implements OnApplicationBootstrap {
         return { message: 'Chapter updated successfully', data: chapter };
     }
 
+    async deleteChapter(id: string) {
+        const chapter = await this.chapterRepository.findByPk(id);
+        if (!chapter) throw new NotFoundException('Chapter not found.');
+
+        // Prevent deletion if there are users still attached to it
+        const usersCount = await this.userRepository.count({ where: { chapterId: id } });
+        if (usersCount > 0) {
+            throw new ConflictException(`"${chapter.name}" has ${usersCount} member(s) assigned. Please reassign or remove them before deleting this chapter.`);
+        }
+
+        await chapter.destroy();
+        return { message: `Chapter "${chapter.name}" has been permanently deleted.` };
+    }
+
     async createChapter(dto: CreateChapterDto) {
         if (dto.code && !/^\d{4}$/.test(dto.code)) {
             throw new ConflictException('Chapter code must be a 4-digit number.');
@@ -192,7 +206,7 @@ export class ChaptersService implements OnApplicationBootstrap {
         const { count, rows } = await this.activityRepository.findAndCountAll({
             where: { isPublished: true },
             include: [
-                { model: Chapter, as: 'chapter', attributes: ['name', 'code'] },
+                { model: Chapter, as: 'chapter', attributes: ['id', 'name', 'code'] },
                 { model: User, as: 'author', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
                 { model: User, as: 'volunteerManager', attributes: [...ACTIVITY_AUTHOR_ATTRS] },
             ],
@@ -207,10 +221,12 @@ export class ChaptersService implements OnApplicationBootstrap {
     }
 
     async createChapterActivity(chapterId: string, author: User, dto: CreateChapterActivityDto) {
-        await this.getChapterById(chapterId);
-        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN].includes(author.systemRole);
-        if (!isAdmin) {
-            throw new ForbiddenException('Only chapter admins can post chapter activities.');
+        const chapter = await this.getChapterById(chapterId);
+        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN].includes(author.systemRole);
+        const isRegionalAdminForChapter = author.systemRole === SystemRole.REGIONAL_ADMIN && (chapter.regionalManagerId === author.id || chapter.associateRegionalDirectorId === author.id);
+
+        if (!isAdmin && !isRegionalAdminForChapter) {
+            throw new ForbiddenException('Only chapter admins can post chapter activities for this chapter.');
         }
         const { eventDate, endDate, ...rest } = dto;
         const activity = await this.activityRepository.create({
@@ -227,9 +243,15 @@ export class ChaptersService implements OnApplicationBootstrap {
     async updateChapterActivity(activityId: string, author: User, dto: UpdateChapterActivityDto) {
         const activity = await this.activityRepository.findByPk(activityId);
         if (!activity) throw new NotFoundException('Activity not found.');
-        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN].includes(author.systemRole);
+        const chapter = await this.getChapterById(activity.chapterId);
+        
+        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN].includes(author.systemRole);
+        const isRegionalAdminForChapter = author.systemRole === SystemRole.REGIONAL_ADMIN && (chapter.regionalManagerId === author.id || chapter.associateRegionalDirectorId === author.id);
         const isOwner = activity.authorId === author.id;
-        if (!isAdmin && !isOwner) throw new ForbiddenException('Unauthorised.');
+        
+        if (!isAdmin && !isRegionalAdminForChapter && !isOwner) {
+            throw new ForbiddenException('Unauthorised to update this activity.');
+        }
         const { eventDate, ...rest } = dto;
         Object.assign(activity, rest);
         if (eventDate) activity.eventDate = new Date(eventDate);
@@ -240,9 +262,15 @@ export class ChaptersService implements OnApplicationBootstrap {
     async deleteChapterActivity(activityId: string, author: User) {
         const activity = await this.activityRepository.findByPk(activityId);
         if (!activity) throw new NotFoundException('Activity not found.');
-        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN].includes(author.systemRole);
+        const chapter = await this.getChapterById(activity.chapterId);
+
+        const isAdmin = [SystemRole.ADMIN, SystemRole.SUPERADMIN].includes(author.systemRole);
+        const isRegionalAdminForChapter = author.systemRole === SystemRole.REGIONAL_ADMIN && (chapter.regionalManagerId === author.id || chapter.associateRegionalDirectorId === author.id);
         const isOwner = activity.authorId === author.id;
-        if (!isAdmin && !isOwner) throw new ForbiddenException('Unauthorised.');
+        
+        if (!isAdmin && !isRegionalAdminForChapter && !isOwner) {
+            throw new ForbiddenException('Unauthorised to delete this activity.');
+        }
         await activity.destroy();
         return { message: 'Activity deleted.' };
     }

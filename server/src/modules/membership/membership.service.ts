@@ -202,6 +202,22 @@ export class MembershipService implements OnApplicationBootstrap {
         return discount.update(dto);
     }
 
+    async removeDiscount(id: string) {
+        const discount = await this.discountRepo.findByPk(id);
+        if (!discount) throw new Error('Discount not found');
+
+        // Sync with Stripe if possible
+        if (discount.stripeCouponId) {
+            try {
+                await (await this.getStripe()).coupons.del(discount.stripeCouponId);
+            } catch (error: any) {
+                this.logger.warn(`Failed to delete Stripe coupon: ${error.message}`);
+            }
+        }
+
+        return discount.destroy();
+    }
+
     // --- Members Management ---
 
     async getSubscribedMembers(filters: any) {

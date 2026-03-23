@@ -44,6 +44,10 @@ export class CreateVolunteerRoleDto {
     @ApiProperty({ example: '2026-12-31' })
     @IsDateString() @IsNotEmpty()
     openUntil: string;
+
+    @ApiPropertyOptional({ example: 'Lead' })
+    @IsString() @IsOptional()
+    grade?: string;
 }
 
 export class ApplyVolunteerDto {
@@ -208,4 +212,12 @@ export class UpdateVolunteerStatsDto {
     @ApiPropertyOptional()
     @IsString() @IsOptional()
     adminNotes?: string;
+
+    @ApiPropertyOptional()
+    @IsUUID() @IsOptional()
+    currentRoleId?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    rating?: number;
 }

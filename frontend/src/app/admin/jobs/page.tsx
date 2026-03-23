@@ -45,6 +45,7 @@ interface Stats {
     inactive: number;
     flagged: number;
     applications: number;
+    categories?: { name: string; count: number; percentage: number }[];
 }
 
 type ModalMode = "view" | "action" | null;
@@ -446,18 +447,30 @@ export default function AdminJobsCenterPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-tatt-lime mb-1">Trend Report</p>
                             <h3 className="text-base font-black text-foreground mb-5">Postings by Category</h3>
                             <div className="space-y-4">
-                                {CATEGORIES.slice(0, 5).map((cat, i) => {
-                                    const pct = Math.max(15, 80 - i * 13);
-                                    return (
-                                        <div key={cat} className="flex items-center gap-3">
-                                            <p className="text-xs font-medium text-foreground w-28 shrink-0 truncate">{cat}</p>
+                                {(stats?.categories && stats.categories.length > 0) ? (
+                                    stats.categories.slice(0, 5).map((cat) => (
+                                        <div key={cat.name} className="flex items-center gap-3">
+                                            <p className="text-xs font-medium text-foreground w-28 shrink-0 truncate">{cat.name}</p>
                                             <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden">
-                                                <div className="h-full bg-tatt-lime rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                                <div className="h-full bg-tatt-lime rounded-full transition-all" style={{ width: `${cat.percentage}%` }} />
                                             </div>
-                                            <p className="text-[10px] font-black text-tatt-gray w-8 text-right">{pct}%</p>
+                                            <p className="text-[10px] font-black text-tatt-gray w-8 text-right">{cat.percentage}%</p>
                                         </div>
-                                    );
-                                })}
+                                    ))
+                                ) : (
+                                    CATEGORIES.slice(0, 5).map((cat, i) => {
+                                        const pct = Math.max(15, 80 - i * 13);
+                                        return (
+                                            <div key={cat} className="flex items-center gap-3 blur-[1px] opacity-40 grayscale">
+                                                <p className="text-xs font-medium text-foreground w-28 shrink-0 truncate">{cat}</p>
+                                                <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden">
+                                                    <div className="h-full bg-tatt-lime rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-tatt-gray w-8 text-right">{pct}%</p>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 

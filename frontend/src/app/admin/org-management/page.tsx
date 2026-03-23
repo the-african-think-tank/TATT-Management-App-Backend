@@ -16,10 +16,12 @@ import {
     Building,
     TrendingUp,
     TrendingDown,
-    AlertCircle
+    AlertCircle,
+    Trash2
 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/context/auth-context";
 
 interface Member {
     id: string;
@@ -49,6 +51,7 @@ export default function OrgManagementPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const { user } = useAuth();
 
     useEffect(() => {
         fetchData();
@@ -67,6 +70,18 @@ export default function OrgManagementPage() {
             toast.error("Failed to load organization data");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`Are you sure you want to permanently delete team member ${name}?`)) return;
+        try {
+            await api.delete(`/users/${id}`);
+            toast.success("Team member deleted successfully");
+            fetchData();
+        } catch (error: any) {
+            console.error("Error deleting member:", error);
+            toast.error(error.response?.data?.message || "Failed to delete team member");
         }
     };
 
@@ -223,9 +238,16 @@ export default function OrgManagementPage() {
                                             {getStatusBadge(member)}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="p-2 text-tatt-gray hover:text-tatt-lime transition-colors">
-                                                <Edit2 size={16} />
-                                            </button>
+                                            <div className="flex justify-end gap-1">
+                                                <Link href={`/admin/org-management/edit/${member.id}`} className="p-2 inline-block text-tatt-gray hover:text-tatt-lime transition-colors">
+                                                    <Edit2 size={16} />
+                                                </Link>
+                                                {user?.systemRole === "SUPERADMIN" && (
+                                                    <button onClick={() => handleDelete(member.id, `${member.firstName} ${member.lastName}`)} className="p-2 text-tatt-gray hover:text-red-500 transition-colors">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

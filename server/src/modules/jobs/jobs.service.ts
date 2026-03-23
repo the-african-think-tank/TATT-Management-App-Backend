@@ -9,6 +9,7 @@ import { User } from '../iam/entities/user.entity';
 import { ApplyJobDto } from './dto/jobs.dto';
 import { NotificationsService } from '../notifications/services/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 export type MarketInsights = {
     topCategory: { name: string; growth: string } | null;
@@ -268,13 +269,33 @@ export class JobsService {
     }
 
     async getAdminStats() {
-        const [total, active, flagged, applications] = await Promise.all([
+        const [total, active, flagged, applications, categoryCounts] = await Promise.all([
             this.jobRepo.count({ paranoid: false }),
             this.jobRepo.count({ where: { isActive: true } }),
             this.jobRepo.count({ where: { isFlagged: true } }),
             this.applicationRepo.count(),
+            this.jobRepo.findAll({
+                where: { isActive: true },
+                attributes: ['category', [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']],
+                group: ['category'],
+                raw: true,
+            })
         ]);
-        return { total, active, inactive: total - active, flagged, applications };
+
+        const categories = (categoryCounts as any).map((item: any) => ({
+            name: item.category || 'Other',
+            count: parseInt(item.count, 10),
+            percentage: active > 0 ? Math.round((parseInt(item.count, 10) / active) * 100) : 0
+        })).sort((a: any, b: any) => b.count - a.count);
+
+        return { 
+            total, 
+            active, 
+            inactive: total - active, 
+            flagged, 
+            applications,
+            categories 
+        };
     }
 
     async adminCreateListing(dto: import('./dto/jobs.dto').CreateJobDto) {

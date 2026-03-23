@@ -113,6 +113,10 @@ export class NotificationsService {
                 return `${baseUrl}/dashboard/settings/subscription`;
             case NotificationType.EVENT_REMINDER:
                 return `${baseUrl}/dashboard/events/${data?.eventId || ''}`;
+            case NotificationType.VOLUNTEER_ACTIVITY:
+                return `${baseUrl}/member/impact`;
+            case NotificationType.VOLUNTEER_ROLE:
+                return `${baseUrl}/member/profile`;
             default:
                 return `${baseUrl}/dashboard`;
         }
@@ -128,6 +132,10 @@ export class NotificationsService {
                 return 'Renew Membership';
             case NotificationType.EVENT_REMINDER:
                 return 'View Event';
+            case NotificationType.VOLUNTEER_ACTIVITY:
+                return 'View My Activities';
+            case NotificationType.VOLUNTEER_ROLE:
+                return 'View Profile';
             default:
                 return 'View Dashboard';
         }

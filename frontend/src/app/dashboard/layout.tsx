@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (!isLoading) {
             if (!isAuthenticated) {
                 router.push('/');
-            } else if (user && user.systemRole !== 'COMMUNITY_MEMBER') {
+            } else if (user && user.systemRole !== 'COMMUNITY_MEMBER' && !window.location.pathname.includes('/volunteers')) {
                 router.push('/admin');
             } else if (user && user.systemRole === 'COMMUNITY_MEMBER' && !user.flags?.includes('ONBOARDING_COMPLETED')) {
                 // If they are a member but haven't finished the plans selection,
@@ -36,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         );
     }
 
-    if (!isAuthenticated || (user && user.systemRole !== 'COMMUNITY_MEMBER')) {
+    if (!isAuthenticated || (user && user.systemRole !== 'COMMUNITY_MEMBER' && !window.location.pathname.includes('/volunteers'))) {
         return null;
     }
 

@@ -33,6 +33,7 @@ export default function SystemConfigurationPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("SMTP");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSecret, setShowSecret] = useState<Record<string, boolean>>({});
@@ -87,6 +88,52 @@ export default function SystemConfigurationPage() {
     return matchesTab && matchesSearch;
   });
 
+  const handleBulkSave = async () => {
+    setIsBulkSaving(true);
+    try {
+      const updates = filteredSettings.map(s => {
+        const is2FA = s.key.startsWith("REQUIRE_2FA");
+        const el = document.getElementById(`input-${s.key}`) as HTMLInputElement | HTMLSelectElement;
+        if (!el) return null;
+        let val = "";
+        if (is2FA) {
+          val = (el as HTMLInputElement).checked ? "true" : "false";
+        } else {
+          val = el.value;
+        }
+        if (val !== s.value) {
+          return { key: s.key, value: val, category: s.category, description: s.description, isSecret: s.isSecret };
+        }
+        return null;
+      }).filter(Boolean) as any[];
+
+      if (updates.length === 0) {
+        toast("No changes detected", { icon: "ℹ️" });
+        setIsBulkSaving(false);
+        return;
+      }
+
+      await Promise.all(updates.map(u => 
+        api.put(`/admin/settings/${u.key}`, {
+          value: u.value, 
+          category: u.category, 
+          description: u.description,
+          isSecret: u.isSecret
+        })
+      ));
+
+      setSettings(prev => prev.map(s => {
+        const updated = updates.find(u => u.key === s.key);
+        return updated ? { ...s, value: updated.value } : s;
+      }));
+      toast.success(`${updates.length} parameter(s) updated successfully`);
+    } catch (err) {
+      toast.error("Failed to save some changes. Check inputs.");
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
   const activeTabLabel = TABS.find(t => t.id === activeTab)?.label || "Configuration";
 
   if (loading) return (
@@ -139,8 +186,13 @@ export default function SystemConfigurationPage() {
           >
             <RefreshCw className="size-4" />
           </button>
-          <button className="bg-tatt-lime text-tatt-black font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest hover:shadow-lg hover:shadow-tatt-lime/20 transition-all flex items-center gap-2 active:scale-95 shadow-sm">
-             Save Settings
+          <button 
+            onClick={handleBulkSave}
+            disabled={isBulkSaving}
+            className="bg-tatt-lime text-tatt-black font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-widest hover:shadow-lg hover:shadow-tatt-lime/20 transition-all flex items-center gap-2 active:scale-95 shadow-sm disabled:opacity-50"
+          >
+             {isBulkSaving ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
+             {isBulkSaving ? "Saving..." : "Save Settings"}
           </button>
         </div>
       </div>

@@ -18,10 +18,12 @@ import {
     Trash2,
     Edit2,
     Hash,
-    Filter
+    Filter,
+    UserCog
 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 interface Broadcast {
     id: string;
@@ -161,6 +163,12 @@ export default function PlatformManagement() {
                 <div className="space-y-1">
                     <h3 className="text-3xl font-black tracking-tight text-foreground italic uppercase">Platform Management</h3>
                     <p className="text-tatt-gray font-medium">Manage platform settings and communications</p>
+                </div>
+                <div className="flex gap-4">
+                    <Link href="/admin/platform/roles" className="bg-surface border border-border hover:border-tatt-lime text-foreground flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm group">
+                        <UserCog size={16} className="text-tatt-lime group-hover:scale-110 transition-transform" />
+                        Role Management Matrix
+                    </Link>
                 </div>
             </div>
 

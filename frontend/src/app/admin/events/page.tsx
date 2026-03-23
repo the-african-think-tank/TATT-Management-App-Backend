@@ -25,6 +25,7 @@ import {
 import Image from "next/image";
 import api from "@/services/api";
 import { toast, Toaster } from "react-hot-toast";
+import { useAuth } from "@/context/auth-context";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from "date-fns";
 
 // --- Types ---
@@ -54,9 +55,12 @@ interface Chapter {
     id: string;
     name: string;
     code: string;
+    regionalManagerId?: string;
+    associateRegionalDirectorId?: string;
 }
 
 export default function AdminEventsPage() {
+    const { user } = useAuth();
     const [events, setEvents] = useState<Event[]>([]);
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [loading, setLoading] = useState(true);
@@ -157,6 +161,10 @@ export default function AdminEventsPage() {
         if (type === "WORKSHOP") return "bg-tatt-lime-light text-tatt-lime-dark";
         return "bg-tatt-green-deep/10 text-tatt-green-deep";
     };
+
+    const availableChapters = user?.systemRole === 'REGIONAL_ADMIN' 
+        ? chapters.filter(c => c.regionalManagerId === user?.id || c.associateRegionalDirectorId === user?.id)
+        : chapters;
 
     return (
         <div className="min-h-screen bg-background text-foreground p-8 lg:p-12">
@@ -450,7 +458,8 @@ export default function AdminEventsPage() {
                                     <select
                                         value={form.isForAllMembers ? "true" : "false"}
                                         onChange={e => setForm({ ...form, isForAllMembers: e.target.value === "true" })}
-                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tatt-lime"
+                                        disabled={user?.systemRole === 'REGIONAL_ADMIN'}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tatt-lime disabled:opacity-50"
                                     >
                                         <option value="true">Public / All Members</option>
                                         <option value="false">Restricted / Tier-based</option>
@@ -489,7 +498,7 @@ export default function AdminEventsPage() {
                                     <label className="text-sm font-bold">Locations & Chapters</label>
                                     <button
                                         type="button"
-                                        onClick={() => setForm({ ...form, locations: [...form.locations, { chapterId: chapters[0]?.id || "", address: "" }] })}
+                                        onClick={() => setForm({ ...form, locations: [...form.locations, { chapterId: availableChapters[0]?.id || "", address: "" }] })}
                                         className="text-xs font-bold text-tatt-lime-dark hover:underline flex items-center gap-1"
                                     >
                                         <Plus className="size-3" /> Add Location
@@ -507,7 +516,9 @@ export default function AdminEventsPage() {
                                                 }}
                                                 className="w-full bg-background border border-border rounded-xl px-4 py-2 text-xs"
                                             >
-                                                {chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                {user?.systemRole === 'REGIONAL_ADMIN' 
+                                                    ? availableChapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                                                    : chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
                                         </div>
                                         <div className="flex-[2] space-y-1">

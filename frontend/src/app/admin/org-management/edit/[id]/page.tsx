@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
     ChevronRight,
     User,
@@ -50,10 +50,12 @@ const moduleFlags = [
 
 
 
-export default function AddMemberPage() {
+export default function EditMemberPage() {
     const router = useRouter();
+    const params = useParams();
     const [chapters, setChapters] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
 
     const [formData, setFormData] = useState({
         firstName: "",
@@ -68,8 +70,35 @@ export default function AddMemberPage() {
     });
 
     useEffect(() => {
-        api.get("/chapters").then(res => setChapters(res.data)).catch(err => console.error(err));
-    }, []);
+        const init = async () => {
+            try {
+                const [chaptersRes, userRes] = await Promise.all([
+                    api.get("/chapters"),
+                    api.get(`/users/${params.id}`)
+                ]);
+                setChapters(chaptersRes.data);
+                
+                const u = userRes.data;
+                setFormData({
+                    firstName: u.firstName || "",
+                    lastName: u.lastName || "",
+                    email: u.email || "",
+                    phoneNumber: u.phoneNumber || "",
+                    professionTitle: u.professionTitle || "",
+                    location: u.location || "",
+                    systemRole: u.systemRole || "ADMIN",
+                    chapterId: u.chapterId || "",
+                    flags: u.flags || []
+                });
+            } catch (err: any) {
+                toast.error("Failed to fetch user data");
+                router.push("/admin/org-management");
+            } finally {
+                setFetching(false);
+            }
+        };
+        if (params?.id) init();
+    }, [params?.id, router]);
 
     const toggleFlag = (flag: string) => {
         setFormData(prev => ({
@@ -88,15 +117,20 @@ export default function AddMemberPage() {
 
         setLoading(true);
         try {
-            await api.post("/auth/org-member/add", formData);
-            toast.success("Team member added successfully! Invitation sent.");
+            await api.patch(`/users/${params.id}`, {
+                ...formData,
+                chapterId: formData.chapterId || null
+            });
+            toast.success("Team member updated successfully!");
             router.push("/admin/org-management");
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to add team member");
+            toast.error(error.response?.data?.message || "Failed to update team member");
         } finally {
             setLoading(false);
         }
     };
+
+    if (fetching) return <div className="p-20 text-center font-bold text-tatt-gray">Loading User Profile...</div>;
 
     return (
         <div className="max-w-5xl mx-auto pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -104,7 +138,7 @@ export default function AddMemberPage() {
             <nav className="flex items-center gap-2 text-sm text-tatt-gray mb-6">
                 <Link href="/admin/org-management" className="hover:text-tatt-lime transition-colors">Org Management</Link>
                 <ChevronRight size={14} />
-                <span className="text-foreground font-bold">Add New Team Member</span>
+                <span className="text-foreground font-bold">Edit Team Member</span>
             </nav>
 
             <header className="mb-10">
@@ -112,10 +146,10 @@ export default function AddMemberPage() {
                     <Link href="/admin/org-management" className="p-2 hover:bg-surface rounded-xl border border-border transition-all">
                         <ArrowLeft size={20} className="text-tatt-gray" />
                     </Link>
-                    <h1 className="text-4xl font-black tracking-tight text-foreground">Add New Team Member</h1>
+                    <h1 className="text-4xl font-black tracking-tight text-foreground">Edit Team Member</h1>
                 </div>
                 <p className="text-tatt-gray text-lg max-w-2xl font-medium">
-                    Onboard a new administrative staff member to the TATT ecosystem with specific roles and region-based permissions.
+                    Modify the roles, flags, and personal details of an existing TATT administrative staff member.
                 </p>
             </header>
 
@@ -277,7 +311,7 @@ export default function AddMemberPage() {
                     disabled={loading}
                     className="px-10 py-3 rounded-xl text-sm font-bold bg-tatt-lime text-tatt-black shadow-lg shadow-tatt-lime/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest disabled:opacity-50"
                 >
-                    {loading ? "Processing..." : "Create Account & Send Invite"}
+                    {loading ? "Processing..." : "Save Changes"}
                 </button>
             </div>
         </div>
