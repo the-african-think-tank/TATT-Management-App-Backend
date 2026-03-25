@@ -22,7 +22,8 @@ import {
     Trello,
     Zap,
     Banknote,
-    DollarSign
+    DollarSign,
+    Handshake
 } from "lucide-react";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
@@ -44,7 +45,8 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
         { name: "Job Board", href: "/dashboard/jobs", icon: Briefcase },
         { name: "Volunteers", href: "/dashboard/volunteers", icon: HeartHandshake },
         { name: "My Chapter", href: "/dashboard/chapter", icon: Building2 },
-        ...(communityTier !== "FREE" ? [{ name: "Business Center", href: "/dashboard/business-center", icon: Store }] : []),
+        { name: "Partner Network", href: "/dashboard/partnerships", icon: Handshake },
+        ...(communityTier !== "FREE" ? [{ name: "Business Directory", href: "/dashboard/business-center", icon: Store }] : []),
         ...(communityTier !== "KIONGOZI" ? [{ name: "Upgrade", href: "/dashboard/upgrade", icon: Zap, highlight: true }] : []),
     ];
 
