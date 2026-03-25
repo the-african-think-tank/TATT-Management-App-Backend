@@ -44,8 +44,8 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
         { name: "Job Board", href: "/dashboard/jobs", icon: Briefcase },
         { name: "Volunteers", href: "/dashboard/volunteers", icon: HeartHandshake },
         { name: "My Chapter", href: "/dashboard/chapter", icon: Building2 },
+        ...(communityTier !== "FREE" ? [{ name: "Business Center", href: "/dashboard/business-center", icon: Store }] : []),
         ...(communityTier !== "KIONGOZI" ? [{ name: "Upgrade", href: "/dashboard/upgrade", icon: Zap, highlight: true }] : []),
-        ...(communityTier === "KIONGOZI" ? [{ name: "My Business", href: "/dashboard/business", icon: Store }] : []),
     ];
 
     const bottomLinks = [
@@ -55,9 +55,10 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
     const adminLinks = [
         { name: "Revenue Center", href: "/admin/revenue", icon: Banknote, role: "SUPERADMIN" },
         { name: "Jobs Center", href: "/admin/jobs", icon: Briefcase, role: "ADMIN" },
+        { name: "Business Directory", href: "/admin/business-directory", icon: Store, role: "MODERATOR" },
     ];
 
-    const isAdmin = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN" || user?.role === "SUPERADMIN" || user?.role === "ADMIN";
+    const isAdmin = user?.systemRole === "SUPERADMIN" || user?.systemRole === "ADMIN" || user?.systemRole === "MODERATOR" || user?.role === "SUPERADMIN" || user?.role === "ADMIN" || user?.role === "MODERATOR";
     const isSuperAdmin = user?.systemRole === "SUPERADMIN" || user?.role === "SUPERADMIN";
 
     return (

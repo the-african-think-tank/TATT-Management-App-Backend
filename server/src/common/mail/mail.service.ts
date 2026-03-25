@@ -256,5 +256,57 @@ export class MailService {
             this.logger.error(`Failed to send notification email to ${email}`, error.stack);
         }
     }
+
+    async sendDailyDigest(email: string, firstName: string, platformPosts: number, chapterPosts: number, chapterName?: string) {
+        try {
+            await this.mailerService.sendMail({
+                to: email,
+                subject: `Daily Community Update — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #ffffff; border: 1px solid #e1e1e1; border-radius: 20px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #000; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">TATT Community</h1>
+                            <p style="color: #666; font-size: 14px; margin-top: 5px;">Daily Digest • ${new Date().toLocaleDateString()}</p>
+                        </div>
+                        
+                        <h2 style="color: #000; font-size: 24px; font-weight: 800; margin-bottom: 20px;">Hi ${firstName},</h2>
+                        <p style="color: #444; font-size: 16px; line-height: 1.6;">The TATT ecosystem has been active today! Here's a snapshot of what's new in your professional network:</p>
+                        
+                        <div style="background-color: #f7f9fc; padding: 25px; border-radius: 16px; margin: 30px 0; border: 1px solid #edf1f7;">
+                            <div style="display: flex; justify-content: space-around; text-align: center;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 32px; font-weight: 900; color: #ADFF2F; text-shadow: 1px 1px 0px rgba(0,0,0,0.1);">${platformPosts}</div>
+                                    <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #888; letter-spacing: 1px; margin-top: 5px;">New Posts Today</div>
+                                </div>
+                                ${chapterName ? `
+                                <div style="flex: 1; border-left: 1px solid #e1e1e1;">
+                                    <div style="font-size: 32px; font-weight: 900; color: #000;">${chapterPosts}</div>
+                                    <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #888; letter-spacing: 1px; margin-top: 5px;">In ${chapterName}</div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <p style="text-align: center; margin-top: 40px;">
+                            <a href="${this.frontendUrl}/dashboard/feed" style="background-color: #ADFF2F; color: #000; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; box-shadow: 0 4px 14px rgba(173, 255, 47, 0.3);">
+                                Check out the Feed
+                            </a>
+                        </p>
+                        
+                        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
+                            <p style="font-size: 10px; color: #aaa; text-transform: uppercase; font-weight: 800; letter-spacing: 2px;">The African Think Tank</p>
+                            <p style="font-size: 11px; color: #aaa; line-height: 1.5; margin-top: 10px;">
+                                You're receiving this because you're a member of the TATT professional ecosystem.<br/>
+                                <a href="${this.frontendUrl}/dashboard/settings" style="color: #666; text-decoration: underline;">Unsubscribe</a> or manage preferences.
+                            </p>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Daily digest email sent to ${email}`);
+        } catch (error: any) {
+            this.logger.error(`Failed to send daily digest to ${email}`, error.stack);
+        }
+    }
 }
 

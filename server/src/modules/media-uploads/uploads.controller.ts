@@ -15,6 +15,7 @@ import {
 import { UploadsService } from './uploads.service';
 import { UploadedFileSchema, UploadResponseSchema, ALL_ALLOWED_MIMES } from './dto/upload.types';
 import { JwtAuthGuard } from '../iam/auth/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
 /** Multer stores files in OS temp dir; the service finalises location after validation */
 const TEMP_STORAGE = diskStorage({
@@ -127,6 +128,7 @@ export class UploadsController {
         },
     })
     @ApiResponse({ status: 401, description: 'Missing or invalid Bearer token.' })
+    @Public()
     @Post('media')
     @UseInterceptors(
         FilesInterceptor('files', 10, {
