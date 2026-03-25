@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DashboardSidebar } from "@/components/organisms/dashboard-sidebar";
 import { DashboardHeader } from "@/components/organisms/dashboard-header";
+import { DashboardFooter } from "@/components/organisms/dashboard-footer";
 import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -66,6 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="flex-1">
                     {children}
                 </div>
+                <DashboardFooter />
             </main>
         </div>
     );

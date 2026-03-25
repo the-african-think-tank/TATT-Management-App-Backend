@@ -18,13 +18,15 @@ import {
     CreditCard,
     RefreshCw,
     Wallet,
-    Lock
+    Lock,
+    Image as ImageIcon,
+    Zap
 } from "lucide-react";
 
 import { Interest } from "@/types/interests";
 import { ChapterDetail } from "@/types/chapter";
 import { toast } from "react-hot-toast";
-import { ChevronDown, X, AlertTriangle } from "lucide-react";
+import { ChevronDown, X, AlertTriangle, Globe, MapPin, Phone, Mail, Layout } from "lucide-react";
 
 // --- Custom Components ---
 
@@ -327,6 +329,24 @@ export default function SettingsPage() {
     const [paymentMethod, setPaymentMethod] = useState<{ last4: string, brand: string, exp_month: number, exp_year: number } | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [togglingAutoPay, setTogglingAutoPay] = useState(false);
+    const [activeTab, setActiveTab] = useState<'GENERAL' | 'BILLING' | 'BUSINESS'>('GENERAL');
+    
+    // Business Profile State
+    const [businessData, setBusinessData] = useState({
+        name: "",
+        category: "All",
+        website: "",
+        locationText: "",
+        perkOffer: "",
+        contactName: "",
+        contactEmail: "",
+        contactPhone: "",
+        logoUrl: "",
+        bannerUrl: "",
+        chapterId: "",
+    });
+    const [savingBusiness, setSavingBusiness] = useState(false);
+    const [loadingBusiness, setLoadingBusiness] = useState(false);
 
 
     useEffect(() => {
@@ -376,8 +396,36 @@ export default function SettingsPage() {
             }
         };
 
+        const fetchBusinessProfile = async () => {
+            if (user?.communityTier !== 'KIONGOZI') return;
+            setLoadingBusiness(true);
+            try {
+                const { data } = await api.get("/business-directory/profile-managed");
+                if (data) {
+                    setBusinessData({
+                        name: data.name || "",
+                        category: data.category || "All",
+                        website: data.website || "",
+                        locationText: data.locationText || "",
+                        perkOffer: data.perkOffer || "",
+                        contactName: data.contactName || "",
+                        contactEmail: data.contactEmail || "",
+                        contactPhone: data.contactPhone || "",
+                        logoUrl: data.logoUrl || "",
+                        bannerUrl: data.bannerUrl || "",
+                        chapterId: data.chapterId || "",
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch business profile", err);
+            } finally {
+                setLoadingBusiness(false);
+            }
+        };
+
         loadInitialData();
         fetchPaymentMethod();
+        fetchBusinessProfile();
     }, [user]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -515,6 +563,48 @@ export default function SettingsPage() {
         }
     };
 
+    const handleBusinessInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setBusinessData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleBusinessSelectChange = (name: string, value: string) => {
+        setBusinessData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleBusinessFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'bannerUrl') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const uploadFormData = new FormData();
+        uploadFormData.append("files", file);
+
+        try {
+            toast.loading(`Uploading business ${field === 'logoUrl' ? 'logo' : 'banner'}...`, { id: 'biz-upload' });
+            const response = await api.post("/uploads/media", uploadFormData);
+            const imageUrl = response.data.files?.[0]?.url;
+            
+            if (imageUrl) {
+                setBusinessData(prev => ({ ...prev, [field]: imageUrl }));
+                toast.success("Image uploaded successfully!", { id: 'biz-upload' });
+            }
+        } catch (error) {
+            toast.error("Upload failed.", { id: 'biz-upload' });
+        }
+    };
+
+    const handleSaveBusiness = async () => {
+        setSavingBusiness(true);
+        try {
+            await api.post("/business-directory/profile-managed", businessData);
+            toast.success("Business profile saved and published!");
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to save business profile.");
+        } finally {
+            setSavingBusiness(false);
+        }
+    };
+
     if (fetching) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -525,6 +615,8 @@ export default function SettingsPage() {
 
     const isKiongozi = user?.communityTier === "KIONGOZI";
 
+    const categories = ['Agriculture & Food', 'Technology & Innovation', 'Healthcare & Wellness', 'Creative & Media', 'Finance & FinTech', 'Manufacturing & Trade', 'Education & Research'];
+
     return (
         <div className="max-w-5xl mx-auto p-4 sm:p-8">
             <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -532,58 +624,62 @@ export default function SettingsPage() {
                     <h2 className="text-3xl font-black tracking-tight mb-2 text-foreground">Account Settings</h2>
                     <p className="text-tatt-gray">Manage your profile, visibility, and professional identity.</p>
                 </div>
-                {user?.deletionRequestedAt && (
-                    <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-4 animate-pulse">
-                        <Trash2 className="text-red-500 shrink-0" />
-                        <div>
-                            <p className="text-xs font-black text-red-500 uppercase tracking-widest">Account Scheduled for Deletion</p>
-                            <p className="text-[10px] text-tatt-gray italic">Set to be permanently removed on {new Date(new Date(user.deletionRequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                )}
             </header>
 
-            {user?.deletionRequestedAt && (
-                <div className="mb-8">
-                    {(() => {
-                        const start = new Date(user.deletionRequestedAt).getTime();
-                        const now = new Date().getTime();
-                        const end = start + 14 * 24 * 60 * 60 * 1000;
-                        const total = end - start;
-                        const elapsed = now - start;
-                        const progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
-                        const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-
-                        return (
-                            <div className="bg-surface border border-red-500/20 rounded-2xl p-6 shadow-sm overflow-hidden relative">
-                                <div className="flex justify-between items-end mb-4">
-                                    <div>
-                                        <h4 className="font-bold text-red-500">Deletion Progress</h4>
-                                        <p className="text-xs text-tatt-gray">{daysLeft} days remaining before permanent data removal</p>
-                                    </div>
-                                    <button
-                                        onClick={handleCancelDeletion}
-                                        disabled={deletionLoading}
-                                        className="text-xs font-bold text-white bg-red-500 px-4 py-2 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                                    >
-                                        Cancel Deletion Request
-                                    </button>
-                                </div>
-                                <div className="h-2 w-full bg-border rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-red-500 transition-all duration-1000"
-                                        style={{ width: `${progress}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
+            {/* Tab Navigation */}
+            <div className="flex bg-surface border border-border p-1 rounded-2xl mb-8 overflow-x-auto no-scrollbar shadow-sm w-fit max-w-full">
+                <button 
+                    onClick={() => setActiveTab('GENERAL')}
+                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'GENERAL' ? 'bg-tatt-lime text-black shadow-md' : 'text-tatt-gray hover:text-foreground hover:bg-black/5'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <UserIcon size={14} /> Global Profile
+                    </div>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('BILLING')}
+                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'BILLING' ? 'bg-tatt-lime text-black shadow-md' : 'text-tatt-gray hover:text-foreground hover:bg-black/5'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Wallet size={14} /> Billing & Access
+                    </div>
+                </button>
+                {isKiongozi && (
+                    <button 
+                        onClick={() => setActiveTab('BUSINESS')}
+                        className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'BUSINESS' ? 'bg-tatt-lime text-black shadow-md' : 'text-tatt-gray hover:text-foreground hover:bg-black/5'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Building2 size={14} /> Business Profile
+                        </div>
+                    </button>
+                )}
+            </div>
 
             <div className="space-y-6">
-                {/* Profile Header Card */}
-                <section className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
+                {activeTab === 'GENERAL' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {user?.deletionRequestedAt && (
+                            <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6 animate-pulse">
+                                <div className="size-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                                    <Trash2 className="text-red-500 size-6" />
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                    <p className="text-sm font-black text-red-500 uppercase tracking-widest">Account Scheduled for Deletion</p>
+                                    <p className="text-xs text-tatt-gray italic">Your data is set for permanent removal on {new Date(new Date(user.deletionRequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                                </div>
+                                <button
+                                    onClick={handleCancelDeletion}
+                                    disabled={deletionLoading}
+                                    className="px-6 py-3 bg-red-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
+                                >
+                                    Cancel Request
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Profile Header Card */}
+                        <section className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
                     <div className="flex flex-col md:flex-row items-center gap-8">
                         <div className="relative group">
                             <div className="size-32 rounded-full overflow-hidden border-4 border-tatt-lime/20 bg-tatt-lime/10 flex items-center justify-center relative shadow-xl shadow-tatt-lime/5 group-hover:scale-105 transition-transform duration-300">
@@ -809,11 +905,15 @@ export default function SettingsPage() {
                                 )}
                             </label>
                         ))}
-                    </div>
-                </section>
+                        </div>
+                    </section>
+                </div>
+                )}
 
-                {/* Billing & Subscription */}
-                <section className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
+                {activeTab === 'BILLING' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {/* Billing & Subscription */}
+                        <section className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                         <Wallet className="text-tatt-lime size-5" />
                         Billing & Subscription
@@ -909,76 +1009,219 @@ export default function SettingsPage() {
                 </section>
 
 
-                {/* Business Profile (Kiongozi Section) */}
-                {isKiongozi && (
-                    <section className="bg-tatt-lime/5 p-6 rounded-2xl border border-tatt-lime/20 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 py-1 px-4 bg-tatt-lime text-black text-[10px] font-black uppercase tracking-widest rounded-bl-xl">
-                            Exclusive Access
                         </div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                <Building2 className="text-tatt-lime size-5" />
-                                Business Profile (Kiongozi)
-                            </h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Business Name</label>
-                                <input
-                                    name="businessName"
-                                    value={formData.businessName}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-background border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
-                                    placeholder="Your Registered Business"
-                                    type="text"
-                                />
+                )}
+
+                {activeTab === 'BUSINESS' && isKiongozi && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {loadingBusiness ? (
+                            <div className="py-20 flex flex-col items-center justify-center text-tatt-gray">
+                                <Loader2 className="size-10 animate-spin mb-4" />
+                                <p className="text-xs font-bold uppercase tracking-widest">Retrieving Venture Details...</p>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Role in Business</label>
-                                <input
-                                    name="businessRole"
-                                    value={formData.businessRole}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-background border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
-                                    placeholder="e.g. Founder, CEO"
-                                    type="text"
-                                />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                                <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Link to Business Profile</label>
-                                <div className="flex">
-                                    <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-border bg-background text-tatt-gray text-xs font-bold">
-                                        https://
-                                    </span>
-                                    <input
-                                        name="businessProfileLink"
-                                        value={formData.businessProfileLink}
-                                        onChange={handleInputChange}
-                                        className="flex-1 min-w-0 block w-full px-4 py-3 rounded-none rounded-r-xl bg-background border-border focus:ring-2 focus:ring-tatt-lime outline-none text-sm"
-                                        placeholder="tatt.org/biz/your-company"
-                                        type="text"
-                                    />
+                        ) : (
+                            <>
+                                {/* Business Identity */}
+                                <section className="bg-surface p-8 rounded-[32px] border border-border shadow-sm">
+                                    <h3 className="text-2xl font-black mb-8 flex items-center gap-3">
+                                        <Building2 className="text-tatt-lime size-6" />
+                                        Corporate Identity
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Business Legal Name</label>
+                                                <input 
+                                                    name="name" 
+                                                    value={businessData.name} 
+                                                    onChange={handleBusinessInputChange}
+                                                    className="w-full bg-background border-border rounded-xl px-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                    placeholder="e.g. Onyx Collective Ltd" 
+                                                />
+                                            </div>
+                                            <CustomSelect 
+                                                label="Industry Sector" 
+                                                name="category" 
+                                                value={businessData.category} 
+                                                onChange={handleBusinessSelectChange} 
+                                                options={categories.map(c => ({ label: c, value: c }))} 
+                                            />
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Website URL</label>
+                                                <div className="flex">
+                                                    <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-border bg-background text-tatt-gray text-xs font-bold font-sans">https://</span>
+                                                    <input 
+                                                        name="website" 
+                                                        value={businessData.website} 
+                                                        onChange={handleBusinessInputChange}
+                                                        className="flex-1 min-w-0 block w-full px-5 py-4 rounded-none rounded-r-xl bg-background border-border focus:ring-2 focus:ring-tatt-lime outline-none text-sm font-sans" 
+                                                        placeholder="www.onyxcollective.com" 
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 block">Corporate Logo</label>
+                                                <div className="flex items-center gap-6">
+                                                    <div className="size-24 rounded-2xl bg-background border-2 border-dashed border-border flex items-center justify-center overflow-hidden shrink-0">
+                                                        {businessData.logoUrl ? (
+                                                            <img src={businessData.logoUrl} className="size-full object-cover" alt="Logo" />
+                                                        ) : (
+                                                            <ImageIcon className="text-tatt-gray opacity-20 size-8" />
+                                                        )}
+                                                    </div>
+                                                    <label className="px-6 py-3 bg-surface border border-border text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-tatt-lime transition-all cursor-pointer">
+                                                        Upload Logo
+                                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBusinessFileUpload(e, 'logoUrl')} />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 block">Directory Banner</label>
+                                                <div className="w-full h-24 rounded-2xl bg-background border-2 border-dashed border-border flex items-center justify-center overflow-hidden mb-3">
+                                                    {businessData.bannerUrl ? (
+                                                        <img src={businessData.bannerUrl} className="size-full object-cover" alt="Banner" />
+                                                    ) : (
+                                                        <ImageIcon className="text-tatt-gray opacity-20 size-8" />
+                                                    )}
+                                                </div>
+                                                <label className="px-6 py-3 bg-surface border border-border text-[10px] font-black uppercase tracking-widest rounded-xl hover:border-tatt-lime transition-all cursor-pointer block text-center">
+                                                    Upload Cover Image
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBusinessFileUpload(e, 'bannerUrl')} />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-border">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Primary Location</label>
+                                            <div className="relative">
+                                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
+                                                <input 
+                                                    name="locationText" 
+                                                    value={businessData.locationText} 
+                                                    onChange={handleBusinessInputChange}
+                                                    className="w-full bg-background border-border rounded-xl pl-12 pr-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                    placeholder="City, Country" 
+                                                />
+                                            </div>
+                                        </div>
+                                        <CustomSelect 
+                                            label="Base Operations Chapter" 
+                                            name="chapterId" 
+                                            value={businessData.chapterId} 
+                                            onChange={handleBusinessSelectChange} 
+                                            options={chapters.map(c => ({ label: c.name, value: c.id }))} 
+                                        />
+                                    </div>
+                                </section>
+
+                                {/* Member Perk & Contact */}
+                                <section className="bg-surface p-8 rounded-[32px] border border-border shadow-sm">
+                                    <h3 className="text-2xl font-black mb-8 flex items-center gap-3">
+                                        <Zap className="text-tatt-lime size-6 fill-tatt-lime" />
+                                        Exclusive Community Perk
+                                    </h3>
+                                    <div className="space-y-2 mb-10">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Your Offer to TATT Members</label>
+                                        <textarea 
+                                            name="perkOffer" 
+                                            value={businessData.perkOffer} 
+                                            onChange={handleBusinessInputChange}
+                                            className="w-full bg-background border-border rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none min-h-[120px] resize-none leading-relaxed" 
+                                            placeholder="e.g. 15% discount for all community members on architecture consulting services." 
+                                        />
+                                    </div>
+
+                                    <h3 className="text-2xl font-black mb-8 pt-8 border-t border-border flex items-center gap-3">
+                                        <UserIcon className="text-tatt-lime size-6" />
+                                        Inbound Representative
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Full Name</label>
+                                            <input 
+                                                name="contactName" 
+                                                value={businessData.contactName} 
+                                                onChange={handleBusinessInputChange}
+                                                className="w-full bg-background border-border rounded-xl px-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                placeholder="Point of Contact" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Inquiry Email</label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
+                                                <input 
+                                                    name="contactEmail" 
+                                                    value={businessData.contactEmail} 
+                                                    onChange={handleBusinessInputChange}
+                                                    className="w-full bg-background border-border rounded-xl pl-12 pr-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                    placeholder="Representative Email" 
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Contact Phone</label>
+                                            <div className="relative">
+                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
+                                                <input 
+                                                    name="contactPhone" 
+                                                    value={businessData.contactPhone} 
+                                                    onChange={handleBusinessInputChange}
+                                                    className="w-full bg-background border-border rounded-xl pl-12 pr-5 py-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none" 
+                                                    placeholder="+1 (xxx) xxx-xxxx" 
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className="bg-tatt-lime/5 border border-tatt-lime/20 rounded-[32px] p-8 flex flex-col items-center text-center">
+                                    <div className="size-16 bg-tatt-lime/10 rounded-full flex items-center justify-center mb-6">
+                                        <Globe className="text-tatt-lime size-8" />
+                                    </div>
+                                    <h4 className="text-xl font-black mb-2 tracking-tight">Direct Directory Publishing</h4>
+                                    <p className="text-tatt-gray text-sm font-medium max-w-lg mb-8 leading-relaxed">
+                                        As a Kiongozi member, your business profile is automatically approved. Saving these changes will immediately update your listing in the public Business Center.
+                                    </p>
+                                    <button 
+                                        onClick={handleSaveBusiness} 
+                                        disabled={savingBusiness}
+                                        className="px-12 py-4 bg-tatt-lime text-black text-sm font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-tatt-lime/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                        {savingBusiness ? <Loader2 className="size-5 animate-spin" /> : <Save className="size-5" />}
+                                        Save &amp; Publish Business Portal
+                                    </button>
                                 </div>
-                            </div>
-                        </div>
-                    </section>
+                            </>
+                        )}
+                    </div>
                 )}
 
                 <div className="flex justify-end gap-4 pt-6 pb-4">
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-3 text-sm font-bold text-tatt-gray hover:text-foreground transition-colors"
-                    >
-                        Discard Changes
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={loading}
-                        className="px-10 py-3 bg-tatt-lime text-black text-sm font-black uppercase tracking-[0.1em] rounded-xl shadow-lg shadow-tatt-lime/20 hover:scale-[1.02] transition-all flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {loading ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                        Save Profile Settings
-                    </button>
+                    {activeTab !== 'BUSINESS' && (
+                        <>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-6 py-3 text-sm font-bold text-tatt-gray hover:text-foreground transition-colors"
+                            >
+                                Discard Changes
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={loading}
+                                className="px-10 py-3 bg-tatt-lime text-black text-sm font-black uppercase tracking-[0.1em] rounded-xl shadow-lg shadow-tatt-lime/20 hover:scale-[1.02] transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                                Save Profile Settings
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <div className="border-t border-border pt-8 pb-12">

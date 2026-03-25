@@ -11,6 +11,7 @@ import {
   Megaphone, Lightbulb, Clock, AlertCircle, Send, Pencil, Trash2, ShieldCheck, ArrowRight
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
+import { initiateFeedSocket, disconnectFeedSocket } from "@/services/feed-socket";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -169,6 +170,9 @@ export default function MyChapterPage() {
   });
   const [postingActivity, setPostingActivity] = useState(false);
 
+  // Real-time states
+  const [newPostsAvailableCount, setNewPostsAvailableCount] = useState(0);
+
   const isAdmin = ["ADMIN", "SUPERADMIN", "REGIONAL_ADMIN"].includes(user?.systemRole || "");
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -210,7 +214,37 @@ export default function MyChapterPage() {
     }
   }, [user?.chapterId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { 
+    fetchAll();
+
+    // ── Real-time Feed Socket ───────────────────────────────────────────
+    const socket = initiateFeedSocket();
+    
+    socket.on('new_post', (newPost: any) => {
+        // Only notify for actual feed posts if we are not the author
+        if (newPost.authorId === user?.id) return;
+
+        // If it's a post for our specific chapter
+        if (newPost.chapterId === user?.chapterId) {
+            const isAtTop = window.scrollY < 100;
+            
+            if (isAtTop && activeTab === 'feed') {
+                // Auto refresh the feed
+                api.get(`/chapters/${user?.chapterId}/feed?limit=15`).then(res => {
+                    setFeed(res.data.data || []);
+                    toast.success(`New chapter insight from ${newPost.authorName}`);
+                });
+            } else {
+                setNewPostsAvailableCount(prev => prev + 1);
+                toast(`New local community insight available.`, { icon: '🏘️' });
+            }
+        }
+    });
+
+    return () => {
+        disconnectFeedSocket();
+    };
+  }, [fetchAll, user?.chapterId, user?.id, activeTab]);
 
   // ── Like post ──────────────────────────────────────────────────────────────
 
@@ -485,6 +519,20 @@ export default function MyChapterPage() {
           {/* ── Member Posts Feed Tab ────────────────────────────────────────── */}
           {activeTab === "feed" && (
             <div className="space-y-5">
+              {newPostsAvailableCount > 0 && (
+                <button
+                    onClick={() => {
+                        api.get(`/chapters/${user?.chapterId}/feed?limit=15`).then(res => {
+                            setFeed(res.data.data || []);
+                            setNewPostsAvailableCount(0);
+                            window.scrollTo({ top: 300, behavior: 'smooth' });
+                        });
+                    }}
+                    className="w-full bg-tatt-lime/10 border border-tatt-lime/20 text-tatt-lime font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-tatt-lime/20 transition-all animate-bounce shadow-xl shadow-tatt-lime/5"
+                >
+                    <Users size={18} fill="currentColor" /> {newPostsAvailableCount} New Chapter Posts Available — Refresh Feed
+                </button>
+              )}
               {feed.length === 0 ? (
                 <div className="text-center py-20 bg-surface rounded-2xl border border-dashed border-border">
                   <Users className="size-12 text-tatt-gray mx-auto mb-4 opacity-20" />

@@ -5,6 +5,8 @@ import { UserSeederService } from '../src/modules/iam/auth/user-seeder.service';
 import { MembershipTier } from '../src/modules/membership/entities/membership-tier.entity';
 import { Discount, DiscountType, DiscountDuration } from '../src/modules/membership/entities/discount.entity';
 import { CommunityTier } from '../src/modules/iam/enums/roles.enum';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Migration Script: Production Database Initialization
@@ -22,12 +24,25 @@ async function deploy() {
     try {
         const sequelize = app.get(Sequelize);
 
-        console.log('2. Synchronizing database schema (alter: true)...');
         // This applies all entity structures (including new PostUpvote, PostBookmark, etc.)
         await sequelize.sync({ alter: true });
         console.log('Schema synchronized successfully.');
 
-        console.log('3. Seeding Membership Tiers...');
+        console.log('3. Running manual SQL migrations (for ENUMs and complex schema changes)...');
+        const migrationsDir = path.join(__dirname, 'migrations');
+        if (fs.existsSync(migrationsDir)) {
+            const files = fs.readdirSync(migrationsDir).filter((f: string) => f.endsWith('.sql')).sort();
+            for (const file of files) {
+                console.log(`   - Applying: ${file}`);
+                const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+                await sequelize.query(sql);
+            }
+            console.log('   All manual migrations applied.');
+        } else {
+            console.log('   No manual migrations found.');
+        }
+
+        console.log('4. Seeding Membership Tiers...');
         const tiers = [
             {
                 tier: CommunityTier.FREE,
