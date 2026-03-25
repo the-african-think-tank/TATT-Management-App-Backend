@@ -4,7 +4,10 @@ import {
     NotFoundException,
     ForbiddenException,
     BadRequestException,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op, Sequelize } from 'sequelize';
 import * as sanitizeHtml from 'sanitize-html';
@@ -26,6 +29,10 @@ import {
     AddCommentDto, GetCommentsQueryDto,
     ReportPostDto,
 } from './dto/feed.dto';
+import { FeedGateway } from './feed.gateway';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { MailService } from '../../common/mail/mail.service';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -177,6 +184,9 @@ export class FeedService {
         @InjectModel(FeedPrompt) private promptRepo: typeof FeedPrompt,
         @InjectModel(FeedTopic) private topicRepo: typeof FeedTopic,
         @InjectModel(User) private userRepo: typeof User,
+        private readonly feedGateway: FeedGateway,
+        private readonly notificationsService: NotificationsService,
+        private readonly mailService: MailService,
     ) { }
 
     // ════════════════════════════════════════════════════════════════════════════
@@ -400,6 +410,15 @@ export class FeedService {
             eventUrl: dto.eventUrl ?? null,
         });
 
+        // ── Real-time Notification ───────────────────────────────────────────
+        // We fetch the post with author info to broadcast it
+        const broadcastPost = await this.postRepo.findByPk(post.id, {
+            include: [{ model: User, as: 'author', attributes: AUTHOR_ATTRS as any }],
+        });
+        if (broadcastPost) {
+            this.feedGateway.broadcastNewPost(broadcastPost);
+        }
+
         if (dto.parentPostId) {
             const parentPost = await this.postRepo.findByPk(dto.parentPostId);
             if (parentPost && parentPost.authorId === author.id) {
@@ -557,6 +576,13 @@ export class FeedService {
         if (post.isPremium && !canSeePremium(author)) throw new ForbiddenException('Upgrade required.');
 
         const comment = await this.commentRepo.create({ postId, authorId: author.id, content: dto.content, parentId: dto.parentId ?? null });
+        
+        // Broadcast real-time
+        const fullComment = await this.commentRepo.findByPk(comment.id, {
+            include: [{ model: User, as: 'author', attributes: AUTHOR_ATTRS as any }],
+        });
+        this.feedGateway.broadcastNewComment(postId, fullComment);
+
         return { message: 'Comment added.', commentId: comment.id };
     }
 
@@ -721,5 +747,64 @@ export class FeedService {
         ]);
 
         return { insight, prompt };
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    //  SCHEDULED TASKS (DAILY SUMMARY)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    @Cron(CronExpression.EVERY_DAY_AT_11PM)
+    async sendDailyCommunityDigest() {
+        this.logger.log('[TATT-Digest] Starting daily community digest process...');
+        
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        // 1. Get new posts across platform
+        const globalPostCount = await this.postRepo.count({
+            where: { createdAt: { [Op.gte]: startOfDay }, isPublished: true }
+        });
+
+        if (globalPostCount === 0) {
+            this.logger.log('[TATT-Digest] No new posts today. Skipping digest.');
+            return;
+        }
+
+        // 2. Get breakdown by chapter
+        const chapters = await Chapter.findAll();
+        const chapterPostCounts = new Map<string, number>();
+
+        for (const chapter of chapters) {
+            const count = await this.postRepo.count({
+                where: { chapterId: chapter.id, createdAt: { [Op.gte]: startOfDay }, isPublished: true }
+            });
+            chapterPostCounts.set(chapter.id, count);
+        }
+
+        // 3. Send emails to all users
+        const users = await this.userRepo.findAll({
+            where: { isActive: true, deletedAt: null },
+            attributes: ['id', 'email', 'firstName', 'chapterId']
+        });
+
+        this.logger.log(`[TATT-Digest] Sending digest to ${users.length} members...`);
+
+        for (const user of users) {
+             const chapterPosts = user.chapterId ? (chapterPostCounts.get(user.chapterId) || 0) : 0;
+             const platformPosts = globalPostCount;
+
+             // Only send if there's actual activity to show
+             if (platformPosts > 0) {
+                 await this.mailService.sendDailyDigest(
+                     user.email,
+                     user.firstName || 'Member',
+                     platformPosts,
+                     chapterPosts,
+                     user.chapterId ? chapters.find(c => c.id === user.chapterId)?.name : undefined
+                 );
+             }
+        }
+
+        this.logger.log('[TATT-Digest] Daily digest completed.');
     }
 }

@@ -14,6 +14,10 @@ import { Chapter } from '../chapters/entities/chapter.entity';
 import { FeedService } from './feed.service';
 import { FeedController } from './feed.controller';
 import { FeedAdminController } from './feed-admin.controller';
+import { FeedGateway } from './feed.gateway';
+import { JwtModule } from '@nestjs/jwt';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { MailModule } from '../../common/mail/mail.module';
 
 @Module({
     imports: [
@@ -23,9 +27,17 @@ import { FeedAdminController } from './feed-admin.controller';
             FeedInsight, FeedPrompt, FeedTopic,
             User, Chapter
         ]),
+        JwtModule.registerAsync({
+            useFactory: () => ({
+                secret: process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
+                signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1h') as any },
+            }),
+        }),
+        NotificationsModule,
+        MailModule,
     ],
     controllers: [FeedController, FeedAdminController],
-    providers: [FeedService],
-    exports: [FeedService],
+    providers: [FeedService, FeedGateway],
+    exports: [FeedService, FeedGateway],
 })
 export class FeedModule { }

@@ -14,13 +14,21 @@ import { MessagesService } from './messages.service';
 import { MessageStatus } from './entities/direct-message.entity';
 
 // Use same CORS origins as REST (main.ts) so WebSocket upgrade is not blocked
-const wsCorsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-
 @WebSocketGateway({
-    cors: { origin: wsCorsOrigins },
+    cors: { 
+        origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+            const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000')
+                .split(',')
+                .map((o) => o.trim())
+                .filter(Boolean);
+            if (!origin || origins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true
+    },
     namespace: 'messages',
 })
 export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {

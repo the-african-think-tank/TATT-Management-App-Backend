@@ -69,14 +69,14 @@ const MembershipCard: React.FC<MembershipCardProps> = ({ member, isCurrentUser }
     const CardContent = (
         <div
             ref={cardRef}
-            className={`relative rounded-2xl overflow-hidden shadow-2xl aspect-[1.58/1] flex flex-col p-6 text-white border border-white/10 transition-all ${isFree ? 'bg-zinc-900/50 backdrop-blur-md grayscale opacity-60' : 'bg-[#0a0a0a]'}`}
+            className={`relative rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] aspect-[1.58/1] flex flex-col p-6 text-white border transition-all ${isFree ? 'bg-[#18181b80] backdrop-blur-md grayscale opacity-60' : 'bg-[#0a0a0a] border-[#ffffff1a]'}`}
         >
             <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
-                    <div className={`size-8 rounded flex items-center justify-center ${isFree ? 'bg-zinc-700 text-zinc-400' : 'bg-tatt-lime text-tatt-black'}`}>
+                    <div className={`size-8 rounded flex items-center justify-center ${isFree ? 'bg-[#3f3f46] text-[#71717a]' : 'bg-[#9fcc00] text-[#000000]'}`}>
                         <Award className="h-4 w-4 font-black" />
                     </div>
-                    <span className={`text-[10px] font-black tracking-widest uppercase ${isFree ? 'text-zinc-500' : 'text-tatt-lime'}`}>{displayTierName}</span>
+                    <span className={`text-[10px] font-black tracking-widest uppercase ${isFree ? 'text-[#71717a]' : 'text-[#9fcc00]'}`}>{displayTierName}</span>
                 </div>
                 {isCurrentUser && (
                     <span className="text-[10px] opacity-50 font-black tracking-tighter">
@@ -87,42 +87,42 @@ const MembershipCard: React.FC<MembershipCardProps> = ({ member, isCurrentUser }
 
             <div className="mt-auto">
                 <div className="mb-4">
-                    <h4 className="text-2xl font-black tracking-tight leading-none mb-1 uppercase truncate">
+                    <h4 className="text-2xl font-black tracking-tight leading-tight mb-2 uppercase py-1">
                         {member.firstName} {member.lastName}
                     </h4>
-                    <p className={`text-[11px] font-black uppercase tracking-[0.2em] break-words whitespace-normal line-clamp-2 ${isFree ? 'text-zinc-500' : 'text-tatt-lime'}`}>
+                    <p className={`text-[11px] font-black uppercase tracking-[0.2em] leading-snug py-1 ${isFree ? 'text-[#71717a]' : 'text-[#9fcc00]'}`}>
                         {member.professionTitle || "Professional Member"}
                     </p>
                 </div>
 
                 <div className="flex items-end justify-between">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="size-6 bg-foreground rounded-sm flex items-center justify-center border border-white/10 shadow-sm">
-                                <span className={`text-[8px] font-black ${isFree ? 'text-zinc-500' : 'text-tatt-lime'}`}>
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="size-6 bg-[#181811] rounded-sm flex items-center justify-center border border-[#ffffff1a] shadow-sm">
+                                <span className={`text-[8px] font-black ${isFree ? 'text-[#71717a]' : 'text-[#9fcc00]'}`}>
                                     {(member.companyName || "TATT").slice(0, 2).toUpperCase()}
                                 </span>
                             </div>
-                            <span className="text-sm font-black tracking-tight truncate max-w-[150px]">
+                            <span className="text-sm font-black tracking-tight leading-normal py-0.5">
                                 {member.companyName || "Member of TATT"}
                             </span>
                         </div>
-                        <div className="flex flex-col">
-                            <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Member Since {joinedDate}</p>
-                            <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">{member.chapterName || "Global"}</p>
+                        <div className="flex flex-col space-y-0.5">
+                            <p className="text-[10px] opacity-60 font-black uppercase tracking-widest leading-normal">Member Since {joinedDate}</p>
+                            <p className="text-[10px] opacity-60 font-black uppercase tracking-widest leading-normal">{member.chapterName || "Global"}</p>
                         </div>
                     </div>
 
-                    <div className="size-16 bg-white/5 border border-white/10 p-1.5 rounded-lg flex flex-col items-center justify-center backdrop-blur-sm">
-                        <ShieldCheck className={`${isFree ? 'text-zinc-600' : 'text-tatt-lime'} size-8 mb-1 opacity-50`} />
+                    <div className="size-16 bg-[#ffffff0d] border border-[#ffffff1a] p-1.5 rounded-lg flex flex-col items-center justify-center backdrop-blur-sm">
+                        <ShieldCheck className={`${isFree ? 'text-[#3f3f46]' : 'text-[#9fcc00]'} size-8 mb-1 opacity-50`} />
                         <span className="text-[6px] font-black uppercase tracking-[0.05em] text-center opacity-40">Verified<br />Member</span>
                     </div>
                 </div>
             </div>
 
             {isFree && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] p-6 text-center">
-                    <div className="bg-tatt-lime/90 text-black px-3 py-1 rounded-full text-[10px] font-black mb-2 uppercase tracking-tighter">Upgrade Required</div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#00000066] backdrop-blur-[2px] p-6 text-center">
+                    <div className="bg-[#9fcc00e6] text-black px-3 py-1 rounded-full text-[10px] font-black mb-2 uppercase tracking-tighter">Upgrade Required</div>
                     <p className="text-xs font-bold leading-tight">Upgrade to a paid tier to get your official TATT member ID card.</p>
                 </div>
             )}

@@ -46,6 +46,7 @@ import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 import toast, { Toaster } from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
+import { initiateFeedSocket, disconnectFeedSocket } from "@/services/feed-socket";
 
 // --- Types ---
 
@@ -195,13 +196,48 @@ export default function FeedPage() {
     // Sidebar loading
     const [isLoadingSidebar, setIsLoadingSidebar] = useState(true);
 
+    // Real-time states
+    const [newPostsAvailableCount, setNewPostsAvailableCount] = useState(0);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         fetchFeed(1, filter, true);
     }, [filter, selectedTopic]);
 
     useEffect(() => {
         fetchSidebarData();
-    }, []);
+
+        // ── Real-time Feed Socket ───────────────────────────────────────────
+        const socket = initiateFeedSocket();
+        
+        socket.on('new_post', (newPost: any) => {
+            // Only notify for actual feed posts if we are not the author
+            if (newPost.authorId === user?.id) return;
+
+            // If we are at the top of the feed and on "ALL" or it matches our chapter
+            const isAtTop = window.scrollY < 100;
+            const matchesFilter = filter === 'ALL' || (filter === 'CHAPTER' && newPost.chapterId === user?.chapterId);
+
+            if (isAtTop && matchesFilter && page === 1) {
+                // Auto prepend
+                // We'll fetch the full post or just trust the broadcasted basic info?
+                // Let's just refetch first page to get the full formatted post object
+                fetchFeed(1, filter, true);
+                toast.success(`Dynamic Refresh: New insight from ${newPost.authorName}`);
+            } else if (matchesFilter) {
+                setNewPostsAvailableCount(prev => prev + 1);
+                toast("New professional insights are available above.", { icon: '🔥' });
+            }
+        });
+
+        socket.on('new_comment', (data: any) => {
+             // Optional: Handle real-time comment bubble updates if necessary
+        });
+
+        return () => {
+            disconnectFeedSocket();
+        };
+    }, [filter, user?.id, user?.chapterId, page]);
 
     const fetchFeed = async (pageNum: number, currentFilter: string, reset: boolean = false) => {
         setIsLoadingPosts(true);
@@ -522,6 +558,19 @@ export default function FeedPage() {
                         </button>
                     </div>
 
+                    {/* Real-time Update Indicator */}
+                    {newPostsAvailableCount > 0 && (
+                        <button
+                            onClick={() => {
+                                fetchFeed(1, filter, true);
+                                setNewPostsAvailableCount(0);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="w-full bg-tatt-lime/10 border border-tatt-lime/20 text-tatt-lime font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-tatt-lime/20 transition-all animate-bounce shadow-xl shadow-tatt-lime/5"
+                        >
+                            <Zap size={18} fill="currentColor" /> {newPostsAvailableCount} New Community Insights Available — View Now
+                        </button>
+                    )}
 
                     {/* Post List */}
                     <div className="space-y-6">

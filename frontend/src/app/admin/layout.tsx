@@ -33,7 +33,9 @@ import {
     Clock,
     Briefcase,
     Banknote,
+    Store,
 } from "lucide-react";
+import { DashboardFooter } from "@/components/organisms/dashboard-footer";
 import api from "@/services/api";
 
 interface MenuItem {
@@ -127,6 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             "/admin/partnerships": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
             "/admin/membership-center": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
             "/admin/jobs": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "MODERATOR"],
+            "/admin/business-directory": ["SUPERADMIN", "ADMIN", "MODERATOR"],
             "/admin/messages": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"],
             "/admin/revenue": ["SUPERADMIN"],
             "/admin/sales-inventory": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "SALES"],
@@ -158,6 +161,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { icon: <Handshake size={20} />, label: "Partnerships", href: "/admin/partnerships", flag: "CAN_ACCESS_PARTNERSHIPS" },
                 { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" },
                 { icon: <Briefcase size={20} />, label: "Jobs Center", href: "/admin/jobs" },
+                { icon: <Store size={20} />, label: "Business Directory", href: "/admin/business-directory" },
                 { icon: <MessageSquare size={20} />, label: "Messages", href: "/admin/messages", badge: "NEW" }
             ]
         },
@@ -418,8 +422,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </header>
 
                     {/* Dashboard Body */}
-                    <main className="flex-1 overflow-y-auto p-4 lg:p-8 bg-background custom-scrollbar">
-                        {children}
+                    <main className="flex-1 overflow-y-auto p-4 lg:p-8 bg-background custom-scrollbar flex flex-col">
+                        <div className="flex-1">
+                            {children}
+                        </div>
+                        <DashboardFooter />
                     </main>
                 </div>
             </div>
