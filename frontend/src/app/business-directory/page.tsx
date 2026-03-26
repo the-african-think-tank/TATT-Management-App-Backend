@@ -148,7 +148,7 @@ export default function BusinessDirectoryLanding() {
               href="/business-directory/apply"
               className="flex items-center justify-center h-16 md:h-20 bg-tatt-lime text-tatt-black px-12 md:px-20 font-bold uppercase tracking-[0.1em] text-sm md:text-base rounded-lg shadow-2xl transition hover:brightness-95 active:scale-95 text-center"
             >
-              Showcase Your Business to the TATT Community Ecosystem
+              Get Starter
             </Link>
           </div>
         </section>
