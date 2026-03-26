@@ -11,9 +11,9 @@ export default function BusinessDirectoryLanding() {
       <Navbar />
       <main className="flex-1 bg-background text-tatt-black font-sans antialiased overflow-x-hidden">
         {/* Hero Section */}
-        <section className="min-h-[85vh] flex items-center px-6 lg:px-20 border-b-2 border-tatt-black">
+        <section className="min-h-0 md:min-h-[85vh] flex items-center px-6 lg:px-20 border-b-2 border-tatt-black">
           <div className="max-w-[1440px] mx-auto w-full grid lg:grid-cols-12 gap-0 items-stretch">
-            <div className="lg:col-span-7 py-16 md:py-20 lg:pr-16 flex flex-col justify-center items-center text-center lg:items-start lg:text-left animate-in fade-in slide-in-from-left-8 duration-1000">
+            <div className="lg:col-span-7 py-10 md:py-20 lg:pr-16 flex flex-col justify-center items-center text-center lg:items-start lg:text-left animate-in fade-in slide-in-from-left-8 duration-1000">
               <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-6 md:mb-8">
                 TATT Business Directory
               </p>
@@ -44,7 +44,7 @@ export default function BusinessDirectoryLanding() {
         </section>
 
         {/* Philosophy Section */}
-        <section className="py-24 lg:py-32 px-6 lg:px-20 border-b-2 border-tatt-black bg-white">
+        <section className="py-12 md:py-32 px-6 lg:px-20 border-b-2 border-tatt-black bg-white">
           <div className="max-w-[1440px] mx-auto">
             <div className="grid lg:grid-cols-12 gap-8 md:gap-12 mb-16 md:mb-24 items-end text-center lg:text-left">
               <div className="lg:col-span-4">
