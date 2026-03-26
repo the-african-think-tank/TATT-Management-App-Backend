@@ -240,7 +240,7 @@ export default function BusinessIntakeForm({
   return (
     <div className="max-w-4xl mx-auto pt-0 pb-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sticky Header with Step Indicator */}
-      <div className="sticky top-24 z-30 bg-background/95 backdrop-blur-md py-6 mb-8 border-b md:border-none border-border px-4 -mx-4 md:px-0 md:mx-0 flex items-center justify-between transition-all">
+      <div className="sticky top-[64px] lg:top-[72px] z-30 bg-background/95 backdrop-blur-md py-6 mb-8 border-b md:border-none border-border px-4 -mx-4 md:px-0 md:mx-0 flex items-center justify-between transition-all">
         <Link 
           href={backLink}
           className="flex items-center gap-2 text-tatt-gray hover:text-tatt-black transition-colors font-bold text-sm group"
