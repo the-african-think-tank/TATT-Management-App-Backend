@@ -13,17 +13,17 @@ export default function BusinessDirectoryLanding() {
         {/* Hero Section */}
         <section className="min-h-[85vh] flex items-center px-6 lg:px-20 border-b-2 border-tatt-black">
           <div className="max-w-[1440px] mx-auto w-full grid lg:grid-cols-12 gap-0 items-stretch">
-            <div className="lg:col-span-7 py-20 lg:pr-16 flex flex-col justify-center animate-in fade-in slide-in-from-left-8 duration-1000">
-              <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-8">
+            <div className="lg:col-span-7 py-16 md:py-20 lg:pr-16 flex flex-col justify-center items-center text-center lg:items-start lg:text-left animate-in fade-in slide-in-from-left-8 duration-1000">
+              <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-6 md:mb-8">
                 TATT Business Directory
               </p>
-              <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-[900] leading-[0.85] tracking-[-0.04em] uppercase mb-10">
-                The Founding <br/> Business Partner <br/> Program
+              <h1 className="text-3xl sm:text-4xl md:text-7xl lg:text-[5.5rem] font-[900] leading-[0.9] tracking-[-0.04em] uppercase mb-8 md:mb-10">
+                The Founding <br className="hidden sm:block"/> Business Partner <br className="hidden sm:block"/> Program
               </h1>
-              <p className="text-xl md:text-2xl font-medium max-w-xl mb-12 leading-tight tracking-tight text-tatt-black opacity-60">
+              <p className="text-lg md:text-2xl font-medium max-w-xl mb-10 md:mb-12 leading-tight tracking-tight text-tatt-black opacity-60">
                 A curated economic ecosystem designed to build uncompromising relationships within the African Diaspora.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
                 <Link 
                   href="/business-directory/apply"
                   className="h-14 bg-tatt-lime text-tatt-black px-10 md:px-14 flex items-center justify-center gap-3 text-sm font-bold uppercase tracking-[0.7px] rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition hover:brightness-95 active:scale-95"
@@ -46,13 +46,13 @@ export default function BusinessDirectoryLanding() {
         {/* Philosophy Section */}
         <section className="py-24 lg:py-32 px-6 lg:px-20 border-b-2 border-tatt-black bg-white">
           <div className="max-w-[1440px] mx-auto">
-            <div className="grid lg:grid-cols-12 gap-12 mb-24 items-end">
+            <div className="grid lg:grid-cols-12 gap-8 md:gap-12 mb-16 md:mb-24 items-end text-center lg:text-left">
               <div className="lg:col-span-4">
                 <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-4">The Philosophy</p>
-                <h2 className="text-5xl md:text-6xl font-[900] tracking-tighter uppercase leading-none">Core<br/>Pillars</h2>
+                <h2 className="text-4xl md:text-6xl font-[900] tracking-tighter uppercase leading-none">Core<br className="hidden md:block"/>Pillars</h2>
               </div>
               <div className="lg:col-span-8">
-                <p className="text-3xl md:text-4xl font-bold leading-tight tracking-tighter uppercase">
+                <p className="text-2xl md:text-4xl font-bold leading-tight tracking-tighter uppercase">
                   Increasing membership value, circulating economic opportunity, and elevating trusted, values-aligned businesses.
                 </p>
               </div>
@@ -89,9 +89,9 @@ export default function BusinessDirectoryLanding() {
         {/* Authority & Visibility */}
         <section className="py-24 lg:py-32 px-6 lg:px-20 border-b-2 border-tatt-black">
           <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0 border-2 border-tatt-black bg-white overflow-hidden shadow-2xl">
-            <div className="p-10 md:p-20 border-b-2 lg:border-b-0 lg:border-r-2 border-tatt-black flex flex-col justify-center">
+            <div className="p-10 md:p-20 border-b-2 lg:border-b-0 lg:border-r-2 border-tatt-black flex flex-col justify-center text-center lg:text-left items-center lg:items-start">
               <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-8">Strategic Advantage</p>
-              <h2 className="text-5xl md:text-6xl font-[900] tracking-tighter uppercase mb-16 leading-none">Authority<br/>& Visibility</h2>
+              <h2 className="text-4xl md:text-6xl font-[900] tracking-tighter uppercase mb-12 md:mb-16 leading-none">Authority<br className="hidden md:block"/>& Visibility</h2>
               
               <div className="space-y-12">
                 {[
@@ -128,10 +128,10 @@ export default function BusinessDirectoryLanding() {
           
           <div className="max-w-4xl mx-auto relative z-10">
             <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-10">Application Phase Active</p>
-            <h2 className="text-6xl md:text-8xl font-[900] tracking-tighter uppercase mb-12 leading-none">
+            <h2 className="text-4xl sm:text-6xl md:text-8xl font-[900] tracking-tighter uppercase mb-8 md:mb-12 leading-none">
               Join the <br/><span className="text-tatt-lime">Ecosystem</span>
             </h2>
-            <p className="text-xl md:text-2xl font-bold mb-16 max-w-2xl mx-auto uppercase tracking-tight">
+            <p className="text-lg md:text-2xl font-bold mb-12 md:mb-16 max-w-2xl mx-auto uppercase tracking-tight opacity-70">
               Applications are currently open for enterprises that embody excellence and uncompromising Diaspora values.
             </p>
             <Link 
