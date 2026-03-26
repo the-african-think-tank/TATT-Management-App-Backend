@@ -242,7 +242,7 @@ export default function BusinessIntakeForm({
     setLoading(true);
     try {
       await api.post('/business-directory/apply', formData);
-      toast.success("Application submitted! Our curators will review it shortly.");
+      toast.success(`${formData.name} application submitted! Our curators will review it shortly.`);
       
       // Success: Clear the draft
       localStorage.removeItem('tatt_business_draft');
@@ -295,9 +295,9 @@ export default function BusinessIntakeForm({
         </div>
       </div>
 
-      <div className="bg-white border border-border rounded-[40px] shadow-2xl">
+      <div className="bg-white border border-border rounded-[36px] shadow-2xl">
         {/* Banner */}
-        <div className="h-40 bg-background border-b border-border flex items-center px-10 relative overflow-hidden rounded-t-[40px]">
+        <div className="h-40 bg-background border-b border-border flex items-center px-10 relative overflow-hidden rounded-t-[36px]">
            <div className="absolute top-0 right-0 p-8 opacity-5">
               <Building2 size={120} className="text-tatt-black" />
            </div>

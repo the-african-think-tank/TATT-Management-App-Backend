@@ -36,6 +36,7 @@ export function ToastProvider() {
           letterSpacing: '0.05em',
           textTransform: 'uppercase',
           padding: '16px 24px',
+          maxWidth: '500px',
         },
         success: {
           iconTheme: {

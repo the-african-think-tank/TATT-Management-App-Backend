@@ -22,7 +22,7 @@ export class BusinessPartner extends Model {
     id: string;
 
     @AllowNull(false)
-    @Column(DataType.STRING)
+    @Column(DataType.TEXT)
     name: string;
 
     @AllowNull(false)
