@@ -13,7 +13,7 @@ export const initiateSocket = () => {
     socket = io(SOCKET_URL, {
         // Attach the in-memory token (not localStorage)
         auth: { token },
-        transports: ['websocket'],
+        transports: ['polling', 'websocket'],
     });
 
     console.log(`Connecting to socket...`);
