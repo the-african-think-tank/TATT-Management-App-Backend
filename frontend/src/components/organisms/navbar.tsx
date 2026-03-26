@@ -62,7 +62,7 @@ export function Navbar() {
                                 >
                                     {link.label}
                                     {isActive && (
-                                        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-tatt-lime animate-in fade-in duration-500"></span>
+                                        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-tatt-lime"></span>
                                     )}
                                 </Link>
                             );
@@ -124,7 +124,7 @@ export function Navbar() {
 
                 {/* Mobile Navigation Drawer */}
                 {isMenuOpen && (
-                    <div className="fixed inset-0 z-[100] bg-tatt-black animate-in fade-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-[100] bg-tatt-black">
                         <div className="flex flex-col h-full">
                             <div className="flex items-center justify-between p-6 border-b border-white/10">
                                 <div className="flex items-center gap-3">
