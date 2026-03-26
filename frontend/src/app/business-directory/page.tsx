@@ -20,6 +20,16 @@ export default function BusinessDirectoryLanding() {
               <h1 className="text-3xl sm:text-4xl md:text-7xl lg:text-[5.5rem] font-[900] leading-[0.9] tracking-[-0.04em] uppercase mb-8 md:mb-10">
                 The Founding <br className="hidden sm:block"/> Business Partner <br className="hidden sm:block"/> Program
               </h1>
+
+              {/* Mobile Only Hero Image */}
+              <div className="lg:hidden w-full mb-10 overflow-hidden border-2 border-tatt-black rounded-2xl">
+                <img 
+                  alt="Strategic collaboration" 
+                  className="w-full h-auto object-cover" 
+                  src="/images/tatt-hero.png"
+                />
+              </div>
+
               <p className="text-lg md:text-2xl font-medium max-w-xl mb-10 md:mb-12 leading-tight tracking-tight text-tatt-black opacity-60">
                 A curated economic ecosystem designed to build uncompromising relationships within the African Diaspora.
               </p>
@@ -89,7 +99,7 @@ export default function BusinessDirectoryLanding() {
         {/* Authority & Visibility */}
         <section className="py-24 lg:py-32 px-6 lg:px-20 border-b-2 border-tatt-black">
           <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0 border-2 border-tatt-black bg-white overflow-hidden shadow-2xl">
-            <div className="p-10 md:p-20 border-b-2 lg:border-b-0 lg:border-r-2 border-tatt-black flex flex-col justify-center text-center lg:text-left items-center lg:items-start">
+            <div className="order-2 lg:order-1 p-10 md:p-20 border-b-2 lg:border-b-0 lg:border-r-2 border-tatt-black flex flex-col justify-center text-center lg:text-left items-center lg:items-start">
               <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-8">Strategic Advantage</p>
               <h2 className="text-4xl md:text-6xl font-[900] tracking-tighter uppercase mb-12 md:mb-16 leading-none">Authority<br className="hidden md:block"/>& Visibility</h2>
               
@@ -109,7 +119,7 @@ export default function BusinessDirectoryLanding() {
                 ))}
               </div>
             </div>
-            <div className="bg-background relative group">
+            <div className="order-1 lg:order-2 bg-background relative group">
               <img 
                 alt="Strategic partner" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-all duration-1000" 
