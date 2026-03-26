@@ -326,7 +326,7 @@ export default function BusinessIntakeForm({
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="e.g. Onyx Collective"
+                    placeholder="e.g. The African Think Tank"
                     className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all placeholder:text-tatt-gray/40 shadow-inner"
                   />
                 </div>
