@@ -11,7 +11,7 @@ export const initiateFeedSocket = () => {
     const token = tokenStore.get();
     feedSocket = io(FEED_SOCKET_URL, {
         auth: { token },
-        transports: ['websocket'],
+        transports: ['polling', 'websocket'],
     });
 
     console.log(`Connecting to feed socket...`);

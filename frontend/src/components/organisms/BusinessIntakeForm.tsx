@@ -197,6 +197,26 @@ export default function BusinessIntakeForm({
     }
   };
 
+  const validateStep = (s: number) => {
+    if (s === 1) {
+      if (!formData.name) { toast.error("Company name is required"); return false; }
+      if (!formData.category) { toast.error("Industry category is required"); return false; }
+      if (!formData.foundingYear) { toast.error("Founding year is required"); return false; }
+      if (!formData.website) { toast.error("Official website is required"); return false; }
+    } else if (s === 2) {
+      if (!formData.locationText) { toast.error("Location is required"); return false; }
+      if (!formData.missionAlignment) { toast.error("Mission alignment statement is required"); return false; }
+    }
+    return true;
+  };
+
+  const handleNextStep = (next: number) => {
+    if (validateStep(step)) {
+      setStep(next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreedToTerms) {
@@ -204,10 +224,25 @@ export default function BusinessIntakeForm({
       return;
     }
 
+    if (!formData.logoUrl) {
+      toast.error("Please upload your brand logo.");
+      return;
+    }
+    
+    if (!formData.perkOffer) {
+      toast.error("Please define a member perk.");
+      return;
+    }
+
+    if (!formData.contactName || !formData.contactEmail) {
+      toast.error("Contact details are required.");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('/business-directory/apply', formData);
-      toast.success("Application submitted! Our curators will review it shortly.");
+      toast.success(`${formData.name} application submitted! Our curators will review it shortly.`);
       
       // Success: Clear the draft
       localStorage.removeItem('tatt_business_draft');
@@ -238,9 +273,9 @@ export default function BusinessIntakeForm({
   ];
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-12">
+    <div className="max-w-4xl mx-auto pt-0 pb-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Sticky Header with Step Indicator */}
+      <div className="sticky top-[64px] lg:top-[72px] z-30 bg-background/95 backdrop-blur-md py-6 mb-8 border-b md:border-none border-border px-4 -mx-4 md:px-0 md:mx-0 flex items-center justify-between transition-all">
         <Link 
           href={backLink}
           className="flex items-center gap-2 text-tatt-gray hover:text-tatt-black transition-colors font-bold text-sm group"
@@ -260,13 +295,13 @@ export default function BusinessIntakeForm({
         </div>
       </div>
 
-      <div className="bg-white border border-border rounded-[40px] shadow-2xl">
+      <div className="bg-white border border-border rounded-[36px] shadow-2xl">
         {/* Banner */}
-        <div className="h-40 bg-background border-b border-border flex items-center px-10 relative overflow-hidden rounded-t-[40px]">
+        <div className="h-40 bg-background border-b border-border flex items-center px-10 relative overflow-hidden rounded-t-[36px]">
            <div className="absolute top-0 right-0 p-8 opacity-5">
               <Building2 size={120} className="text-tatt-black" />
            </div>
-           <div className="size-16 rounded-2xl bg-tatt-lime flex items-center justify-center shadow-lg shadow-tatt-lime/20 relative z-10 transition-transform hover:scale-105 duration-300">
+           <div className="size-16 rounded-full bg-tatt-lime flex items-center justify-center shadow-lg shadow-tatt-lime/20 relative z-10 transition-transform hover:scale-105 duration-300 shrink-0">
              <Building2 className="text-tatt-black pointer-events-none" size={32} strokeWidth={2.5} />
            </div>
            <div className="ml-6 relative z-10">
@@ -291,7 +326,7 @@ export default function BusinessIntakeForm({
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="e.g. Onyx Collective"
+                    placeholder="e.g. The African Think Tank"
                     className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all placeholder:text-tatt-gray/40 shadow-inner"
                   />
                 </div>
@@ -331,10 +366,11 @@ export default function BusinessIntakeForm({
               <div className="flex justify-end pt-4">
                 <button 
                   type="button"
-                  onClick={() => setStep(2)}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                  onClick={() => handleNextStep(2)}
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
                 >
-                  Continue to Impact <ArrowRight size={20} strokeWidth={3} />
+                  <span className="hidden md:inline">Continue to Impact</span>
+                  <ArrowRight size={20} className="md:size-5" strokeWidth={3} />
                 </button>
               </div>
             </div>
@@ -388,16 +424,18 @@ export default function BusinessIntakeForm({
                 <button 
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2"
+                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2 group"
                 >
-                  <ArrowLeft size={16} /> Previous
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  <span className="hidden md:inline">Previous</span>
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setStep(3)}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                  onClick={() => handleNextStep(3)}
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
                 >
-                  Define Your Offer <ArrowRight size={20} strokeWidth={3} />
+                  <span className="hidden md:inline">Define Your Offer</span>
+                  <ArrowRight size={20} className="md:size-5" strokeWidth={3} />
                 </button>
               </div>
             </div>
@@ -512,17 +550,22 @@ export default function BusinessIntakeForm({
                 <button 
                   type="button"
                   onClick={() => setStep(2)}
-                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2"
+                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2 group"
                 >
-                  <ArrowLeft size={16} /> Previous
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  <span className="hidden md:inline">Previous</span>
                 </button>
                 <button 
                   type="submit"
                   disabled={loading || !formData.agreedToTerms}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-12 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 disabled:opacity-50"
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-12 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="size-5 animate-spin" /> : (
-                    <>Submit Application <CheckCircle2 size={20} strokeWidth={3} /></>
+                    <>
+                      <span className="hidden md:inline">Submit Application</span>
+                      <span className="md:hidden">Submit</span>
+                      <CheckCircle2 size={20} strokeWidth={3} />
+                    </>
                   )}
                 </button>
               </div>

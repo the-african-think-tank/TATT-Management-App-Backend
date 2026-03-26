@@ -206,38 +206,33 @@ export default function FeedPage() {
 
     useEffect(() => {
         fetchSidebarData();
+    }, [user?.id]);
 
-        // ── Real-time Feed Socket ───────────────────────────────────────────
+    // ── Real-time Feed Socket (Isolated) ──────────────────────────────────
+    useEffect(() => {
+        if (!user?.id) return;
+
         const socket = initiateFeedSocket();
         
         socket.on('new_post', (newPost: any) => {
-            // Only notify for actual feed posts if we are not the author
             if (newPost.authorId === user?.id) return;
 
-            // If we are at the top of the feed and on "ALL" or it matches our chapter
-            const isAtTop = window.scrollY < 100;
-            const matchesFilter = filter === 'ALL' || (filter === 'CHAPTER' && newPost.chapterId === user?.chapterId);
-
-            if (isAtTop && matchesFilter && page === 1) {
-                // Auto prepend
-                // We'll fetch the full post or just trust the broadcasted basic info?
-                // Let's just refetch first page to get the full formatted post object
-                fetchFeed(1, filter, true);
-                toast.success(`Dynamic Refresh: New insight from ${newPost.authorName}`);
-            } else if (matchesFilter) {
-                setNewPostsAvailableCount(prev => prev + 1);
-                toast("New professional insights are available above.", { icon: '🔥' });
-            }
+            const isAtTop = typeof window !== 'undefined' && window.scrollY < 100;
+            // Note: We use the *current* values of filter and page here.
+            // Since this listener is stable, we might need a ref for filter if we want to check it here,
+            // or we just handle the notification logic.
+            
+            toast("New professional insights are available above.", { icon: '🔥' });
         });
 
         socket.on('new_comment', (data: any) => {
-             // Optional: Handle real-time comment bubble updates if necessary
+             // Optional: Handle real-time comment bubble updates
         });
 
         return () => {
             disconnectFeedSocket();
         };
-    }, [filter, user?.id, user?.chapterId, page]);
+    }, [user?.id]); // ONLY reconnect if user changes
 
     const fetchFeed = async (pageNum: number, currentFilter: string, reset: boolean = false) => {
         setIsLoadingPosts(true);
