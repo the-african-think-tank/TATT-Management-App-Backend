@@ -33,10 +33,10 @@ export default function BusinessDirectoryLanding() {
               <p className="text-lg md:text-2xl font-medium max-w-xl mb-10 md:mb-12 leading-tight tracking-tight text-tatt-black opacity-60">
                 A curated economic ecosystem designed to build uncompromising relationships within the African Diaspora.
               </p>
-              <div className="flex flex-wrap items-start justify-start gap-4">
+              <div className="flex flex-wrap items-center justify-center lg:items-start lg:justify-start gap-4 w-full">
                 <Link 
                   href="/business-directory/apply"
-                  className="h-14 bg-tatt-lime text-tatt-black px-10 md:px-14 flex items-center justify-center gap-3 text-sm font-bold uppercase tracking-[0.7px] rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition hover:brightness-95 active:scale-95"
+                  className="h-14 bg-tatt-lime text-tatt-black px-10 md:px-14 flex items-center justify-center gap-3 text-sm font-bold uppercase tracking-[0.7px] rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition hover:brightness-95 active:scale-95 text-center"
                 >
                   Add Your Business <ArrowRight size={20} />
                 </Link>
@@ -146,7 +146,7 @@ export default function BusinessDirectoryLanding() {
             </p>
             <Link 
               href="/business-directory/apply"
-              className="flex items-center justify-center h-16 md:h-20 bg-tatt-lime text-tatt-black px-12 md:px-20 font-bold uppercase tracking-[0.1em] text-sm md:text-base rounded-lg shadow-2xl transition hover:brightness-95 active:scale-95 text-center"
+              className="inline-flex items-center justify-center h-16 md:h-20 bg-tatt-lime text-tatt-black px-12 md:px-20 font-bold uppercase tracking-[0.1em] text-sm md:text-base rounded-lg shadow-2xl transition hover:brightness-95 active:scale-95 text-center mx-auto"
             >
               Get Starter
             </Link>
