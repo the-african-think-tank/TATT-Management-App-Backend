@@ -197,10 +197,45 @@ export default function BusinessIntakeForm({
     }
   };
 
+  const validateStep = (s: number) => {
+    if (s === 1) {
+      if (!formData.name) { toast.error("Company name is required"); return false; }
+      if (!formData.category) { toast.error("Industry category is required"); return false; }
+      if (!formData.foundingYear) { toast.error("Founding year is required"); return false; }
+      if (!formData.website) { toast.error("Official website is required"); return false; }
+    } else if (s === 2) {
+      if (!formData.locationText) { toast.error("Location is required"); return false; }
+      if (!formData.missionAlignment) { toast.error("Mission alignment statement is required"); return false; }
+    }
+    return true;
+  };
+
+  const handleNextStep = (next: number) => {
+    if (validateStep(step)) {
+      setStep(next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.agreedToTerms) {
       toast.error("Please agree to the TATT partnership terms.");
+      return;
+    }
+
+    if (!formData.logoUrl) {
+      toast.error("Please upload your brand logo.");
+      return;
+    }
+    
+    if (!formData.perkOffer) {
+      toast.error("Please define a member perk.");
+      return;
+    }
+
+    if (!formData.contactName || !formData.contactEmail) {
+      toast.error("Contact details are required.");
       return;
     }
 
@@ -266,7 +301,7 @@ export default function BusinessIntakeForm({
            <div className="absolute top-0 right-0 p-8 opacity-5">
               <Building2 size={120} className="text-tatt-black" />
            </div>
-           <div className="size-16 rounded-2xl bg-tatt-lime flex items-center justify-center shadow-lg shadow-tatt-lime/20 relative z-10 transition-transform hover:scale-105 duration-300">
+           <div className="size-16 rounded-full bg-tatt-lime flex items-center justify-center shadow-lg shadow-tatt-lime/20 relative z-10 transition-transform hover:scale-105 duration-300 shrink-0">
              <Building2 className="text-tatt-black pointer-events-none" size={32} strokeWidth={2.5} />
            </div>
            <div className="ml-6 relative z-10">
@@ -331,10 +366,11 @@ export default function BusinessIntakeForm({
               <div className="flex justify-end pt-4">
                 <button 
                   type="button"
-                  onClick={() => setStep(2)}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                  onClick={() => handleNextStep(2)}
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
                 >
-                  Continue to Impact <ArrowRight size={20} strokeWidth={3} />
+                  <span className="hidden md:inline">Continue to Impact</span>
+                  <ArrowRight size={20} className="md:size-5" strokeWidth={3} />
                 </button>
               </div>
             </div>
@@ -388,16 +424,18 @@ export default function BusinessIntakeForm({
                 <button 
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2"
+                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2 group"
                 >
-                  <ArrowLeft size={16} /> Previous
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  <span className="hidden md:inline">Previous</span>
                 </button>
                 <button 
                   type="button"
-                  onClick={() => setStep(3)}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
+                  onClick={() => handleNextStep(3)}
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-10 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20"
                 >
-                  Define Your Offer <ArrowRight size={20} strokeWidth={3} />
+                  <span className="hidden md:inline">Define Your Offer</span>
+                  <ArrowRight size={20} className="md:size-5" strokeWidth={3} />
                 </button>
               </div>
             </div>
@@ -512,17 +550,22 @@ export default function BusinessIntakeForm({
                 <button 
                   type="button"
                   onClick={() => setStep(2)}
-                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2"
+                  className="text-tatt-gray font-bold text-sm hover:text-tatt-black transition-colors flex items-center gap-2 group"
                 >
-                  <ArrowLeft size={16} /> Previous
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  <span className="hidden md:inline">Previous</span>
                 </button>
                 <button 
                   type="submit"
                   disabled={loading || !formData.agreedToTerms}
-                  className="bg-tatt-lime text-tatt-black font-black py-4 px-12 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 disabled:opacity-50"
+                  className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-12 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="size-5 animate-spin" /> : (
-                    <>Submit Application <CheckCircle2 size={20} strokeWidth={3} /></>
+                    <>
+                      <span className="hidden md:inline">Submit Application</span>
+                      <span className="md:hidden">Submit</span>
+                      <CheckCircle2 size={20} strokeWidth={3} />
+                    </>
                   )}
                 </button>
               </div>
