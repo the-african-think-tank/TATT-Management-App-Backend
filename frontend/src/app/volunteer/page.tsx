@@ -85,7 +85,7 @@ export default function VolunteerPublicPage() {
                   Sign Up
                 </Link>
                 <Link
-                  href="/login"
+                  href="/"
                   className="inline-flex items-center justify-center min-h-[48px] px-8 py-3 border-2 border-tatt-lime text-tatt-lime font-bold rounded-lg text-sm hover:bg-tatt-lime hover:text-tatt-black transition-colors touch-manipulation w-full sm:w-auto"
                 >
                   Log In

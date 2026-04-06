@@ -82,3 +82,19 @@ body {
   animation: swing 0.5s ease-in-out infinite;
   transform-origin: top center;
 }
+
+/* Custom branded scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(159, 204, 0, 0.2);
+  border-radius: 20px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(159, 204, 0, 0.5);
+}
+

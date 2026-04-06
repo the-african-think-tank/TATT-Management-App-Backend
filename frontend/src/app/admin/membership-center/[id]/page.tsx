@@ -351,25 +351,7 @@ export default function EditMembershipPlanPage() {
                             <p className="text-[9px] font-black uppercase text-center mt-6 tracking-widest text-tatt-gray/60 italic">Dynamic System Configuration</p>
                         </section>
 
-                        {/* Discount Control */}
-                        <section className="bg-surface p-8 rounded-2xl border border-border shadow-sm group hover:border-border/80 transition-all">
-                            <label className="text-[10px] uppercase tracking-[0.2em] font-black text-tatt-gray mb-6 block">Global Discount Control</label>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-widest font-black mb-3 text-foreground">Event Discount Percentage</label>
-                                <div className="flex items-center gap-5">
-                                    <input 
-                                        value={planData.eventDiscountPercent} 
-                                        onChange={(e) => setPlanData({ ...planData, eventDiscountPercent: parseInt(e.target.value) || 0 })}
-                                        className="flex-1 accent-tatt-lime hover:accent-tatt-lime-vibrant transition-all cursor-pointer" 
-                                        type="range" 
-                                        min="0" 
-                                        max="100"
-                                    />
-                                    <span className="text-sm font-black w-14 text-center bg-background py-2.5 rounded-xl border border-tatt-lime/40 text-tatt-lime">{planData.eventDiscountPercent}%</span>
-                                </div>
-                                <p className="text-[9px] text-tatt-gray mt-4 italic font-bold tracking-widest uppercase">Select the exact rate assigned to tier events.</p>
-                            </div>
-                        </section>
+
 
                         {/* Form Actions */}
                         <div className="flex flex-col gap-4 pt-4 sticky bottom-8">

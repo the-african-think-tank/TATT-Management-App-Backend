@@ -148,8 +148,12 @@ export class MembershipService implements OnApplicationBootstrap {
                     usageCount: stripeData ? stripeData.times_redeemed : 0
                 };
             });
-        } catch (error) {
-            this.logger.error('Failed to sync Stripe coupons', error);
+        } catch (error: any) {
+            if (error.type === 'StripeAuthenticationError') {
+                this.logger.warn('Stripe API Key is invalid or unconfigured. Skipping live coupon syncing. Set STRIPE_SECRET_KEY in .env to enable.');
+            } else {
+                this.logger.error('Failed to sync Stripe coupons:', error.message);
+            }
             return discounts.map(d => ({ ...d.toJSON(), usageCount: 0 }));
         }
     }

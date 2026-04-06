@@ -26,6 +26,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 import { RevenueModule } from './modules/revenue/revenue.module';
 import { BusinessDirectoryModule } from './modules/business-directory/business-directory.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
     imports: [
@@ -63,6 +64,7 @@ import { BusinessDirectoryModule } from './modules/business-directory/business-d
         SystemSettingsModule, // Platform Configuration & API Keys
         RevenueModule,      // Revenue Dashboards and Financial Control Domain
         BusinessDirectoryModule, // Business Partner Directory & Application Hub
+        SupportModule,      // Support Management Domain
     ],
     controllers: [],
     providers: [],

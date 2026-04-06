@@ -23,7 +23,8 @@ import {
     Zap,
     Banknote,
     DollarSign,
-    Handshake
+    Handshake,
+    Headset
 } from "lucide-react";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
@@ -46,7 +47,8 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
         { name: "Volunteers", href: "/dashboard/volunteers", icon: HeartHandshake },
         { name: "My Chapter", href: "/dashboard/chapter", icon: Building2 },
         { name: "Partner Network", href: "/dashboard/partnerships", icon: Handshake },
-        ...(communityTier !== "FREE" ? [{ name: "Business Directory", href: "/dashboard/business-center", icon: Store }] : []),
+        { name: "Support Center", href: "/dashboard/support", icon: Headset },
+        { name: "Business Directory", href: "/dashboard/business-center", icon: Store },
         ...(communityTier !== "KIONGOZI" ? [{ name: "Upgrade", href: "/dashboard/upgrade", icon: Zap, highlight: true }] : []),
     ];
 

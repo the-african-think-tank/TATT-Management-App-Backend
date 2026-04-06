@@ -259,7 +259,7 @@ export default function MemberProfilePage() {
             </div>
 
             <div className="px-4 lg:px-12 -mt-20 relative z-10 pb-12 w-full max-w-[1400px] mx-auto">
-                <div className="flex flex-col lg:flex-row gap-8 items-start">
+                <div className="flex flex-col xl:flex-row gap-8 items-start">
                     
                     {/* Left Column: Main Profile Info */}
                     <div className="flex-grow w-full space-y-6">
@@ -341,11 +341,11 @@ export default function MemberProfilePage() {
                         </div>
 
                         {/* Key Information Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {member.tattMemberId && member.communityTier !== "FREE" && (
-                                <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
-                                    <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
-                                        <Award className="h-6 w-6" />
+                                <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                                    <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
+                                        <Award className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Member ID</p>
@@ -356,9 +356,9 @@ export default function MemberProfilePage() {
                                 </div>
                             )}
                             
-                            <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
-                                <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
-                                    <Calendar className="h-6 w-6" />
+                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                                <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
+                                    <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Joined Date</p>
@@ -368,9 +368,9 @@ export default function MemberProfilePage() {
                                 </div>
                             </div>
                             
-                            <div className="bg-background p-5 rounded-xl border border-border flex items-center gap-4">
-                                <div className="size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
-                                    <Briefcase className="h-6 w-6" />
+                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                                <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
+                                    <Briefcase className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs text-tatt-gray font-bold uppercase tracking-wider">Profession</p>
@@ -424,7 +424,7 @@ export default function MemberProfilePage() {
                     </div>
 
                     {/* Right Column: Sidebar Widgets */}
-                    <div className="w-full lg:w-96 space-y-6 shrink-0">
+                    <div className="w-full xl:w-96 space-y-6 shrink-0">
                         {/* Digital Identity Card — only visible to the member themselves */}
                         {user?.id === member.id && (
                             <div className="bg-background rounded-xl border border-border p-6 shadow-sm">

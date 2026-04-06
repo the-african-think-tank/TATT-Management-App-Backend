@@ -1,5 +1,6 @@
 import { IsString, IsEmail, IsNotEmpty, IsOptional, IsUrl, IsNumber, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type, Transform } from 'class-transformer';
 
 export class CreateBusinessApplicationDto {
     @ApiProperty({ example: 'Onyx Collective' })
@@ -13,11 +14,13 @@ export class CreateBusinessApplicationDto {
     category: string;
 
     @ApiProperty({ example: 2024 })
+    @Type(() => Number)
     @IsNumber()
     @IsOptional()
     foundingYear?: number;
 
     @ApiProperty({ example: 'https://onyx.com' })
+    @Transform(({ value }) => value === '' ? null : value)
     @IsUrl()
     @IsOptional()
     website?: string;
@@ -28,6 +31,7 @@ export class CreateBusinessApplicationDto {
     locationText: string;
 
     @ApiProperty({ example: 'UUID of chapter' })
+    @Transform(({ value }) => value === '' ? null : value)
     @IsUUID()
     @IsOptional()
     chapterId?: string;

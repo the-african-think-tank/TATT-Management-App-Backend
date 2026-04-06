@@ -1,7 +1,11 @@
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class RegisterEventDto {
     @IsBoolean()
     @IsOptional()
     isBusinessRegistration?: boolean = false;
+
+    @IsString()
+    @IsOptional()
+    paymentMethodId?: string;
 }

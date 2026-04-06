@@ -48,8 +48,9 @@ export function StoreClient() {
     const categories = [
         { label: "ALL COLLECTIONS", value: "ALL" },
         { label: "APPAREL", value: "APPAREL" },
-        { label: "MEDIA & BOOKS", value: "MEDIA_BOOKS" },
-        { label: "PROFESSIONAL KITS", value: "KITS" },
+        { label: "MEDIA & BOOKS", value: "BOOKS" },
+        { label: "ACCESSORIES", value: "ACCESSORIES" },
+        { label: "LIMITED DROPS", value: "LIMITED_DROPS" }
     ];
 
     useEffect(() => {

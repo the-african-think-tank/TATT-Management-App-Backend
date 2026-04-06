@@ -117,6 +117,10 @@ export class NotificationsService {
                 return `${baseUrl}/member/impact`;
             case NotificationType.VOLUNTEER_ROLE:
                 return `${baseUrl}/member/profile`;
+            case NotificationType.SUPPORT_TICKET_CREATED:
+            case NotificationType.SUPPORT_MESSAGE_RECEIVED:
+            case NotificationType.SUPPORT_TICKET_RESOLVED:
+                return `${baseUrl}/dashboard/support/ticket/${data?.ticketId || ''}`;
             default:
                 return `${baseUrl}/dashboard`;
         }
@@ -136,6 +140,12 @@ export class NotificationsService {
                 return 'View My Activities';
             case NotificationType.VOLUNTEER_ROLE:
                 return 'View Profile';
+            case NotificationType.SUPPORT_TICKET_CREATED:
+                return 'View Ticket';
+            case NotificationType.SUPPORT_MESSAGE_RECEIVED:
+                return 'Read History';
+            case NotificationType.SUPPORT_TICKET_RESOLVED:
+                return 'View Case Detail';
             default:
                 return 'View Dashboard';
         }

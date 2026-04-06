@@ -162,7 +162,7 @@ export default function MembershipCenterPage() {
     }
 
     return (
-        <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-700">
+        <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
             {/* Page Title & Actions */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                 <div>
@@ -170,10 +170,7 @@ export default function MembershipCenterPage() {
                     <p className="text-xs text-tatt-gray font-medium mt-1 uppercase tracking-widest">Efficiency-first administration for TATT membership</p>
                 </div>
                 <div className="flex space-x-3 w-full md:w-auto">
-                    <button className="flex-1 md:flex-none bg-tatt-black text-tatt-lime px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center space-x-2 border border-white/5 shadow-lg">
-                        <Download size={14} />
-                        <span>Export Data</span>
-                    </button>
+
                     <button 
                         onClick={() => router.push('/admin/membership-center/new')}
                         className="flex-1 md:flex-none bg-tatt-lime text-tatt-black px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-tatt-lime/20"
@@ -256,35 +253,10 @@ export default function MembershipCenterPage() {
                         {activeTab === "OVERVIEW" && (
                             <div className="col-span-12 space-y-6">
                                 <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
-                                    <div className="px-6 py-4 bg-surface/50 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <div className="flex items-center space-x-4">
-                                        <label className="flex items-center space-x-2 cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={selectedMembers.length === data.subscribers.length && data.subscribers.length > 0}
-                                                onChange={toggleAllMembers}
-                                                className="rounded border-border text-tatt-lime focus:ring-tatt-lime w-4 h-4 bg-background" 
-                                            />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Select All</span>
-                                        </label>
-                                        <div className="hidden md:block h-4 w-px bg-border"></div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button disabled={selectedMembers.length === 0} className="bg-background border border-border text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-neutral-dark/5 disabled:opacity-50 transition-all">Bulk Archive</button>
-                                            <button disabled={selectedMembers.length === 0} className="bg-background border border-border text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-neutral-dark/5 disabled:opacity-50 transition-all">Reassign Tier</button>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2 w-full md:w-auto justify-between md:justify-end">
-                                        <span className="text-[10px] font-black uppercase text-tatt-lime italic tracking-widest">{selectedMembers.length} selected</span>
-                                        <button className="p-1.5 rounded-lg hover:bg-background transition-all text-tatt-gray">
-                                            <MoreVertical size={14} />
-                                        </button>
-                                    </div>
-                                </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm border-collapse">
                                         <thead className="bg-background/30">
                                             <tr>
-                                                <th className="w-12 px-6 py-4"></th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Plan Name</th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Price (USD)</th>
                                                 <th className="px-4 py-4 font-black text-[10px] uppercase tracking-[0.2em] text-tatt-gray">Assigned Perks</th>
@@ -294,14 +266,6 @@ export default function MembershipCenterPage() {
                                         <tbody className="divide-y divide-border">
                                             {data.tiers.map((tier: any) => (
                                                 <tr key={tier.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <input 
-                                                            type="checkbox"
-                                                            checked={selectedMembers.includes(tier.id)}
-                                                            onChange={() => toggleMemberSelection(tier.id)}
-                                                            className="rounded border-border text-tatt-lime focus:ring-tatt-lime w-4 h-4 bg-background" 
-                                                        />
-                                                    </td>
                                                     <td className="px-4 py-4">
                                                         <input 
                                                             className="bg-transparent border-none p-0 text-sm font-black focus:ring-0 w-full focus:bg-background rounded px-2 -ml-2 transition-all" 
@@ -318,31 +282,36 @@ export default function MembershipCenterPage() {
                                                     </td>
                                                     <td className="px-4 py-4">
                                                         <div className="flex flex-wrap gap-1.5">
-                                                            {(tier.features || []).slice(0, 2).map((perk: any, i: number) => (
+                                                            {[...(tier.features || []), ...(tier.accessControls || []).filter((a: any) => a.enabled).map((a: any) => a.title)].slice(0, 3).map((perk: any, i: number) => (
                                                                 <span key={i} className="bg-background border border-border px-2 py-0.5 rounded text-[10px] font-bold flex items-center group/perk">
-                                                                    {typeof perk === 'string' ? perk : (perk?.title || 'Perk')}
+                                                                    {perk}
                                                                     <button className="ml-1 text-tatt-gray hover:text-red-500 opacity-0 group-hover/perk:opacity-100 transition-all">×</button>
                                                                 </span>
                                                             ))}
-                                                            <button 
-                                                                onClick={() => router.push('/admin/membership-center/' + tier.id)}
-                                                                className="text-tatt-lime text-[10px] font-black px-2 border border-dashed border-tatt-lime/40 rounded hover:bg-tatt-lime/5 transition-all"
-                                                            >
-                                                                + ADD
-                                                            </button>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4 text-right">
                                                         <div className="flex items-center justify-end space-x-1">
                                                             <button 
-                                                                onClick={() => router.push('/admin/membership-center/' + tier.id)}
-                                                                className="p-1.5 text-tatt-gray hover:text-tatt-lime transition-all opacity-0 group-hover:opacity-100"
+                                                                onClick={() => {
+                                                                    if(confirm('Are you sure you want to delete this plan?')) {
+                                                                        toast.error("Deletion not mapped yet on the backend API.");
+                                                                    }
+                                                                }}
+                                                                className="p-1.5 text-tatt-gray hover:text-red-500 transition-all"
                                                             >
-                                                                <Edit2 size={14} />
+                                                                <Trash2 size={14} />
                                                             </button>
-                                                            <button className="p-1.5 text-tatt-gray hover:text-foreground transition-all">
-                                                                <MoreVertical size={14} />
-                                                            </button>
+                                                            <div className="relative group/dropdown">
+                                                                <button className="p-1.5 text-tatt-gray hover:text-foreground transition-all">
+                                                                    <MoreVertical size={14} />
+                                                                </button>
+                                                                <div className="absolute right-0 top-full w-40 bg-surface border border-border rounded-xl shadow-xl opacity-0 pointer-events-none group-hover/dropdown:opacity-100 group-hover/dropdown:pointer-events-auto transition-all z-50 flex flex-col p-1 overflow-hidden">
+                                                                    <button onClick={() => router.push('/admin/membership-center/' + tier.id)} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:bg-background hover:text-foreground rounded-lg transition-colors">Edit Plan</button>
+                                                                    <button onClick={() => router.push('/admin/membership-center/' + tier.id)} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:bg-background hover:text-foreground rounded-lg transition-colors">Add New Perk</button>
+                                                                    <button onClick={() => router.push('/admin/membership-center/' + tier.id)} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:bg-background hover:text-foreground rounded-lg transition-colors">Add Benefit</button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -386,18 +355,18 @@ export default function MembershipCenterPage() {
                                             <div className="flex-1 space-y-4">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray italic border-b border-border pb-2 block">Integrated Perks & Benefits</span>
                                                 <div className="space-y-2.5">
-                                                    {(tier.accessControls || tier.features || []).map((perk: any, i: number) => (
+                                                    {[...(tier.features || []), ...(tier.accessControls || []).filter((a: any) => a.enabled).map((a: any) => a.title)].map((perk: any, i: number) => (
                                                         <div key={i} className="flex items-start gap-3">
                                                             <div className="mt-0.5 size-4 rounded-full bg-tatt-lime/10 text-tatt-lime flex items-center justify-center shrink-0">
                                                                 <Check size={10} strokeWidth={4} />
                                                             </div>
                                                             <span className="text-xs font-bold text-foreground leading-tight">
-                                                                {typeof perk === 'string' ? perk : (perk?.title || 'Perk')}
+                                                                {perk}
                                                             </span>
                                                         </div>
                                                     ))}
-                                                    {(!tier.accessControls || tier.accessControls.length === 0) && (!tier.features || tier.features.length === 0) && (
-                                                        <p className="text-[10px] text-tatt-gray italic">No perks allocated yet.</p>
+                                                    {(!tier.features || tier.features.length === 0) && (!tier.accessControls || !tier.accessControls.some((a: any) => a.enabled)) && (
+                                                        <p className="text-[10px] text-tatt-gray italic">No specific perks enabled yet.</p>
                                                     )}
                                                 </div>
                                             </div>
@@ -454,7 +423,7 @@ export default function MembershipCenterPage() {
                             <>
                                 {activeTab === "DISCOUNTS" && (
                                     <div className="col-span-12 lg:col-span-5 bg-surface rounded-2xl p-6 border border-border sticky top-6">
-                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Launch Global Campaign</span>
+                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Create New Promotion</span>
                                         <div className="space-y-4">
                                             <div>
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Campaign Alias</label>
@@ -493,7 +462,7 @@ export default function MembershipCenterPage() {
                                 
                                 <div className={`col-span-12 ${activeTab === "DISCOUNTS" ? "lg:col-span-7" : "lg:col-span-5"}`}>
                                     <div className="bg-surface rounded-2xl p-6 border border-border">
-                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Live Global Promotions</span>
+                                        <span className="text-[11px] uppercase tracking-[0.2em] font-black text-foreground italic mb-6 block underline decoration-tatt-lime/40">Active Promotions</span>
                                         <div className="space-y-3 mb-6">
                                             {data.discounts.map((discount: any) => (
                                                 <div key={discount.id} className="flex items-center justify-between p-4 bg-background border border-border rounded-xl group hover:border-tatt-lime transition-all">

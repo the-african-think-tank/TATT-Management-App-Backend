@@ -351,7 +351,7 @@ export default function EventDetailPage() {
 
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleRegister(false)}
+                                                    onClick={() => price === 0 ? handleRegister(false) : router.push(`/dashboard/events/${id}/checkout`)}
                                                     disabled={registering}
                                                     className="w-full py-4 bg-tatt-lime text-tatt-black font-black uppercase tracking-[0.2em] text-[10px] rounded-xl hover:brightness-110 active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 transition-all shadow-xl shadow-tatt-lime/20"
                                                 >

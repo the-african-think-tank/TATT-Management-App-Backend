@@ -186,6 +186,48 @@ export class EventsService {
         });
 
         if (amountToPay > 0) {
+            // Check if we have a real Stripe key
+            const isMock = !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder');
+
+            if (dto.paymentMethodId) {
+                if (isMock) {
+                    this.logger.warn(`Simulating successful internal payment for event registration: ${registration.id}`);
+                    registration.status = 'COMPLETED';
+                    await registration.save();
+                    return { registration, message: 'Internal payment successful (simulated).' };
+                }
+
+                // Real Stripe PaymentIntent with confirm: true
+                try {
+                    const stripe = await this.getStripe();
+                    const intent = await stripe.paymentIntents.create({
+                        amount: Math.round(amountToPay * 100),
+                        currency: 'usd',
+                        payment_method: dto.paymentMethodId,
+                        customer: user.stripeCustomerId || undefined,
+                        confirm: true,
+                        return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/events/${event.id}/success`,
+                        metadata: {
+                            registrationId: registration.id,
+                            type: 'EVENT_REGISTRATION'
+                        }
+                    });
+
+                    if (intent.status === 'succeeded') {
+                        registration.status = 'COMPLETED';
+                        registration.stripePaymentIntentId = intent.id;
+                        await registration.save();
+                        return { registration, message: 'Payment confirmed successfully.' };
+                    }
+
+                    return { registration, message: 'Payment in progress.', status: intent.status };
+                } catch (error) {
+                    this.logger.error(`Stripe Error: ${error.message}`);
+                    throw new Error(`Payment failed: ${error.message}`);
+                }
+            }
+
+            // Fallback: External Stripe Checkout Session (Redirect)
             const session = await (await this.getStripe()).checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [
@@ -193,7 +235,7 @@ export class EventsService {
                         price_data: {
                             currency: 'usd',
                             product_data: {
-                                name: `Business Registration for ${event.title}`,
+                                name: `Event Registration for ${event.title}`,
                                 description: `Event Date: ${event.dateTime.toLocaleString()}`,
                             },
                             unit_amount: Math.round(amountToPay * 100),
@@ -202,8 +244,8 @@ export class EventsService {
                     },
                 ],
                 mode: 'payment',
-                success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${event.id}/success?regId=${registration.id}`,
-                cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${event.id}/cancel`,
+                success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/events/${event.id}/success?regId=${registration.id}`,
+                cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/events/${event.id}/cancel`,
                 client_reference_id: registration.id,
                 metadata: {
                     registrationId: registration.id,
