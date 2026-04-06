@@ -19,7 +19,8 @@ export type User = {
     chapterCode?: string | null;
     profilePicture?: string | null;
     professionTitle?: string | null;
-    industry?: string | null;
+    industryId?: string | null;
+    industry?: { id: string; name: string } | null;
     companyName?: string | null;
     location?: string | null;
     tattMemberId?: string | null;

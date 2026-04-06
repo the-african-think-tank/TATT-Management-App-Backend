@@ -5,6 +5,7 @@ import { SystemRole, CommunityTier, AccountFlags } from '../enums/roles.enum';
 import { Op } from 'sequelize';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { ProfessionalInterest } from '../../interests/entities/interest.entity';
+import { CommunityIndustry } from '../../industries/entities/industry.entity';
 import { UpdateProfileDto } from './dto/users.dto';
 
 @Injectable()
@@ -69,6 +70,7 @@ export class UsersService {
         const user = await this.userRepository.findByPk(userId, {
             include: [
                 { model: Chapter, attributes: ['id', 'name', 'code'] },
+                { model: CommunityIndustry, as: 'industry', attributes: ['id', 'name'] },
                 { model: ProfessionalInterest, as: 'interests', attributes: ['id', 'name'], through: { attributes: [] } }
             ],
             attributes: { exclude: ['password', 'twoFactorSecret', 'pendingTotpSecret'] }
@@ -109,7 +111,7 @@ export class UsersService {
 
         if (updatedUser) {
             const hasBasicInfo = !!(updatedUser.firstName && updatedUser.lastName);
-            const hasProfessionalInfo = !!(updatedUser.professionTitle && updatedUser.industry);
+            const hasProfessionalInfo = !!(updatedUser.professionTitle && updatedUser.industryId);
             const hasBio = !!(updatedUser.professionalHighlight && updatedUser.professionalHighlight.length > 2);
             const hasInterests = !!(updatedUser.interests && updatedUser.interests.length > 0);
 

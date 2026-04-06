@@ -40,7 +40,7 @@ export class UpdateProfileDto {
 
     @ApiProperty({ required: false })
     @IsString() @IsOptional()
-    industry?: string;
+    industryId?: string;
 
     @ApiProperty({ required: false })
     @IsString() @IsOptional()

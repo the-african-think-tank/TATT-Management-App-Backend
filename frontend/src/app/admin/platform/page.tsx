@@ -14,15 +14,15 @@ import {
     ChevronLeft, 
     ChevronRight,
     Loader2,
-    Settings,
     Trash2,
     Edit2,
     Hash,
     Filter,
-    UserCog
+    UserCog,
+    Layers
 } from "lucide-react";
 import api from "@/services/api";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import Link from "next/link";
 
 interface Broadcast {
@@ -42,36 +42,34 @@ interface Interest {
     name: string;
 }
 
+interface Industry {
+    id: string;
+    name: string;
+}
+
 const Tiers = ["FREE", "UBUNTU", "IMANI", "KIONGOZI"];
 
 export default function PlatformManagement() {
+    const [activeTab, setActiveTab] = useState<'ANNOUNCEMENTS' | 'INTERESTS' | 'INDUSTRIES'>('ANNOUNCEMENTS');
     const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
     const [interests, setInterests] = useState<Interest[]>([]);
+    const [industries, setIndustries] = useState<Industry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isScheduling, setIsScheduling] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Form States
+    // Broadcast Form States
     const [title, setTitle] = useState("");
     const [audience, setAudience] = useState<'ALL' | 'ORG_MEMBERS' | 'TIER_SPECIFIC'>('ALL');
     const [targetTier, setTargetTier] = useState("UBUNTU");
     const [message, setMessage] = useState("");
     const [scheduledAt, setScheduledAt] = useState("");
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Interests & Search States
+    // Search & Taxonomy States
     const [searchTerm, setSearchTerm] = useState("");
-    const [interestSearch, setInterestSearch] = useState("");
-    const [newInterest, setNewInterest] = useState("");
-    const [editingInterest, setEditingInterest] = useState<Interest | null>(null);
-
-    const filteredBroadcasts = broadcasts.filter(b => 
-        b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        b.message.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const filteredInterests = interests.filter(i => 
-        i.name.toLowerCase().includes(interestSearch.toLowerCase())
-    );
+    const [taxoSearch, setTaxoSearch] = useState("");
+    const [newValue, setNewValue] = useState("");
+    const [editingItem, setEditingItem] = useState<{id: string, name: string} | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -80,12 +78,14 @@ export default function PlatformManagement() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [bRes, iRes] = await Promise.all([
+            const [bRes, iRes, indRes] = await Promise.all([
                 api.get("/admin/broadcasts"),
-                api.get("/interests")
+                api.get("/interests"),
+                api.get("/industries")
             ]);
             setBroadcasts(bRes.data);
             setInterests(iRes.data);
+            setIndustries(indRes.data);
         } catch (error) {
             toast.error("Failed to load platform data");
         } finally {
@@ -120,263 +120,313 @@ export default function PlatformManagement() {
         }
     };
 
-    const handleCreateInterest = async (e: React.FormEvent) => {
+    const handleTaxonomySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newInterest) return;
+        if (!newValue) return;
+        const endpoint = activeTab === 'INTERESTS' ? '/interests' : '/industries';
         try {
-            if (editingInterest) {
-                await api.patch(`/interests/${editingInterest.id}`, { name: newInterest });
-                toast.success("Interest updated");
+            if (editingItem) {
+                await api.patch(`${endpoint}/${editingItem.id}`, { name: newValue });
+                toast.success(`${activeTab === 'INTERESTS' ? 'Interest' : 'Industry'} updated`);
             } else {
-                await api.post("/interests", { name: newInterest });
-                toast.success("New interest added");
+                await api.post(endpoint, { name: newValue });
+                toast.success(`New ${activeTab === 'INTERESTS' ? 'interest' : 'industry'} added`);
             }
-            setNewInterest("");
-            setEditingInterest(null);
+            setNewValue("");
+            setEditingItem(null);
             fetchData();
         } catch (error) {
             toast.error("Process failed");
         }
     };
 
-    const deleteInterest = async (id: string) => {
+    const deleteItem = async (id: string) => {
         if (!confirm("Are you sure?")) return;
+        const endpoint = activeTab === 'INTERESTS' ? '/interests' : '/industries';
         try {
-            await api.delete(`/interests/${id}`);
-            toast.success("Interest removed");
+            await api.delete(`${endpoint}/${id}`);
+            toast.success("Removed successfuly");
             fetchData();
         } catch (error) {
             toast.error("Deletion failed");
         }
     };
 
-    const stats = {
-        totalSent: broadcasts.filter(b => b.status === 'SENT').length,
-        active: broadcasts.filter(b => b.status === 'SENT' && b.sentAt && (new Date().getTime() - new Date(b.sentAt).getTime() < 86400000)).length,
-        pending: broadcasts.filter(b => b.status === 'SCHEDULED').length
-    };
+    const filteredBroadcasts = broadcasts.filter(b => 
+        b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        b.message.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const taxonomyList = activeTab === 'INTERESTS' ? interests : industries;
+    const filteredTaxonomy = taxonomyList.filter(item => 
+        item.name.toLowerCase().includes(taxoSearch.toLowerCase())
+    );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+            <Toaster position="top-right" />
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div className="space-y-1">
                     <h3 className="text-3xl font-black tracking-tight text-foreground italic uppercase">Platform Management</h3>
-                    <p className="text-tatt-gray font-medium">Manage platform settings and communications</p>
+                    <p className="text-tatt-gray font-medium">Govern platform communications and taxonomies</p>
                 </div>
                 <div className="flex gap-4">
                     <Link href="/admin/platform/roles" className="bg-surface border border-border hover:border-tatt-lime text-foreground flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm group">
                         <UserCog size={16} className="text-tatt-lime group-hover:scale-110 transition-transform" />
-                        Role Management Matrix
+                        Role Matrix
                     </Link>
                 </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-surface p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] tracking-widest uppercase font-black text-tatt-gray mb-4">Total Broadcasts Sent</p>
-                    <div className="flex items-end justify-between">
-                        <h3 className="text-4xl font-black text-foreground italic">{stats.totalSent}</h3>
-                        <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
-                            <Send size={24} />
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-surface p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] tracking-widest uppercase font-black text-tatt-gray mb-4">Currently Live</p>
-                    <div className="flex items-end justify-between">
-                        <h3 className="text-4xl font-black text-foreground italic">{stats.active}</h3>
-                        <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
-                            <Megaphone size={24} />
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-surface p-6 rounded-[2rem] border border-border shadow-sm flex flex-col justify-between">
-                    <p className="text-[10px] tracking-widest uppercase font-black text-tatt-gray mb-4">Pending Schedules</p>
-                    <div className="flex items-end justify-between">
-                        <h3 className="text-4xl font-black text-foreground italic">{stats.pending}</h3>
-                        <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
-                            <Clock size={24} />
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-tatt-black p-6 rounded-[2rem] flex flex-col justify-between shadow-xl shadow-tatt-lime/10">
-                    <p className="text-[10px] tracking-widest uppercase font-black text-white/40">Platform Status</p>
-                    <div className="flex items-center gap-3">
-                        <div className="size-3 rounded-full bg-tatt-lime animate-pulse shadow-[0_0_10px_#9fcc00]" />
-                        <span className="text-xs font-black uppercase tracking-widest text-white">Archives Online</span>
-                    </div>
-                </div>
+            {/* Custom Tab Switcher */}
+            <div className="flex p-1 bg-surface border border-border rounded-2xl w-full max-w-2xl overflow-x-auto no-scrollbar">
+                {[
+                    { id: 'ANNOUNCEMENTS', icon: Megaphone, label: 'Announcements' },
+                    { id: 'INTERESTS', icon: Hash, label: 'Interests' },
+                    { id: 'INDUSTRIES', icon: Layers, label: 'Industries' },
+                ].map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => {
+                            setActiveTab(tab.id as any);
+                            setNewValue("");
+                            setEditingItem(null);
+                        }}
+                        className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            activeTab === tab.id 
+                            ? 'bg-background text-tatt-lime border border-border shadow-sm ring-1 ring-tatt-lime/10' 
+                            : 'text-tatt-gray hover:text-foreground'
+                        }`}
+                    >
+                        <tab.icon size={16} />
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
-            <div className="grid grid-cols-12 gap-8">
-                {/* Notification Composer */}
-                <div className="col-span-12 lg:col-span-12 xl:col-span-5 space-y-8">
-                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
-                        <div className="p-8 border-b border-border bg-surface/50">
-                            <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
+            {activeTab === 'ANNOUNCEMENTS' && (
+                <div className="grid grid-cols-12 gap-8">
+                    {/* Create Announcement */}
+                    <div className="col-span-12 xl:col-span-4 space-y-6">
+                        <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+                            <div className="p-8 border-b border-border bg-surface/50">
+                                <div className="flex items-center gap-4 text-tatt-lime">
                                     <SquarePen size={24} />
-                                </div>
-                                <h5 className="text-xl font-black uppercase italic tracking-tighter">Create Announcements</h5>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleBroadcastSubmit} className="p-8 space-y-8">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Announcement Title</label>
-                                <input 
-                                    className="w-full h-14 bg-background border border-border rounded-2xl px-6 text-sm font-bold focus:ring-2 focus:ring-tatt-lime/20 outline-none transition-all"
-                                    placeholder="e.g. Quarterly Town Hall Meeting"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Audience Targeting</label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                                    {[
-                                        { id: 'ALL', label: 'All Members', icon: Globe },
-                                        { id: 'ORG_MEMBERS', label: 'Org Members', icon: Building2 }
-                                    ].map((opt) => (
-                                        <label 
-                                            key={opt.id}
-                                            className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all cursor-pointer ${
-                                                audience === opt.id ? 'border-tatt-lime bg-tatt-lime/5' : 'border-border bg-background hover:border-tatt-lime/30'
-                                            }`}
-                                        >
-                                            <input 
-                                                type="radio" 
-                                                className="hidden" 
-                                                name="audience" 
-                                                checked={audience === opt.id}
-                                                onChange={() => setAudience(opt.id as any)}
-                                            />
-                                            <opt.icon size={20} className={audience === opt.id ? 'text-tatt-lime' : 'text-tatt-gray'} />
-                                            <span className="text-xs font-black uppercase tracking-widest">{opt.label}</span>
-                                        </label>
-                                    ))}
-                                </div>
-
-                                <div className="p-6 bg-background rounded-[2rem] border border-border">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-[9px] font-black text-tatt-gray uppercase tracking-[0.2em]">Filter by Tier (Optional)</p>
-                                        <div className="size-2 rounded-full bg-tatt-lime" />
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {Tiers.map(tier => (
-                                            <button 
-                                                key={tier}
-                                                type="button"
-                                                onClick={() => {
-                                                    setAudience('TIER_SPECIFIC');
-                                                    setTargetTier(tier);
-                                                }}
-                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                                    audience === 'TIER_SPECIFIC' && targetTier === tier 
-                                                    ? 'bg-tatt-black text-tatt-lime shadow-lg' 
-                                                    : 'border border-border text-tatt-gray hover:border-tatt-lime'
-                                                }`}
-                                            >
-                                                {tier}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <h5 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Composer</h5>
                                 </div>
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Message Content</label>
-                                <textarea 
-                                    className="w-full bg-background border border-border rounded-[2rem] p-6 text-sm font-bold min-h-[160px] focus:ring-2 focus:ring-tatt-lime/20 outline-none transition-all resize-none"
-                                    placeholder="Compose your message here..."
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row items-center gap-6 pt-6 border-t border-border">
-                                <div className="flex items-center gap-4 bg-background px-4 py-2 rounded-2xl border border-border w-full sm:w-auto">
+                            <form onSubmit={handleBroadcastSubmit} className="p-8 space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Title</label>
                                     <input 
-                                        type="checkbox" 
-                                        checked={isScheduling}
-                                        onChange={(e) => setIsScheduling(e.target.checked)}
-                                        className="size-5 rounded-lg accent-tatt-lime cursor-pointer"
+                                        className="w-full h-12 bg-background border border-border rounded-xl px-6 text-sm font-bold outline-none border focus:border-tatt-lime transition-all"
+                                        placeholder="Headline..."
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)} required
                                     />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray whitespace-nowrap">Schedule Logic</span>
                                 </div>
                                 
-                                {isScheduling && (
-                                    <input 
-                                        type="datetime-local" 
-                                        className="bg-background border border-border rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest flex-1 outline-none"
-                                        value={scheduledAt}
-                                        onChange={(e) => setScheduledAt(e.target.value)}
-                                        required
-                                    />
-                                ) || <div className="flex-1" />}
-
-                                <button 
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className={`w-full sm:w-auto bg-tatt-lime text-tatt-black px-8 h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-tatt-lime/20 hover:scale-[1.02] transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : (isScheduling ? <Clock size={18} /> : <Send size={18} />)}
-                                    {isSubmitting ? 'Transmitting...' : (isScheduling ? 'Engage Timer' : 'Broadcast Now')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* Interest Taxonomy Governance */}
-                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
-                        <div className="p-8 border-b border-border bg-surface/50 flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
-                                    <Hash size={24} />
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Target Audience</label>
+                                    <select 
+                                        className="w-full h-12 bg-background border border-border rounded-xl px-4 text-xs font-black uppercase tracking-widest outline-none border focus:border-tatt-lime transition-all"
+                                        value={audience}
+                                        onChange={(e) => setAudience(e.target.value as any)}
+                                    >
+                                        <option value="ALL">ALL MEMBERS</option>
+                                        <option value="ORG_MEMBERS">ORG MEMBERS ONLY</option>
+                                        <option value="TIER_SPECIFIC">BY MEMBERSHIP TIER</option>
+                                    </select>
+                                    
+                                    {audience === 'TIER_SPECIFIC' && (
+                                        <div className="flex gap-2 pt-2 overflow-x-auto pb-2">
+                                            {Tiers.map(t => (
+                                                <button 
+                                                    key={t} type="button"
+                                                    onClick={() => setTargetTier(t)}
+                                                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${targetTier === t ? 'bg-tatt-black text-tatt-lime border-tatt-lime' : 'border-border text-tatt-gray'}`}
+                                                >
+                                                    {t}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <h5 className="text-xl font-black uppercase italic tracking-tighter">Platform Community Interests</h5>
-                            </div>
-                        </div>
-                        
-                        <div className="p-8 space-y-6">
-                            <form onSubmit={handleCreateInterest} className="flex gap-3">
-                                <input 
-                                    className="flex-1 h-12 bg-background border border-border rounded-xl px-4 text-xs font-bold outline-none border focus:border-tatt-lime transition-colors"
-                                    placeholder="Add new community interest..."
-                                    value={newInterest}
-                                    onChange={(e) => setNewInterest(e.target.value)}
-                                />
-                                <button className="h-12 px-6 bg-tatt-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                                    <PlusCircle size={16} className="text-tatt-lime" />
-                                    {editingInterest ? 'Update' : 'Commit'}
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Content</label>
+                                    <textarea 
+                                        className="w-full bg-background border border-border rounded-2xl p-6 text-sm font-medium min-h-[140px] focus:ring-1 focus:ring-tatt-lime/20 outline-none transition-all resize-none"
+                                        placeholder="Message body..."
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)} required
+                                    />
+                                </div>
+
+                                <div className="pt-4 space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <input type="checkbox" checked={isScheduling} onChange={(e) => setIsScheduling(e.target.checked)} className="size-4 accent-tatt-lime"/>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Delayed Delivery</span>
+                                    </div>
+                                    {isScheduling && (
+                                        <input type="datetime-local" className="w-full bg-background border border-border rounded-xl p-3 text-xs outline-none" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)}/>
+                                    )}
+                                </div>
+
+                                <button type="submit" disabled={isSubmitting} className="w-full bg-tatt-lime text-tatt-black h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-tatt-lime/20 transition-all">
+                                    {isSubmitting ? <Loader2 className="animate-spin" /> : <Send size={18}/>}
+                                    {isSubmitting ? 'Transmitting...' : 'Dispatch Now'}
                                 </button>
                             </form>
+                        </div>
+                    </div>
 
-                            <div className="relative group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray/40 transition-colors group-focus-within:text-tatt-lime" size={16} />
-                                <input 
-                                    className="w-full h-12 bg-background border border-border rounded-xl pl-10 pr-4 text-xs font-bold outline-none focus:border-tatt-lime transition-colors"
-                                    placeholder="Filter interests..."
-                                    value={interestSearch}
-                                    onChange={(e) => setInterestSearch(e.target.value)}
-                                />
+                    {/* Announcement History */}
+                    <div className="col-span-12 xl:col-span-8">
+                        <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+                            <div className="p-8 border-b border-border flex justify-between items-center bg-surface/50 flex-wrap gap-4">
+                                <div className="flex items-center gap-4">
+                                    <Megaphone size={24} className="text-tatt-lime" />
+                                    <h5 className="text-xl font-black uppercase italic tracking-tighter">Communications Log</h5>
+                                </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray" size={16} />
+                                    <input 
+                                        className="h-10 bg-background border border-border rounded-xl pl-10 pr-4 text-[10px] font-black uppercase tracking-widest outline-none w-48 focus:border-tatt-lime"
+                                        placeholder="Scan Subject..."
+                                        value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-background/40">
+                                        <tr>
+                                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-widest text-tatt-gray">Header</th>
+                                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-widest text-tatt-gray">Target</th>
+                                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-widest text-tatt-gray">Status</th>
+                                            <th className="px-8 py-4 text-[9px] font-black uppercase tracking-widest text-tatt-gray">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {filteredBroadcasts.map(b => (
+                                            <tr key={b.id} className="group hover:bg-background/20">
+                                                <td className="px-8 py-5">
+                                                    <p className="text-sm font-black italic tracking-tight">{b.title}</p>
+                                                    <p className="text-[10px] text-tatt-gray truncate max-w-[200px]">{b.message}</p>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-tatt-lime underline decoration-2 underline-offset-4">
+                                                        {b.targetTier || b.audienceType}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${b.status === 'SENT' ? 'bg-tatt-lime/10 text-tatt-lime' : 'bg-surface border border-border text-tatt-gray'}`}>
+                                                        {b.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-5 text-[10px] font-bold text-tatt-gray">
+                                                    {new Date(b.sentAt || b.createdAt).toLocaleDateString()}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {(activeTab === 'INTERESTS' || activeTab === 'INDUSTRIES') && (
+                <div className="max-w-5xl mx-auto space-y-8">
+                    {/* Management Component */}
+                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+                        <div className="p-8 border-b border-border bg-surface/50 flex flex-col md:flex-row justify-between md:items-center gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="size-14 rounded-[1.5rem] bg-tatt-lime/10 flex items-center justify-center text-tatt-lime ring-4 ring-tatt-lime/5">
+                                    {activeTab === 'INTERESTS' ? <Hash size={28} /> : <Layers size={28} />}
+                                </div>
+                                <div>
+                                    <h5 className="text-2xl font-black uppercase italic tracking-tighter">
+                                        Community {activeTab === 'INTERESTS' ? 'Interests' : 'Industries'}
+                                    </h5>
+                                    <p className="text-xs font-medium text-tatt-gray uppercase tracking-widest">Global Taxonomy Governance</p>
+                                </div>
+                            </div>
+                            
+                            <form onSubmit={handleTaxonomySubmit} className="flex gap-4 items-end">
+                                <div className="space-y-1.5 flex-1 md:w-64">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-tatt-gray ml-4">
+                                        {editingItem ? 'Updating Record' : `Define New ${activeTab === 'INTERESTS' ? 'Interest' : 'Industry'}`}
+                                    </label>
+                                    <input 
+                                        className="w-full h-14 bg-background border border-border rounded-2xl px-6 text-sm font-bold outline-none focus:border-tatt-lime focus:ring-2 focus:ring-tatt-lime/10 transition-all"
+                                        placeholder={`e.g. ${activeTab === 'INTERESTS' ? 'FinTech' : 'Agriculture'}`}
+                                        value={newValue}
+                                        onChange={(e) => setNewValue(e.target.value)} required
+                                    />
+                                </div>
+                                <button className="h-14 px-8 bg-tatt-black text-tatt-lime rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10">
+                                    <PlusCircle size={18} />
+                                    {editingItem ? 'Update' : 'Save'}
+                                </button>
+                                {editingItem && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setEditingItem(null); setNewValue(""); }}
+                                        className="h-14 px-4 bg-surface border border-border text-tatt-gray rounded-2xl text-[10px] font-black uppercase tracking-widest"
+                                    >Cancel</button>
+                                )}
+                            </form>
+                        </div>
+
+                        <div className="p-8 bg-background/30 backdrop-blur-sm">
+                            <div className="flex gap-4 mb-8">
+                                <div className="relative flex-1 group">
+                                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-tatt-gray/40 group-focus-within:text-tatt-lime transition-colors" size={20} />
+                                    <input 
+                                        className="w-full h-14 bg-background border border-border rounded-2xl pl-14 pr-6 text-sm font-bold outline-none focus:border-tatt-lime transition-all"
+                                        placeholder="Filter unit keys..."
+                                        value={taxoSearch}
+                                        onChange={(e) => setTaxoSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="bg-surface px-6 h-14 rounded-2xl border border-border flex items-center gap-3">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Active Units:</span>
+                                    <span className="text-xl font-black italic text-foreground">{taxonomyList.length}</span>
+                                </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
-                                {filteredInterests.map(interest => (
-                                    <div key={interest.id} className="group bg-background border border-border px-3 py-2 rounded-xl flex items-center gap-3 hover:border-tatt-lime transition-all">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">{interest.name}</span>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => { setEditingInterest(interest); setNewInterest(interest.name); }} className="text-tatt-gray hover:text-tatt-lime">
-                                                <Edit2 size={12} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {loading ? (
+                                    <div className="col-span-full py-20 flex flex-col items-center gap-4 opacity-30">
+                                        <Loader2 className="animate-spin" size={32} />
+                                        <span className="text-xs font-black uppercase tracking-widest">Awaiting Archive Access...</span>
+                                    </div>
+                                ) : filteredTaxonomy.map(item => (
+                                    <div key={item.id} className="group bg-surface hover:bg-tatt-black border border-border hover:border-tatt-lime p-5 rounded-3xl transition-all flex items-center justify-between shadow-sm">
+                                        <div className="flex items-center gap-4">
+                                            <div className="size-8 rounded-xl bg-tatt-gray/5 flex items-center justify-center text-tatt-gray group-hover:bg-tatt-lime group-hover:text-tatt-black transition-colors">
+                                                <span className="text-xs font-bold italic">#</span>
+                                            </div>
+                                            <span className="text-xs font-black uppercase tracking-widest text-foreground group-hover:text-white transition-colors">
+                                                {item.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all">
+                                            <button 
+                                                onClick={() => { setEditingItem(item); setNewValue(item.name); }}
+                                                className="size-9 rounded-xl bg-surface/10 flex items-center justify-center text-white hover:bg-tatt-lime hover:text-black transition-all"
+                                            >
+                                                <Edit2 size={14} />
                                             </button>
-                                            <button onClick={() => deleteInterest(interest.id)} className="text-tatt-gray hover:text-red-500">
-                                                <Trash2 size={12} />
+                                            <button 
+                                                onClick={() => deleteItem(item.id)}
+                                                className="size-9 rounded-xl bg-surface/10 flex items-center justify-center text-white hover:bg-red-500 transition-all"
+                                            >
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </div>
@@ -385,109 +435,7 @@ export default function PlatformManagement() {
                         </div>
                     </div>
                 </div>
-
-                {/* Communication Archive */}
-                <div className="col-span-12 lg:col-span-12 xl:col-span-7">
-                    <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden h-full flex flex-col">
-                        <div className="p-8 border-b border-border flex flex-wrap gap-6 items-center justify-between bg-surface/50 backdrop-blur-sm">
-                            <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
-                                    <Megaphone size={24} />
-                                </div>
-                                <h5 className="text-xl font-black uppercase italic tracking-tighter">Active Communications</h5>
-                            </div>
-                            <div className="flex gap-4">
-                                 <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray" size={16} />
-                                    <input 
-                                        className="bg-background border border-border rounded-xl px-10 h-10 text-[10px] uppercase font-black tracking-widest outline-none w-48 focus:border-tatt-lime transition-colors"
-                                        placeholder="Scan Logs..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                 </div>
-                                 <button className="size-10 rounded-xl border border-border flex items-center justify-center bg-background">
-                                    <Filter size={16} className="text-tatt-gray" />
-                                 </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-x-auto">
-                             <table className="w-full text-left">
-                                <thead className="bg-background/50 border-b border-border">
-                                    <tr>
-                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Subject & Context</th>
-                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Sector</th>
-                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Status</th>
-                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Deployment</th>
-                                        <th className="px-8 py-4"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {filteredBroadcasts.length === 0 && !loading && (
-                                        <tr>
-                                            <td colSpan={5} className="py-32 text-center">
-                                                <div className="flex flex-col items-center gap-3 opacity-20">
-                                                    <Loader2 size={48} className="animate-spin" />
-                                                    <p className="text-xs font-black uppercase tracking-widest">Awaiting Transmissions...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {filteredBroadcasts.map(broadcast => (
-                                        <tr key={broadcast.id} className="group hover:bg-background/30 transition-all duration-300">
-                                            <td className="px-8 py-6">
-                                                <p className="text-sm font-black text-foreground mb-1 italic tracking-tighter">{broadcast.title}</p>
-                                                <p className="text-[10px] text-tatt-gray font-bold line-clamp-1">{broadcast.message}</p>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-2">
-                                                    {broadcast.audienceType === 'ALL' && <Globe size={14} className="text-tatt-lime" />}
-                                                    {broadcast.audienceType === 'ORG_MEMBERS' && <Building2 size={14} className="text-tatt-lime" />}
-                                                    {broadcast.audienceType === 'TIER_SPECIFIC' && <div className="size-3.5 rounded-full bg-tatt-black" />}
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">{broadcast.targetTier || broadcast.audienceType}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                                    broadcast.status === 'SENT' 
-                                                    ? 'bg-tatt-lime/10 border-tatt-lime/20 text-tatt-lime' 
-                                                    : broadcast.status === 'SCHEDULED' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' 
-                                                    : 'bg-tatt-gray/10 border-tatt-gray/20 text-tatt-gray'
-                                                }`}>
-                                                    {broadcast.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">
-                                                    {broadcast.sentAt || broadcast.scheduledAt ? new Date(broadcast.sentAt || broadcast.scheduledAt!).toLocaleDateString() : 'DRAFT'}
-                                                </p>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <button className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                                                    <MoreVertical size={20} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                             </table>
-                        </div>
-
-                        <div className="p-8 border-t border-border flex items-center justify-between bg-surface/30">
-                            <p className="text-[10px] font-black text-tatt-gray uppercase tracking-widest">Data Stream Volume: {filteredBroadcasts.length} Units</p>
-                            <div className="flex items-center gap-2">
-                                <button className="size-10 rounded-xl border border-border flex items-center justify-center hover:bg-background transition-all group">
-                                    <ChevronLeft size={18} className="text-tatt-gray group-hover:text-tatt-lime" />
-                                </button>
-                                <button className="size-10 rounded-xl border border-border flex items-center justify-center hover:bg-background transition-all group">
-                                    <ChevronRight size={18} className="text-tatt-gray group-hover:text-tatt-lime" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            )}
         </div>
     );
 }

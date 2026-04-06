@@ -80,6 +80,68 @@ export class EventsService {
         return event;
     }
 
+    async updateEvent(admin: User, id: string, dto: CreateEventDto) {
+        const allowedRoles = [SystemRole.SUPERADMIN, SystemRole.ADMIN, SystemRole.CONTENT_ADMIN];
+        if (!allowedRoles.includes(admin.systemRole)) {
+            throw new ForbiddenException('Only Org admins and content admins can update events.');
+        }
+
+        const event = await this.eventRepo.findByPk(id);
+        if (!event) throw new NotFoundException('Event not found');
+
+        await event.update({
+            title: dto.title,
+            description: dto.description,
+            dateTime: new Date(dto.dateTime),
+            type: dto.type,
+            imageUrl: dto.imageUrl,
+            isForAllMembers: dto.isForAllMembers,
+            targetMembershipTiers: dto.targetMembershipTiers,
+            basePrice: dto.basePrice || 0,
+        });
+
+        // Update locations: simplest way is to delete and recreate
+        await this.eventChapterRepo.destroy({ where: { eventId: id } });
+        for (const loc of dto.locations) {
+            await this.eventChapterRepo.create({
+                eventId: event.id,
+                chapterId: loc.chapterId,
+                address: loc.address,
+            });
+        }
+
+        // Update featured guests
+        await this.eventGuestRepo.destroy({ where: { eventId: id } });
+        if (dto.featuredGuestIds && dto.featuredGuestIds.length > 0) {
+            for (const guestId of dto.featuredGuestIds) {
+                await this.eventGuestRepo.create({
+                    eventId: event.id,
+                    userId: guestId,
+                });
+            }
+        }
+
+        return this.getEvent(id);
+    }
+
+    async deleteEvent(admin: User, id: string) {
+        const allowedRoles = [SystemRole.SUPERADMIN, SystemRole.ADMIN, SystemRole.CONTENT_ADMIN];
+        if (!allowedRoles.includes(admin.systemRole)) {
+            throw new ForbiddenException('Only Org admins and content admins can delete events.');
+        }
+
+        const event = await this.eventRepo.findByPk(id);
+        if (!event) throw new NotFoundException('Event not found');
+
+        // Cascade delete should handle associations if configured, but let's be safe.
+        await this.eventChapterRepo.destroy({ where: { eventId: id } });
+        await this.eventGuestRepo.destroy({ where: { eventId: id } });
+        await this.eventRegistrationRepo.destroy({ where: { eventId: id } });
+
+        await event.destroy();
+        return { success: true, message: 'Event deleted successfully.' };
+    }
+
     private async notifyMembers(event: Event) {
         const dateStr = event.dateTime.toLocaleString();
         const chapterIds = event.locations?.map(loc => loc.chapterId) || [];

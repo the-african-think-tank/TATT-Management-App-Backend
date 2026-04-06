@@ -7,6 +7,7 @@ import { SupportFaq } from './entities/support-faq.entity';
 import { CreateTicketDto, ResolveTicketDto, CreateFaqDto } from './dto/support.dto';
 import { User } from '../iam/entities/user.entity';
 import { SupportMessage } from './entities/support-message.entity';
+import { SystemRole } from '../iam/enums/roles.enum';
 
 @Injectable()
 export class SupportService {
@@ -81,7 +82,9 @@ export class SupportService {
         );
 
         // OPTIONAL: Notify all Admins?
-        const admins = await this.userRepo.findAll({ where: { isAdmin: true } as any });
+        const admins = await this.userRepo.findAll({ 
+            where: { systemRole: [SystemRole.ADMIN, SystemRole.SUPERADMIN] } as any 
+        });
         for (const admin of admins) {
             await this.notificationsService.create(
                 admin.id,
@@ -214,7 +217,9 @@ export class SupportService {
             );
         } else {
             // Member responded. Notify Admins.
-            const admins = await this.userRepo.findAll({ where: { isAdmin: true } as any });
+            const admins = await this.userRepo.findAll({ 
+                where: { systemRole: [SystemRole.ADMIN, SystemRole.SUPERADMIN] } as any 
+            });
             for (const admin of admins) {
                 await this.notificationsService.create(
                     admin.id,

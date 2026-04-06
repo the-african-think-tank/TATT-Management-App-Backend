@@ -7,6 +7,7 @@ import { ProfessionalInterest } from '../interests/entities/interest.entity';
 import { UserInterest } from '../interests/entities/user-interest.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { RecommendationSchema } from './dto/recommendations.dto';
+import { CommunityIndustry } from '../industries/entities/industry.entity';
 
 // ─── Scoring weights ──────────────────────────────────────────────────────────
 /** Points awarded per shared professional interest */
@@ -27,7 +28,7 @@ const PAID_TIERS: CommunityTier[] = [
 const MEMBER_PROFILE_ATTRS = [
     'id', 'firstName', 'lastName', 'profilePicture',
     'professionTitle', 'companyName', 'location',
-    'tattMemberId', 'communityTier', 'industry', 'chapterId',
+    'tattMemberId', 'communityTier', 'industryId', 'chapterId',
 ] as const;
 
 @Injectable()
@@ -58,6 +59,11 @@ export class RecommenderService {
                     as: 'interests',
                     attributes: ['id', 'name'],
                     through: { attributes: [] }, // omit junction row from output
+                },
+                {
+                    model: CommunityIndustry,
+                    as: 'industry',
+                    attributes: ['id', 'name'],
                 },
             ],
         });
@@ -103,6 +109,11 @@ export class RecommenderService {
                     attributes: ['id', 'name'],
                     through: { attributes: [] },
                 },
+                {
+                    model: CommunityIndustry,
+                    as: 'industry',
+                    attributes: ['id', 'name'],
+                },
             ],
         });
 
@@ -128,9 +139,9 @@ export class RecommenderService {
             if (sharedIds.length === 0) continue;
 
             const sameIndustry =
-                !!me.industry &&
-                !!candidate.industry &&
-                me.industry.trim().toLowerCase() === candidate.industry.trim().toLowerCase();
+                !!me.industryId &&
+                !!candidate.industryId &&
+                me.industryId === candidate.industryId;
 
             const sameChapter =
                 !!me.chapterId &&
@@ -158,7 +169,7 @@ export class RecommenderService {
                     location: candidate.location ?? null,
                     tattMemberId: candidate.tattMemberId,
                     communityTier: candidate.communityTier,
-                    industry: candidate.industry ?? null,
+                    industry: candidate.industry?.name ?? null,
                 },
                 matchReason: {
                     sharedInterestCount: sharedIds.length,

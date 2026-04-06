@@ -302,7 +302,8 @@ export default function SettingsPage() {
     const { user, updateUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
-    const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
+     const [availableInterests, setAvailableInterests] = useState<Interest[]>([]);
+    const [availableIndustries, setAvailableIndustries] = useState<{id: string, name: string}[]>([]);
     const [chapters, setChapters] = useState<ChapterDetail[]>([]);
     const [deletionLoading, setDeletionLoading] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -311,7 +312,7 @@ export default function SettingsPage() {
         firstName: "",
         lastName: "",
         professionTitle: "",
-        industry: "",
+        industryId: "",
         employer: "",
         professionalHighlight: "",
         expertise: "",
@@ -352,19 +353,21 @@ export default function SettingsPage() {
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                const [intRes, chapRes] = await Promise.all([
+                const [intRes, chapRes, indRes] = await Promise.all([
                     api.get("/interests"),
-                    api.get("/chapters")
+                    api.get("/chapters"),
+                    api.get("/industries")
                 ]);
                 setAvailableInterests(intRes.data);
                 setChapters(chapRes.data);
+                setAvailableIndustries(indRes.data);
 
                 if (user) {
                     setFormData({
                         firstName: user.firstName || "",
                         lastName: user.lastName || "",
                         professionTitle: user.professionTitle || "",
-                        industry: user.industry || "",
+                        industryId: user.industryId || "",
                         employer: user.companyName || "",
                         professionalHighlight: user.professionalHighlight || "",
                         expertise: user.expertise || "",
@@ -755,19 +758,12 @@ export default function SettingsPage() {
                             />
                         </div>
                         <CustomSelect
-                            label="Industry"
-                            name="industry"
-                            value={formData.industry}
+                            label="Industry Sector"
+                            name="industryId"
+                            value={formData.industryId}
                             onChange={handleSelectChange}
-                            options={[
-                                { label: "Technology", value: "Technology" },
-                                { label: "Finance", value: "Finance" },
-                                { label: "Healthcare", value: "Healthcare" },
-                                { label: "Real Estate", value: "Real Estate" },
-                                { label: "Education", value: "Education" },
-                                { label: "Manufacturing", value: "Manufacturing" },
-                                { label: "Agriculture", value: "Agriculture" },
-                            ]}
+                            placeholder="Select your industry"
+                            options={availableIndustries.map(ind => ({ label: ind.name, value: ind.id }))}
                         />
                         <CustomSelect
                             label="Local Chapter"

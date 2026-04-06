@@ -374,7 +374,7 @@ export class AuthService {
             email: dto.email,
             password: hashedPassword,
             professionTitle: dto.professionTitle,
-            industry: dto.industry,
+            industryId: dto.industryId,
             chapterId: dto.chapterId,
             systemRole: SystemRole.COMMUNITY_MEMBER,
             communityTier: dto.communityTier,

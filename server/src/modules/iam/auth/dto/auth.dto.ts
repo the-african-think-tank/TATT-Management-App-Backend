@@ -101,7 +101,7 @@ export class CommunitySignupDto {
 
     @IsString()
     @IsOptional()
-    industry?: string;
+    industryId?: string;
 
     @IsString()
     @IsOptional()
