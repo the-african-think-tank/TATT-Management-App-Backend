@@ -43,6 +43,7 @@ import { OrderItem } from '../../modules/store/entities/order-item.entity';
 import { Partnership } from '../../modules/partnerships/entities/partnership.entity';
 import { SupportTicket } from '../../modules/support/entities/support-ticket.entity';
 import { SupportFaq } from '../../modules/support/entities/support-faq.entity';
+import { SupportMessage } from '../../modules/support/entities/support-message.entity';
 
 @Module({
     imports: [
@@ -67,7 +68,7 @@ import { SupportFaq } from '../../modules/support/entities/support-faq.entity';
                     JobListing, JobApplication, SavedJob,
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
                     Product, ProductVariant, Order, OrderItem, Partnership,
-                    SupportTicket, SupportFaq,
+                    SupportTicket, SupportFaq, SupportMessage,
                 ],
                 autoLoadModels: true,
                 // Default to true unless explicitly set to false, 'false', or '0'
