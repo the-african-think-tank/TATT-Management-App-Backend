@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { RegisterEventDto } from './dto/register-event.dto';
@@ -17,6 +17,22 @@ export class EventsController {
     @ApiResponse({ status: 201, description: 'Event created successfully and notifications sent.' })
     async create(@Body() createEventDto: CreateEventDto, @Req() req: any) {
         return this.eventsService.createEvent(req.user, createEventDto);
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update an event or workshop' })
+    async update(@Param('id') id: string, @Body() updateEventDto: CreateEventDto, @Req() req: any) {
+        return this.eventsService.updateEvent(req.user, id, updateEventDto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete an event or workshop' })
+    async remove(@Param('id') id: string, @Req() req: any) {
+        return this.eventsService.deleteEvent(req.user, id);
     }
 
     @Get()

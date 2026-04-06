@@ -27,6 +27,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
 import { RevenueModule } from './modules/revenue/revenue.module';
 import { BusinessDirectoryModule } from './modules/business-directory/business-directory.module';
 import { SupportModule } from './modules/support/support.module';
+import { IndustriesModule } from './modules/industries/industries.module';
 
 @Module({
     imports: [
@@ -65,6 +66,7 @@ import { SupportModule } from './modules/support/support.module';
         RevenueModule,      // Revenue Dashboards and Financial Control Domain
         BusinessDirectoryModule, // Business Partner Directory & Application Hub
         SupportModule,      // Support Management Domain
+        IndustriesModule,   // Platform Taxonomy: Industries
     ],
     controllers: [],
     providers: [],

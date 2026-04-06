@@ -26,7 +26,8 @@ import {
     ChevronDown,
     ImagePlus,
     Infinity,
-    CircleDashed
+    CircleDashed,
+    Trash2
 } from "lucide-react";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
@@ -213,7 +214,7 @@ export default function PartnershipsPage() {
             console.error("Failed to save partnership:", error);
             const message = error.response?.data?.message;
             if (Array.isArray(message)) {
-                setFormError(message[0]); // Take first validation error
+                setFormError(message[0]);
             } else if (typeof message === 'string') {
                 setFormError(message);
             } else {
@@ -221,6 +222,19 @@ export default function PartnershipsPage() {
             }
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDeletePartner = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to delete this partnership? This action cannot be undone.")) return;
+
+        try {
+            await api.delete(`/partnerships/${id}`);
+            alert("Partnership deleted successfully");
+            fetchData();
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Failed to delete partnership");
         }
     };
 
@@ -354,7 +368,7 @@ export default function PartnershipsPage() {
             </div>
 
             {/* Main Table Content */}
-            <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="bg-surface rounded-2xl border border-border shadow-sm">
                 <div className="p-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface/50">
                     <div className="relative w-full md:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
@@ -368,7 +382,7 @@ export default function PartnershipsPage() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-background/50 border-b border-border">
@@ -442,16 +456,26 @@ export default function PartnershipsPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    onClick={() => handleOpenModal(partner)}
-                                                    className="p-2 text-tatt-gray hover:text-tatt-lime hover:bg-tatt-lime/10 rounded-lg transition-all"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </button>
+                                            <div className="relative group/menu inline-block">
                                                 <button className="p-2 text-tatt-gray hover:text-tatt-black hover:bg-background rounded-lg transition-all">
                                                     <MoreVertical size={18} />
                                                 </button>
+                                                <div className="absolute right-0 mt-0 w-48 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden hidden group-hover/menu:block animate-in fade-in slide-in-from-top-1 duration-200 text-left">
+                                                    <button 
+                                                        onClick={() => handleOpenModal(partner)}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-tatt-gray hover:bg-border/30 hover:text-tatt-black transition-colors"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                        Edit Partnership
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleDeletePartner(partner.id, e)}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border-t border-border"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                        Delete Partnership
+                                                    </button>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -548,7 +572,7 @@ export default function PartnershipsPage() {
                                     disabled={isSaving}
                                     className="px-8 py-2.5 rounded-xl bg-tatt-black text-white font-black uppercase tracking-widest text-xs hover:bg-tatt-lime hover:text-tatt-black transition-all shadow-lg active:scale-95 flex items-center gap-2"
                                 >
-                                    {isSaving ? <Loader2 className="animate-spin size-4" /> : "Save & Publish"}
+                                    {isSaving ? <Loader2 className="animate-spin size-4" /> : "Save Partnership"}
                                 </button>
                             </div>
                         </div>
@@ -640,8 +664,8 @@ export default function PartnershipsPage() {
                                                     <input 
                                                         type="number"
                                                         step="0.01"
-                                                        value={formData.fullPrice || ""}
-                                                        onChange={(e) => setFormData({...formData, fullPrice: parseFloat(e.target.value) || 0})}
+                                                        value={formData.fullPrice === 0 ? "0" : (formData.fullPrice || "")}
+                                                        onChange={(e) => setFormData({...formData, fullPrice: e.target.value === "" ? 0 : parseFloat(e.target.value)})}
                                                         className="w-full bg-white border border-border rounded-xl pl-8 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none transition-all font-bold" 
                                                         placeholder="0.00"
                                                     />
@@ -654,8 +678,8 @@ export default function PartnershipsPage() {
                                                     <input 
                                                         type="number"
                                                         step="0.01"
-                                                        value={formData.discountedPrice || ""}
-                                                        onChange={(e) => setFormData({...formData, discountedPrice: parseFloat(e.target.value) || 0})}
+                                                        value={formData.discountedPrice === 0 ? "0" : (formData.discountedPrice || "")}
+                                                        onChange={(e) => setFormData({...formData, discountedPrice: e.target.value === "" ? 0 : parseFloat(e.target.value)})}
                                                         className="w-full bg-white border border-border rounded-xl pl-8 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-tatt-lime outline-none transition-all font-black text-tatt-lime-dark" 
                                                         placeholder="0.00"
                                                     />
@@ -836,9 +860,9 @@ export default function PartnershipsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Action Buttons & Error */}
-                                    <div className="bg-white p-8 rounded-2xl border border-border space-y-4">
-                                        {formError && (
+                                    {/* Error Feedback */}
+                                    {formError && (
+                                        <div className="bg-white p-8 rounded-2xl border border-border">
                                             <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 animate-in slide-in-from-top-2">
                                                 <XCircle size={18} className="shrink-0 mt-0.5" />
                                                 <div className="space-y-1">
@@ -846,25 +870,8 @@ export default function PartnershipsPage() {
                                                     <p className="text-sm font-bold leading-relaxed">{formError}</p>
                                                 </div>
                                             </div>
-                                        )}
-                                        <button 
-                                            type="submit"
-                                            disabled={isSaving}
-                                            className="w-full bg-tatt-black text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-tatt-gray transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 group"
-                                        >
-                                            {isSaving ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={16} />
-                                                    Saving...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <CheckCircle2 size={16} />
-                                                    Save & Publish Partnership
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
+                                        </div>
+                                    )}
 
                                     {/* Primary Contact */}
                                     <div className="bg-surface p-8 rounded-2xl border border-border space-y-6">
@@ -872,12 +879,12 @@ export default function PartnershipsPage() {
                                             <div className="p-2 bg-tatt-black/5 rounded-lg text-tatt-black">
                                                 <Users2 size={20} />
                                             </div>
-                                            <h4 className="text-lg font-black uppercase tracking-tight text-tatt-black">Internal Liaison</h4>
+                                            <h4 className="text-lg font-black uppercase tracking-tight text-tatt-black">Contact Personnel</h4>
                                         </div>
                                         
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Liaison Contact Name</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Personnel Contact Name</label>
                                                 <input 
                                                     required
                                                     value={formData.contactName}
@@ -901,7 +908,7 @@ export default function PartnershipsPage() {
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Liaison Position</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray px-1">Personnel Position</label>
                                                 <input 
                                                     required
                                                     value={formData.contactPosition}

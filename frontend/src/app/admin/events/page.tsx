@@ -20,7 +20,9 @@ import {
     X,
     Loader2,
     Image as ImageIcon,
-    CheckCircle2
+    CheckCircle2,
+    Edit2,
+    Trash2
 } from "lucide-react";
 import Image from "next/image";
 import api from "@/services/api";
@@ -69,6 +71,10 @@ export default function AdminEventsPage() {
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [attendees, setAttendees] = useState<any[]>([]);
     const [loadingAttendees, setLoadingAttendees] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
+    const [searchQuery, setSearchQuery] = useState("");
 
     const safeDate = (dateStr: string) => {
         try {
@@ -115,8 +121,13 @@ export default function AdminEventsPage() {
     const handleCreateEvent = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post("/events", form);
-            toast.success("Event created successfully!");
+            if (isEditMode && selectedEvent) {
+                await api.patch(`/events/${selectedEvent.id}`, form);
+                toast.success("Event updated successfully!");
+            } else {
+                await api.post("/events", form);
+                toast.success("Event created successfully!");
+            }
             setIsCreateModalOpen(false);
             fetchData();
             setForm({
@@ -129,8 +140,22 @@ export default function AdminEventsPage() {
                 targetMembershipTiers: [],
                 locations: []
             });
+            setIsEditMode(false);
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to create event");
+            toast.error(error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} event`);
+        }
+    };
+
+    const handleDeleteEvent = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
+        
+        try {
+            await api.delete(`/events/${id}`);
+            toast.success("Event deleted successfully");
+            fetchData();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to delete event");
         }
     };
 
@@ -151,6 +176,24 @@ export default function AdminEventsPage() {
         fetchAttendees(event.id);
     };
 
+    const handleEditClick = (event: Event, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedEvent(event);
+        setIsEditMode(true);
+        setForm({
+            title: event.title,
+            description: event.description,
+            dateTime: new Date(event.dateTime).toISOString().slice(0, 16),
+            type: event.type,
+            basePrice: event.basePrice,
+            isForAllMembers: event.isForAllMembers,
+            targetMembershipTiers: (event as any).targetMembershipTiers || [],
+            locations: event.locations.map(loc => ({ chapterId: loc.chapterId, address: loc.address }))
+        });
+        setIsCreateModalOpen(true);
+        setOpenMenuId(null);
+    };
+
     // Calendar logic
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
@@ -169,132 +212,181 @@ export default function AdminEventsPage() {
     return (
         <div className="min-h-screen bg-background text-foreground p-8 lg:p-12">
             <Toaster position="top-right" />
-
+            
             {/* Header */}
-            <header className="flex flex-wrap items-center justify-between gap-6 mb-10">
+            <header className="flex flex-wrap items-center justify-between gap-6 mb-8">
                 <div>
-                    <h1 className="text-3xl lg:text-4xl font-black tracking-tight">Events & Mixers Management</h1>
-                    <p className="text-tatt-gray mt-2 text-base">Plan, coordinate, and track all ecosystem gatherings.</p>
+                    <h1 className="text-3xl lg:text-4xl font-black tracking-tight uppercase">Events & Mixers</h1>
+                    <p className="text-tatt-gray mt-2 text-base font-medium">Coordinate community gatherings and manage workshop participation.</p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-tatt-lime hover:bg-tatt-lime-dark text-tatt-green-deep px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-tatt-lime/20 transition-all"
-                >
-                    <Plus className="size-5" />
-                    <span>Create New Event</span>
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="flex p-1 bg-surface border border-border rounded-xl shadow-sm">
+                        <button 
+                            onClick={() => setActiveTab('list')}
+                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'list' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
+                        >
+                            List View
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('calendar')}
+                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'calendar' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
+                        >
+                            Calendar
+                        </button>
+                    </div>
+                    <button
+                        onClick={() => {
+                            setIsEditMode(false);
+                            setForm({
+                                title: "",
+                                description: "",
+                                dateTime: "",
+                                type: "EVENT",
+                                basePrice: 0,
+                                isForAllMembers: true,
+                                targetMembershipTiers: [],
+                                locations: []
+                            });
+                            setIsCreateModalOpen(true);
+                        }}
+                        className="bg-tatt-lime hover:bg-tatt-lime-dark text-tatt-green-deep px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-tatt-lime/20 transition-all border-2 border-tatt-lime-dark/10"
+                    >
+                        <Plus className="size-5" strokeWidth={3} />
+                        <span className="uppercase tracking-widest text-xs font-black">New Event</span>
+                    </button>
+                </div>
             </header>
 
             {/* Stats Grid */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <StatCard
                     icon={<CalendarIcon className="text-tatt-lime-dark" />}
-                    label="Total Upcoming Events"
+                    label="Upcoming Gatherings"
                     value={events.filter(e => safeDate(e.dateTime) > new Date()).length.toString()}
                     trend="+2%"
                 />
                 <StatCard
                     icon={<Users className="text-tatt-lime-dark" />}
-                    label="Registrations (Total)"
+                    label="Total Registrations"
                     value={events.reduce((acc, e) => acc + (e.registrationsCount || 0), 0).toString()}
                     trend="+15%"
                 />
                 <StatCard
                     icon={<DollarSign className="text-tatt-lime-dark" />}
-                    label="Base Revenue Goal"
+                    label="Revenue Goal"
                     value={`$${events.reduce((acc, e) => acc + (e.basePrice * (e.registrationsCount || 0)), 0).toLocaleString()}`}
                     trend="+8%"
                 />
             </section>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Calendar View */}
-                <section className="xl:col-span-1 bg-surface p-6 rounded-xl border border-border h-fit">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold">Event Calendar</h2>
-                        <div className="flex gap-2">
-                            <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 hover:bg-border rounded-lg transition-colors"><ChevronLeft className="size-5" /></button>
-                            <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 hover:bg-border rounded-lg transition-colors"><ChevronRight className="size-5" /></button>
-                        </div>
-                    </div>
-
-                    <p className="text-center font-bold mb-4">{format(currentDate, "MMMM yyyy")}</p>
-
-                    <div className="grid grid-cols-7 text-center text-xs font-bold text-tatt-gray mb-2">
-                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1">
-                        {Array.from({ length: monthStart.getDay() }).map((_, i) => (
-                            <div key={`empty-${i}`} className="h-10"></div>
-                        ))}
-
-                        {calendarDays.map(day => {
-                            const dayEvents = events.filter(e => isSameDay(safeDate(e.dateTime), day));
-                            const isToday = isSameDay(new Date(), day);
-
-                            return (
-                                <div
-                                    key={day.toString()}
-                                    className={`h-10 flex items-center justify-center font-medium relative rounded-lg cursor-pointer hover:bg-border transition-colors ${isToday ? "bg-tatt-lime text-tatt-green-deep font-black" : ""}`}
-                                >
-                                    {format(day, "d")}
-                                    {dayEvents.length > 0 && !isToday && (
-                                        <span className="absolute bottom-1.5 size-1 bg-tatt-lime rounded-full"></span>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="mt-8">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-tatt-gray mb-4">Upcoming Agenda</h3>
-                        <div className="space-y-4">
-                            {events
-                                .filter(e => new Date(e.dateTime) >= new Date())
-                                .slice(0, 3)
-                                .map(event => (
-                                    <div
-                                        key={event.id}
-                                        onClick={() => handleEventClick(event)}
-                                        className="flex items-start gap-4 p-3 rounded-lg hover:bg-border/50 transition-colors cursor-pointer border-l-2 border-transparent hover:border-tatt-lime"
-                                    >
-                                        <div className="text-xs font-bold text-tatt-lime-dark mt-1">{format(safeDate(event.dateTime), "HH:mm")}</div>
-                                        <div>
-                                            <h4 className="text-sm font-bold">{event.title}</h4>
-                                            <p className="text-xs text-tatt-gray">
-                                                {event.locations?.[0]?.chapter?.name || "Global"} • {event.locations?.[0]?.address || "TBA"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            }
-                            {events.filter(e => new Date(e.dateTime) >= new Date()).length === 0 && (
-                                <p className="text-xs text-tatt-gray italic">No upcoming events scheduled.</p>
-                            )}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Event List */}
-                <section className="xl:col-span-2 space-y-6">
-                    <div className="bg-surface rounded-xl border border-border overflow-hidden">
-                        <div className="p-6 border-b border-border flex flex-wrap items-center justify-between gap-4">
-                            <h2 className="text-lg font-bold">Manage Events</h2>
-                            <div className="flex gap-2">
-                                <div className="relative">
-                                    <input
-                                        className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-tatt-lime/50 w-64"
-                                        placeholder="Search events..."
-                                        type="text"
-                                    />
-                                    <Search className="absolute left-3 top-2.5 text-tatt-gray size-4" />
-                                </div>
-                                <button className="p-2 bg-background border border-border rounded-lg"><Filter className="size-4" /></button>
+            {activeTab === 'calendar' ? (
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <section className="xl:col-span-3 bg-surface p-10 rounded-3xl border border-border shadow-xl min-h-[600px]">
+                        <div className="flex items-center justify-between mb-10">
+                            <div>
+                                <h2 className="text-3xl font-black uppercase tracking-tight">{format(currentDate, "MMMM yyyy")}</h2>
+                                <p className="text-tatt-gray text-sm font-medium">Ecosystem engagement schedule overview.</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-3 bg-background border border-border rounded-xl hover:bg-surface transition-all"><ChevronLeft className="size-6" /></button>
+                                <button onClick={() => setCurrentDate(new Date())} className="px-6 py-2 text-xs font-bold uppercase tracking-widest border border-border rounded-xl">Today</button>
+                                <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-3 bg-background border border-border rounded-xl hover:bg-surface transition-all"><ChevronRight className="size-6" /></button>
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
+                        <div className="grid grid-cols-7 text-center text-xs font-black text-tatt-gray uppercase tracking-[0.2em] mb-6 opacity-60">
+                            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-4">
+                            {Array.from({ length: monthStart.getDay() }).map((_, i) => (
+                                <div key={`empty-${i}`} className="aspect-square bg-border/5 rounded-2xl border border-transparent"></div>
+                            ))}
+
+                            {calendarDays.map(day => {
+                                const dayEvents = events.filter(e => isSameDay(safeDate(e.dateTime), day));
+                                const isToday = isSameDay(new Date(), day);
+
+                                return (
+                                    <div
+                                        key={day.toString()}
+                                        onClick={() => dayEvents[0] && handleEventClick(dayEvents[0])}
+                                        className={`aspect-square flex flex-col p-4 font-bold relative rounded-2xl cursor-pointer border transition-all group ${
+                                            isToday 
+                                            ? "bg-tatt-lime border-tatt-lime-dark/20 text-tatt-green-deep shadow-lg shadow-tatt-lime/20" 
+                                            : "bg-background border-border hover:border-tatt-lime/50 hover:bg-surface/50"
+                                        }`}
+                                    >
+                                        <span className="text-xl">{format(day, "d")}</span>
+                                        <div className="mt-auto flex flex-wrap gap-1">
+                                            {dayEvents.slice(0, 3).map((e, i) => (
+                                                <div key={i} className={`size-2 rounded-full ${isToday ? 'bg-tatt-green-deep' : 'bg-tatt-lime'}`}></div>
+                                            ))}
+                                            {dayEvents.length > 3 && <span className="text-[9px]">+ {dayEvents.length - 3}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                    
+                    <aside className="xl:col-span-1 space-y-8">
+                        <div className="bg-tatt-black rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
+                            <div className="relative z-10">
+                                <h3 className="text-xl font-black uppercase tracking-tight mb-6">Agenda Spotlight</h3>
+                                <div className="space-y-6">
+                                    {events
+                                        .filter(e => new Date(e.dateTime) >= new Date())
+                                        .slice(0, 4)
+                                        .map(event => (
+                                            <div
+                                                key={event.id}
+                                                onClick={() => handleEventClick(event)}
+                                                className="group cursor-pointer"
+                                            >
+                                                <div className="flex items-center gap-3 mb-1">
+                                                    <span className="text-[10px] font-black tracking-widest text-tatt-lime uppercase">{format(safeDate(event.dateTime), "MMM dd")}</span>
+                                                    <span className="size-1 bg-white/20 rounded-full"></span>
+                                                    <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">{format(safeDate(event.dateTime), "HH:mm")}</span>
+                                                </div>
+                                                <h4 className="text-sm font-bold group-hover:text-tatt-lime transition-colors">{event.title}</h4>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                            <div className="absolute -right-10 -bottom-10 opacity-10">
+                                <CalendarIcon size={160} />
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            ) : (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-surface rounded-3xl border border-border shadow-xl">
+                        <div className="p-8 border-b border-border flex flex-wrap items-center justify-between gap-6 bg-surface/50">
+                            <div>
+                                <h2 className="text-2xl font-black uppercase tracking-tight">Management Directory</h2>
+                                <p className="text-tatt-gray text-sm font-medium">Archive of all past and scheduled community gatherings.</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="relative">
+                                    <input
+                                        className="pl-12 pr-6 py-3.5 bg-background border border-border rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-tatt-lime/50 w-80 font-medium transition-all"
+                                        placeholder="Search events by title..."
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-5" />
+                                </div>
+                                <button className="p-3.5 bg-background border border-border rounded-2xl hover:bg-surface transition-all text-tatt-gray hover:text-tatt-black">
+                                    <Filter className="size-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="">
                             <table className="w-full text-left">
                                 <thead className="bg-border/30 text-tatt-gray text-xs font-bold uppercase tracking-wider">
                                     <tr>
@@ -353,7 +445,42 @@ export default function AdminEventsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <button className="p-1 hover:text-tatt-lime-dark transition-colors"><MoreVertical className="size-4" /></button>
+                                                    <div className="relative">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setOpenMenuId(openMenuId === event.id ? null : event.id);
+                                                            }}
+                                                            className="p-2 hover:bg-border/50 rounded-lg transition-colors"
+                                                        >
+                                                            <MoreVertical className="size-4" />
+                                                        </button>
+                                                        
+                                                        {openMenuId === event.id && (
+                                                            <>
+                                                                <div 
+                                                                    className="fixed inset-0 z-[60]" 
+                                                                    onClick={() => setOpenMenuId(null)}
+                                                                ></div>
+                                                                <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-xl z-[70] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200 text-left">
+                                                                    <button 
+                                                                        onClick={(e) => handleEditClick(event, e)}
+                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-tatt-gray hover:bg-border/30 hover:text-tatt-black transition-colors"
+                                                                    >
+                                                                        <Edit2 className="size-3.5" />
+                                                                        Edit Event
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={(e) => handleDeleteEvent(event.id, e)}
+                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border-t border-border"
+                                                                    >
+                                                                        <Trash2 className="size-3.5" />
+                                                                        Delete Event
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -362,37 +489,15 @@ export default function AdminEventsPage() {
                             </table>
                         </div>
                     </div>
-
-                    {/* Member Pricing Perk Summary */}
-                    <div className="bg-tatt-lime-light/30 p-6 rounded-xl border border-tatt-lime/30">
-                        <div className="flex items-center gap-3 mb-4">
-                            <CheckCircle2 className="text-tatt-lime-dark size-5" />
-                            <h3 className="text-sm font-bold">Dynamic Pricing Logic Active</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="flex flex-col">
-                                <span className="text-xs font-bold uppercase text-tatt-gray">Ubuntu Members</span>
-                                <span className="text-sm font-bold mt-1">15% Discount on all events</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-bold uppercase text-tatt-gray">Imani Members</span>
-                                <span className="text-sm font-bold mt-1">Free Workshops • 25% on Mixers</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-bold uppercase text-tatt-gray">Kiongozi Members</span>
-                                <span className="text-sm font-bold mt-1">All Events 100% Free (Inclusive)</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
+                </div>
+            )}
 
             {/* Create Event Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm">
                     <div className="bg-surface w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
                         <div className="p-6 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold">Create New Event</h2>
+                            <h2 className="text-xl font-bold">{isEditMode ? 'Edit Event' : 'Create New Event'}</h2>
                             <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-border rounded-full transition-colors">
                                 <X className="size-5" />
                             </button>
@@ -549,7 +654,7 @@ export default function AdminEventsPage() {
                                     type="submit"
                                     className="flex-1 bg-tatt-lime text-tatt-green-deep font-black py-4 rounded-xl uppercase tracking-widest text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-tatt-lime/20"
                                 >
-                                    Schedule Event
+                                    {isEditMode ? 'Update Event' : 'Schedule Event'}
                                 </button>
                                 <button
                                     type="button"

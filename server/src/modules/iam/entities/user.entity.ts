@@ -13,6 +13,7 @@ import { Notification } from '../../notifications/entities/notification.entity';
 import { VolunteerStat } from '../../volunteers/entities/volunteer-stat.entity';
 import { VolunteerApplication } from '../../volunteers/entities/volunteer-application.entity';
 import { HasOne } from 'sequelize-typescript';
+import { CommunityIndustry } from '../../industries/entities/industry.entity';
 
 @Table({
     tableName: 'users',
@@ -106,8 +107,15 @@ export class User extends Model<User> {
     @Column(DataType.STRING)
     location?: string;
 
-    @Column(DataType.STRING)
-    industry?: string;
+    @ForeignKey(() => CommunityIndustry)
+    @Column({
+        type: DataType.UUID,
+        allowNull: true,
+    })
+    industryId?: string;
+
+    @BelongsTo(() => CommunityIndustry)
+    industry: CommunityIndustry;
 
     // -- ACTIVATION & INVITATION --
     @Default(true)
