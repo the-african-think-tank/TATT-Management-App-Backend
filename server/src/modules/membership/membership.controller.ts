@@ -36,6 +36,13 @@ export class MembershipController {
         return this.membershipService.createTier(dto);
     }
 
+    @ApiOperation({ summary: 'Delete a membership tier' })
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Delete('tiers/:id')
+    async removeTier(@Param('id') id: string) {
+        return this.membershipService.removeTier(id);
+    }
+
     // --- Discounts Endpoints ---
 
     @ApiOperation({ summary: 'Get all discounts' })

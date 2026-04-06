@@ -293,9 +293,15 @@ export default function MembershipCenterPage() {
                                                     <td className="px-4 py-4 text-right">
                                                         <div className="flex items-center justify-end space-x-1">
                                                             <button 
-                                                                onClick={() => {
+                                                                onClick={async () => {
                                                                     if(confirm('Are you sure you want to delete this plan?')) {
-                                                                        toast.error("Deletion not mapped yet on the backend API.");
+                                                                        try {
+                                                                            await api.delete(`/membership-center/tiers/${tier.id}`);
+                                                                            toast.success("Plan deleted successfully");
+                                                                            fetchAllData();
+                                                                        } catch (err) {
+                                                                            toast.error("Failed to delete plan");
+                                                                        }
                                                                     }
                                                                 }}
                                                                 className="p-1.5 text-tatt-gray hover:text-red-500 transition-all"
