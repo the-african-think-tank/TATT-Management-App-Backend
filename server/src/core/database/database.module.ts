@@ -68,7 +68,7 @@ import { SupportMessage } from '../../modules/support/entities/support-message.e
                     JobListing, JobApplication, SavedJob,
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
                     Product, ProductVariant, Order, OrderItem, Partnership,
-                    SupportTicket, SupportFaq, SupportMessage,
+                    SupportMessage, SupportTicket, SupportFaq,
                 ],
                 autoLoadModels: true,
                 // Default to true unless explicitly set to false, 'false', or '0'
