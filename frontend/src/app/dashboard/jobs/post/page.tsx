@@ -42,11 +42,14 @@ export default function JobPostPage() {
   // PRE-FILL BUSINESS DETAILS IF KIONGOZI
   useEffect(() => {
     if (user && user.communityTier === "KIONGOZI") {
+      const userIndustryName = user.industry?.name;
+      const matchedCategory = CATEGORIES.find(c => c === userIndustryName);
+
       setFormData(prev => ({
         ...prev,
         companyName: user.businessName || prev.companyName,
         companyWebsite: user.businessProfileLink || prev.companyWebsite,
-        category: (user.industry as any)?.name || prev.category,
+        category: matchedCategory || prev.category,
       }));
     }
   }, [user]);
