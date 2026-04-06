@@ -1,3 +1,5 @@
+// Force reload
+// Trigger table sync
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Sequelize } from 'sequelize-typescript';

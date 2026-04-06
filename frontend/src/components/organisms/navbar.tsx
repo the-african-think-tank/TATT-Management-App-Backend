@@ -18,7 +18,6 @@ export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const navLinks = [
-        { label: "Store", href: "/store" },
         { label: "TATT Business Directory", href: "/business-directory" },
         { label: "Volunteer", href: isAuthenticated ? "/dashboard/volunteers" : "/volunteer" },
     ];
@@ -70,17 +69,7 @@ export function Navbar() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => setIsCartOpen(true)}
-                                className="relative p-2 hover:bg-surface rounded-full transition-colors group"
-                            >
-                                <ShoppingBag size={18} className="text-tatt-black lg:size-5 group-hover:text-tatt-lime transition-colors" />
-                                {totalItems > 0 && (
-                                    <span className="absolute top-0 right-0 size-3.5 bg-tatt-black text-tatt-lime text-[8px] font-black rounded-full flex items-center justify-center border border-white">
-                                        {totalItems}
-                                    </span>
-                                )}
-                            </button>
+
 
                             <div className="hidden md:block h-6 w-px bg-border mx-2"></div>
 

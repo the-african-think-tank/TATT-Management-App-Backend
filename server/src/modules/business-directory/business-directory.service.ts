@@ -18,10 +18,12 @@ export class BusinessDirectoryService {
     async apply(dto: CreateBusinessApplicationDto, userId: string) {
         this.logger.log(`[BusinessDirectoryService] Creating application for business: ${dto.name} from user ${userId}`);
         
-        // Ensure user hasn't already submitted a business
-        const existing = await this.businessPartnerModel.findOne({ where: { submittedById: userId } });
-        if (existing) {
-            throw new ConflictException('You have already submitted a business to the directory.');
+        // Ensure user hasn't already submitted a business if logged in
+        if (userId) {
+            const existing = await this.businessPartnerModel.findOne({ where: { submittedById: userId } });
+            if (existing) {
+                throw new ConflictException("You have already submitted a business to the directory.");
+            }
         }
 
         const business = await this.businessPartnerModel.create({

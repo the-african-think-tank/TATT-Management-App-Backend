@@ -46,7 +46,7 @@ export default function UpgradePage() {
 
     const [plans, setPlans] = useState<Plan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isYearly, setIsYearly] = useState(true);
+    const [isYearly, setIsYearly] = useState(false);
 
     // Kiongozi members have nothing to upgrade to — send them away
     useEffect(() => {
@@ -59,7 +59,12 @@ export default function UpgradePage() {
         const fetchPlans = async () => {
             try {
                 const resp = await api.get("/billing/plans");
-                setPlans(resp.data);
+                // Force Imani to be the 'Most Popular' plan
+                const processed = resp.data.map((p: Plan) => ({
+                    ...p,
+                    isPopular: p.tier === "IMANI"
+                }));
+                setPlans(processed);
             } catch (err) {
                 console.error("Failed to fetch plans", err);
             } finally {
@@ -78,7 +83,6 @@ export default function UpgradePage() {
         router.push(`/dashboard/upgrade/payment?plan=${plan.tier}&yearly=${isYearly}`);
     };
 
-    // Format a price to at most 2 decimal places, dropping trailing zeros
     const fmt = (n: number) => {
         const rounded = Math.round(n * 100) / 100;
         return rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(2);
@@ -109,13 +113,11 @@ export default function UpgradePage() {
                         Join thousands of African diaspora leaders who use TATT's paid tiers to connect, collaborate, and drive measurable impact.
                     </p>
 
-                    {/* Current tier pill */}
                     <div className="mt-7 inline-flex items-center gap-2 bg-white/5 border border-white/10 text-white/50 text-xs font-bold uppercase tracking-widest px-5 py-2 rounded-full">
                         <Shield className="h-3.5 w-3.5" />
                         Current tier: {user.communityTier ?? "FREE"}
                     </div>
 
-                    {/* Billing toggle */}
                     <div className="flex items-center justify-center mt-8 gap-4">
                         <span className={`text-sm font-bold transition-colors ${!isYearly ? "text-white" : "text-white/40"}`}>Monthly</span>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -137,7 +139,6 @@ export default function UpgradePage() {
                 </div>
             </div>
 
-            {/* Plans grid */}
             <div className="max-w-6xl mx-auto px-6 py-12">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-24">
@@ -146,13 +147,12 @@ export default function UpgradePage() {
                     </div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
                             {plans.map((plan) => {
                                 const planRank = TIER_RANK[plan.tier] ?? 0;
                                 const isCurrentPlan = user.communityTier === plan.tier;
                                 const isDowngrade = planRank < currentRank;
                                 const isFree = plan.monthlyPrice === 0;
-
                                 const displayPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
                                 const period = isYearly ? "yr" : "mo";
 
@@ -161,13 +161,12 @@ export default function UpgradePage() {
                                         key={plan.id}
                                         className={`relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-300 shadow-sm
                                             ${plan.isPopular
-                                                ? "border-tatt-lime bg-surface scale-[1.02] shadow-lg z-10"
+                                                ? "border-tatt-lime bg-surface shadow-lg z-10 ring-1 ring-tatt-lime"
                                                 : "border-border bg-surface hover:border-tatt-lime/40 hover:shadow-md"
                                             }
                                             ${isCurrentPlan ? "ring-2 ring-tatt-bronze/50" : ""}
                                         `}
                                     >
-                                        {/* Top accent strip */}
                                         <div
                                             className={`h-1 w-full ${
                                                 isFree
@@ -180,7 +179,6 @@ export default function UpgradePage() {
                                             }`}
                                         />
 
-                                        {/* Badges */}
                                         {plan.isPopular && (
                                             <div className="absolute top-0 right-0 bg-tatt-lime text-tatt-black text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
                                                 Most Popular
@@ -191,36 +189,29 @@ export default function UpgradePage() {
                                                 Current Plan
                                             </div>
                                         )}
-                                        {isYearly && plan.hasYearlyDiscount && !plan.isPopular && plan.yearlyDiscountPercent && (
-                                            <div className="absolute top-0 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
-                                                Save {plan.yearlyDiscountPercent}%
-                                            </div>
-                                        )}
-                                        {isYearly && plan.hasYearlyDiscount && plan.isPopular && plan.yearlyDiscountPercent && (
-                                            <div className="absolute top-7 right-0 bg-tatt-lime/20 border-b border-l border-tatt-lime/30 text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
+                                        {isYearly && plan.hasYearlyDiscount && plan.yearlyDiscountPercent && (
+                                            <div className={`absolute right-0 bg-tatt-lime/40 border-b border-l border-tatt-lime text-tatt-lime-dark text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl ${plan.isPopular ? "top-7" : "top-0"}`}>
                                                 Save {plan.yearlyDiscountPercent}%
                                             </div>
                                         )}
 
                                         <div className="p-6 flex-1 flex flex-col">
-                                            {/* Plan name + tagline */}
-                                            <div className="mb-5">
+                                            <div className="mb-5 min-h-[84px]">
                                                 <h2 className={`text-xl font-black tracking-tight ${isFree ? "text-tatt-gray" : "text-foreground"}`}>
                                                     {plan.name}
                                                 </h2>
-                                                <p className="text-tatt-gray text-sm mt-1 leading-relaxed">{plan.tagline}</p>
+                                                <p className="text-tatt-gray text-[13px] font-medium mt-1 leading-snug">{plan.tagline}</p>
                                             </div>
-
-                                            {/* Price */}
-                                            <div className="mb-6">
+                                            
+                                            <div className="mb-8 min-h-[100px]">
                                                 <div className="flex items-baseline gap-1">
                                                     {plan.activeDiscount ? (
                                                         <div className="flex flex-col">
                                                             <div className="flex items-baseline gap-2">
                                                                 <span className={`text-4xl font-black ${isFree ? "text-tatt-gray" : plan.isPopular ? "text-tatt-lime" : "text-foreground"}`}>
                                                                     ${fmt(isYearly 
-                                                                        ? (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value / 100))
-                                                                        : (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value / 100))
+                                                                        ? (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value))
+                                                                        : (plan.activeDiscount.type === 'percentage' ? displayPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, displayPrice - plan.activeDiscount.value))
                                                                     )}
                                                                 </span>
                                                                 <span className="text-sm font-black text-tatt-gray line-through decoration-red-500/50">${fmt(displayPrice)}</span>
@@ -241,67 +232,70 @@ export default function UpgradePage() {
                                                     <p className="text-xs text-tatt-gray mt-1">
                                                         <span className="line-through">${fmt(plan.monthlyPrice * 12)}/yr</span>
                                                         {" → "}
-                                                        <span className="font-black text-tatt-lime-dark">${fmt(plan.yearlyPrice)}/yr</span>
+                                                        <span className="font-black text-tatt-lime-dark text-xs">${fmt(plan.yearlyPrice)}/yr</span>
                                                     </p>
                                                 )}
                                             </div>
 
-                                            <ul className="flex-1 space-y-3 mb-6">
-                                                {plan.features.map((feature, idx) => (
-                                                    <li key={`feat-${idx}`} className="flex items-start gap-2.5 text-sm">
-                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
-                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{feature}</span>
-                                                    </li>
-                                                ))}
-                                                {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
-                                                    <li key={`ctrl-${idx}`} className="flex items-start gap-2.5 text-sm">
-                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
-                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{control.title}</span>
-                                                    </li>
-                                                ))}
-                                                {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
-                                                    <li className="flex items-start gap-2.5 text-sm">
-                                                        <CheckCircle className={`h-4 w-4 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
-                                                        <span className={isFree ? "text-tatt-gray" : "text-foreground font-medium"}>{plan.eventDiscountPercent}% off TATT Events</span>
-                                                    </li>
-                                                )}
-                                            </ul>
+                                            <div className="flex-1 mb-8 overflow-hidden">
+                                                <ul className="h-64 overflow-y-auto space-y-3.5 pr-2 custom-scrollbar">
+                                                    {plan.features.map((feature, idx) => (
+                                                        <li key={`feat-${idx}`} className="flex items-start gap-2.5 text-[13px]">
+                                                            <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                            <span className={isFree ? "text-tatt-gray" : "text-foreground font-semibold"}>{feature}</span>
+                                                        </li>
+                                                    ))}
+                                                    {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
+                                                        <li key={`ctrl-${idx}`} className="flex items-start gap-2.5 text-[13px]">
+                                                            <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                            <span className={isFree ? "text-tatt-gray" : "text-foreground font-semibold"}>{control.title}</span>
+                                                        </li>
+                                                    ))}
+                                                    {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
+                                                        <li className="flex items-start gap-2.5 text-[13px]">
+                                                            <CheckCircle className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${isFree ? "text-tatt-gray/50" : "text-tatt-lime"}`} />
+                                                            <span className={isFree ? "text-tatt-gray" : "text-foreground font-semibold"}>{plan.eventDiscountPercent}% off TATT Events</span>
+                                                        </li>
+                                                    )}
+                                                </ul>
+                                            </div>
 
                                             {/* CTA */}
-                                            {isCurrentPlan ? (
-                                                <div className="flex items-center justify-center gap-2 py-3.5 bg-background border border-tatt-bronze/30 rounded-xl text-tatt-bronze text-xs font-black uppercase tracking-widest">
-                                                    ✓ Your Current Plan
-                                                </div>
-                                            ) : isDowngrade ? (
-                                                <div className="flex items-center justify-center py-3.5 bg-background border border-dashed border-border rounded-xl text-tatt-gray text-xs font-bold opacity-40 cursor-not-allowed">
-                                                    Below your current tier
-                                                </div>
-                                            ) : isFree ? (
-                                                <div className="flex items-center justify-center py-3.5 bg-background border border-dashed border-border rounded-xl text-tatt-gray text-xs font-bold opacity-40 cursor-not-allowed">
-                                                    Free Tier
-                                                </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleSelectPlan(plan)}
-                                                    className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer
-                                                        ${plan.isPopular
-                                                            ? "bg-tatt-lime text-tatt-black hover:brightness-105 shadow-md"
-                                                            : plan.tier === "KIONGOZI"
-                                                            ? "bg-tatt-yellow text-tatt-black hover:brightness-105"
-                                                            : "bg-tatt-black text-white hover:bg-foreground"
-                                                        }
-                                                    `}
-                                                >
-                                                    Upgrade to {plan.name}
-                                                </button>
-                                            )}
+                                            <div className="mt-auto h-[54px] flex items-stretch">
+                                                {isCurrentPlan ? (
+                                                    <div className="w-full flex items-center justify-center gap-2 bg-background border border-tatt-bronze/30 rounded-xl text-tatt-bronze text-[10px] font-black uppercase tracking-widest">
+                                                        ✓ Your Current Plan
+                                                    </div>
+                                                ) : isDowngrade ? (
+                                                    <div className="w-full flex items-center justify-center px-4 bg-background border border-dashed border-border rounded-xl text-tatt-gray text-[10px] font-bold opacity-40 cursor-not-allowed">
+                                                        Below your tier
+                                                    </div>
+                                                ) : isFree ? (
+                                                    <div className="w-full flex items-center justify-center bg-background border border-dashed border-border rounded-xl text-tatt-gray text-[10px] font-bold opacity-40 cursor-not-allowed text-center">
+                                                        Free Tier
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleSelectPlan(plan)}
+                                                        className={`w-full rounded-xl font-black text-[11px] uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer
+                                                            ${plan.isPopular
+                                                                ? "bg-tatt-lime text-tatt-black hover:brightness-105 shadow-md"
+                                                                : plan.tier === "KIONGOZI"
+                                                                ? "bg-tatt-yellow text-tatt-black hover:brightness-105"
+                                                                : "bg-tatt-black text-white hover:bg-foreground"
+                                                            }
+                                                        `}
+                                                    >
+                                                        Upgrade to {plan.name}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
 
-                        {/* Trust row */}
                         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
                                 { icon: Shield, title: "Secure Payments", desc: "Powered by Stripe — PCI DSS compliant" },

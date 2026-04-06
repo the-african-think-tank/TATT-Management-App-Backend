@@ -556,6 +556,7 @@ export class BillingService {
                     invoice_settings: { default_payment_method: paymentMethodId },
                 });
                 user.stripeCustomerId = customer.id;
+                await user.save(); // Persist immediately to avoid orphans
             } else if (paymentMethodId) {
                 // Update payment method if provided
                 await (await this.getStripe()).paymentMethods.attach(paymentMethodId, { customer: user.stripeCustomerId });
@@ -572,14 +573,35 @@ export class BillingService {
                 }
             });
 
-            // 2. Create Subscription
+            // 2. Create or Update Subscription
             if (!priceId.includes('mock') && !process.env.STRIPE_SECRET_KEY?.includes('placeholder')) {
-                await (await this.getStripe()).subscriptions.create({
+                const stripe = await this.getStripe();
+                const subscriptions = await stripe.subscriptions.list({
                     customer: user.stripeCustomerId!,
-                    items: [{ price: priceId }],
-                    discounts: activeDiscount?.stripeCouponId ? [{ coupon: activeDiscount.stripeCouponId }] : undefined,
-                    expand: ['latest_invoice.payment_intent'],
+                    status: 'active',
+                    limit: 1
                 });
+
+                if (subscriptions.data.length > 0) {
+                    // Update existing
+                    const subId = subscriptions.data[0].id;
+                    await stripe.subscriptions.update(subId, {
+                        items: [{
+                            id: subscriptions.data[0].items.data[0].id,
+                            price: priceId
+                        }],
+                        proration_behavior: 'always_invoice',
+                        discounts: activeDiscount?.stripeCouponId ? [{ coupon: activeDiscount.stripeCouponId }] : undefined,
+                    });
+                } else {
+                    // Create new
+                    await stripe.subscriptions.create({
+                        customer: user.stripeCustomerId!,
+                        items: [{ price: priceId }],
+                        discounts: activeDiscount?.stripeCouponId ? [{ coupon: activeDiscount.stripeCouponId }] : undefined,
+                        expand: ['latest_invoice.payment_intent'],
+                    });
+                }
             } else {
                 this.logger.warn(`Simulating Stripe Subscription for Tier: ${tier}`);
             }

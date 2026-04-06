@@ -57,6 +57,13 @@ export class MembershipService implements OnApplicationBootstrap {
                 stripeMonthlyPriceId: null,
                 stripeYearlyPriceId: null,
                 hasYearlyDiscount: false,
+                accessControls: [
+                    { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: false },
+                    { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: false },
+                    { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: false },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: false },
+                    { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
+                ]
             },
             {
                 tier: CommunityTier.UBUNTU,
@@ -69,6 +76,13 @@ export class MembershipService implements OnApplicationBootstrap {
                 stripeMonthlyPriceId: process.env.STRIPE_PRICE_UBUNTU_MONTHLY || null,
                 stripeYearlyPriceId: process.env.STRIPE_PRICE_UBUNTU_YEARLY || null,
                 hasYearlyDiscount: true,
+                accessControls: [
+                    { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: true },
+                    { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: false },
+                    { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: false },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: false },
+                    { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
+                ]
             },
             {
                 tier: CommunityTier.IMANI,
@@ -81,6 +95,13 @@ export class MembershipService implements OnApplicationBootstrap {
                 stripeMonthlyPriceId: process.env.STRIPE_PRICE_IMANI_MONTHLY || null,
                 stripeYearlyPriceId: process.env.STRIPE_PRICE_IMANI_YEARLY || null,
                 hasYearlyDiscount: true,
+                accessControls: [
+                    { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: true },
+                    { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: true },
+                    { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: true },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: false },
+                    { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
+                ]
             },
             {
                 tier: CommunityTier.KIONGOZI,
@@ -93,6 +114,13 @@ export class MembershipService implements OnApplicationBootstrap {
                 stripeMonthlyPriceId: process.env.STRIPE_PRICE_KIONGOZI_MONTHLY || null,
                 stripeYearlyPriceId: process.env.STRIPE_PRICE_KIONGOZI_YEARLY || null,
                 hasYearlyDiscount: true,
+                accessControls: [
+                    { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: true },
+                    { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: true },
+                    { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: true },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: true },
+                    { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
+                ]
             }
         ];
 
@@ -120,6 +148,12 @@ export class MembershipService implements OnApplicationBootstrap {
         return this.planRepo.create(dto);
     }
 
+    async removePlan(id: string) {
+        const plan = await this.planRepo.findByPk(id);
+        if (!plan) throw new Error('Plan not found');
+        return plan.destroy();
+    }
+
     // --- Legacy Tiers (Internal logic) ---
 
     async getTiers() {
@@ -135,6 +169,10 @@ export class MembershipService implements OnApplicationBootstrap {
         return this.createPlan(dto);
     }
 
+    async removeTier(id: string) {
+        return this.removePlan(id);
+    }
+
     // --- Discounts ---
 
     async getDiscounts() {
@@ -148,8 +186,12 @@ export class MembershipService implements OnApplicationBootstrap {
                     usageCount: stripeData ? stripeData.times_redeemed : 0
                 };
             });
-        } catch (error) {
-            this.logger.error('Failed to sync Stripe coupons', error);
+        } catch (error: any) {
+            if (error.type === 'StripeAuthenticationError') {
+                this.logger.warn('Stripe API Key is invalid or unconfigured. Skipping live coupon syncing. Set STRIPE_SECRET_KEY in .env to enable.');
+            } else {
+                this.logger.error('Failed to sync Stripe coupons:', error.message);
+            }
             return discounts.map(d => ({ ...d.toJSON(), usageCount: 0 }));
         }
     }

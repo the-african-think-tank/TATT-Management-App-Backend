@@ -34,6 +34,7 @@ import {
     Briefcase,
     Banknote,
     Store,
+    LifeBuoy,
 } from "lucide-react";
 import { DashboardFooter } from "@/components/organisms/dashboard-footer";
 import api from "@/services/api";
@@ -131,6 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             "/admin/jobs": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "MODERATOR"],
             "/admin/business-directory": ["SUPERADMIN", "ADMIN", "MODERATOR"],
             "/admin/messages": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "SALES", "MODERATOR"],
+            "/admin/support-center": ["SUPERADMIN", "ADMIN", "REGIONAL_ADMIN", "CONTENT_ADMIN", "MODERATOR"],
             "/admin/revenue": ["SUPERADMIN"],
             "/admin/sales-inventory": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN", "SALES"],
             "/admin/resources": ["SUPERADMIN", "ADMIN", "CONTENT_ADMIN"],
@@ -162,7 +164,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { icon: <IdCard size={20} />, label: "Membership Center", href: "/admin/membership-center", flag: "CAN_ACCESS_MEMBERSHIP_CENTER" },
                 { icon: <Briefcase size={20} />, label: "Jobs Center", href: "/admin/jobs" },
                 { icon: <Store size={20} />, label: "Business Directory", href: "/admin/business-directory" },
-                { icon: <MessageSquare size={20} />, label: "Messages", href: "/admin/messages", badge: "NEW" }
+                { icon: <MessageSquare size={20} />, label: "Messages", href: "/admin/messages", badge: "NEW" },
+                { icon: <LifeBuoy size={20} />, label: "Support Center", href: "/admin/support-center" }
             ]
         },
         {

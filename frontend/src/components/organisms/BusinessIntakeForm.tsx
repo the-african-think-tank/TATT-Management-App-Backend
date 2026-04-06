@@ -241,11 +241,23 @@ export default function BusinessIntakeForm({
 
     setLoading(true);
     try {
-      await api.post('/business-directory/apply', formData);
+      const payload = {
+        ...formData,
+        name: formData.name.trim(),
+        contactEmail: formData.contactEmail.trim(),
+        foundingYear: formData.foundingYear ? Number(formData.foundingYear) : undefined,
+        website: formData.website?.trim() === "" ? undefined : formData.website?.trim(),
+        chapterId: formData.chapterId === "" ? undefined : formData.chapterId,
+        contactPhone: formData.contactPhone?.trim() === "" ? undefined : formData.contactPhone?.trim(),
+        contactName: formData.contactName?.trim() === "" ? undefined : formData.contactName?.trim()
+      };
+      
+      const endpoint = isPublic ? "/business-directory/apply" : "/business-directory/profile-managed";
+      await api.post(endpoint, payload);
       toast.success(`${formData.name} application submitted! Our curators will review it shortly.`);
       
       // Success: Clear the draft
-      localStorage.removeItem('tatt_business_draft');
+      localStorage.removeItem("tatt_business_draft");
       
       router.push(onSuccessRedirect);
     } catch (error: any) {
@@ -268,7 +280,7 @@ export default function BusinessIntakeForm({
   ];
 
   const chapterOptions = [
-    { label: 'Global Presence / None', value: '' },
+    { label: 'Global Chapter', value: '' },
     ...chapters.map(c => ({ label: c.name, value: c.id }))
   ];
 
@@ -403,7 +415,7 @@ export default function BusinessIntakeForm({
                   options={chapterOptions}
                   value={formData.chapterId}
                   onChange={(val) => handleCustomSelectChange('chapterId', val)}
-                  placeholder="Global Presence / None"
+                  placeholder="Global Chapter"
                 />
 
               <div className="space-y-2">
