@@ -46,7 +46,7 @@ export default function JobPostPage() {
         ...prev,
         companyName: user.businessName || prev.companyName,
         companyWebsite: user.businessProfileLink || prev.companyWebsite,
-        category: user.industry || prev.category,
+        category: (user.industry as any)?.name || prev.category,
       }));
     }
   }, [user]);
