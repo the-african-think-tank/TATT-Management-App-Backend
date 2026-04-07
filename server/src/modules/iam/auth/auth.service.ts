@@ -274,7 +274,15 @@ export class AuthService {
             isApproved: true,
         });
 
-        await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+        try {
+            await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+        } catch (mailError: any) {
+            this.logger.error(`Failed to send initial invite to ${user.email} (non-fatal): ${mailError.message}`);
+            return { 
+                message: 'Org member added successfully, but invitation email failed to send. You can resend it from the management dashboard once email settings are verified.',
+                warning: 'EMAIL_DISPATCH_FAILED'
+            };
+        }
         return { message: 'Org member added successfully. Invitation email dispatched.' };
     }
 
@@ -303,9 +311,17 @@ export class AuthService {
             user.inviteToken = tokenHash;
             await user.save();
 
-            await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
-            this.logger.log(`Invitation email successfully resent to ${user.email}`);
-            return { message: 'Invitation email resent successfully.' };
+            try {
+                await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+                this.logger.log(`Invitation email successfully resent to ${user.email}`);
+                return { message: 'Invitation email resent successfully.' };
+            } catch (mailError: any) {
+                this.logger.error(`Failed to resend invite to ${user.email} (non-fatal): ${mailError.message}`);
+                return { 
+                    message: 'Member updated with new token, but invitation email failed to send again. Please check your SMTP configuration.',
+                    warning: 'EMAIL_DISPATCH_FAILED'
+                };
+            }
         } catch (error) {
             this.logger.error(`Resend invitation error for user ${userId}: ${error.message}`, error.stack);
             throw error;
