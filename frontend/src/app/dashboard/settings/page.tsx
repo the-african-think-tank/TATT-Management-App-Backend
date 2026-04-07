@@ -765,14 +765,7 @@ export default function SettingsPage() {
                             placeholder="Select your industry"
                             options={availableIndustries.map(ind => ({ label: ind.name, value: ind.id }))}
                         />
-                        <CustomSelect
-                            label="Local Chapter"
-                            name="chapterId"
-                            value={formData.chapterId}
-                            onChange={handleSelectChange}
-                            placeholder="Choose your chapter"
-                            options={chapters.map(c => ({ label: c.name, value: c.id }))}
-                        />
+
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">Employer / Company</label>
                             <input
@@ -792,6 +785,7 @@ export default function SettingsPage() {
                             placeholder="Global / Select Chapter"
                             options={chapters.map(c => ({ label: c.name, value: c.id }))}
                         />
+
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-tatt-gray">LinkedIn Profile URL</label>
                             <div className="flex">

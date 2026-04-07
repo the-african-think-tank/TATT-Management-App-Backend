@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import {
     UserPlus,
@@ -17,11 +17,13 @@ import {
     TrendingUp,
     TrendingDown,
     AlertCircle,
-    Trash2
+    Trash2,
+    X
 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/context/auth-context";
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface Member {
     id: string;
@@ -46,21 +48,26 @@ interface Stats {
     regionalChapters: number;
 }
 
-export default function OrgManagementPage() {
+function OrgManagementContent() {
     const [members, setMembers] = useState<Member[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const { user } = useAuth();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const activeRoleFilter = searchParams.get('role');
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [searchParams]);
 
     const fetchData = async () => {
+        setLoading(true);
         try {
+            const roleFilter = searchParams.get('role');
             const [membersRes, statsRes] = await Promise.all([
-                api.get("/users/org-members"),
+                api.get("/users/org-members", { params: { role: roleFilter } }),
                 api.get("/users/stats")
             ]);
             setMembers(membersRes.data);
@@ -83,6 +90,10 @@ export default function OrgManagementPage() {
             console.error("Error deleting member:", error);
             toast.error(error.response?.data?.message || "Failed to delete team member");
         }
+    };
+
+    const clearFilter = () => {
+        router.push("/admin/org-management");
     };
 
     const getStatusBadge = (member: Member) => {
@@ -131,6 +142,24 @@ export default function OrgManagementPage() {
                     Add Team Member
                 </Link>
             </div>
+
+            {activeRoleFilter && (
+                <div className="flex items-center gap-3 bg-surface border border-tatt-lime/20 p-4 rounded-2xl animate-in slide-in-from-left-4 duration-500">
+                    <div className="size-8 bg-tatt-lime/10 rounded-lg flex items-center justify-center text-tatt-lime">
+                        <Filter size={16} />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray">Active Role Filter</p>
+                        <p className="text-xs font-bold text-foreground">Showing only: <span className="text-tatt-lime italic uppercase tracking-wider">{activeRoleFilter.replace('_', ' ')}</span></p>
+                    </div>
+                    <button 
+                        onClick={clearFilter}
+                        className="p-2 hover:bg-background rounded-lg text-tatt-gray hover:text-red-500 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <X size={14} /> Clear
+                    </button>
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -274,7 +303,7 @@ export default function OrgManagementPage() {
                         <button className="size-8 flex items-center justify-center rounded-lg bg-tatt-lime text-tatt-black font-bold text-xs">
                             1
                         </button>
-                        <button className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-surface transition-colors text-xs">
+                        <button disabled className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-surface transition-colors text-xs">
                             2
                         </button>
                         <button className="size-8 flex items-center justify-center rounded-lg border border-border hover:bg-surface transition-colors">
@@ -304,5 +333,13 @@ function StatCard({ label, value, icon, trend, trendUp }: { label: string, value
                 {trend}
             </p>
         </div>
+    );
+}
+
+export default function OrgManagementPage() {
+    return (
+        <Suspense fallback={<div className="p-20 text-center font-bold text-tatt-gray">Initializing Management Matrix...</div>}>
+            <OrgManagementContent />
+        </Suspense>
     );
 }

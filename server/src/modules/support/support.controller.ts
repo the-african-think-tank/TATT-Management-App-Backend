@@ -18,6 +18,11 @@ export class SupportController {
         return this.supportService.getDashboardStats();
     }
 
+    @Get('ping')
+    async ping() {
+        return { status: 'ok', message: 'Support Controller reached' };
+    }
+
     // --- TICKETS ---
     @Post('tickets')
     @ApiOperation({ summary: 'Submit a new support ticket' })
@@ -29,6 +34,24 @@ export class SupportController {
     @ApiOperation({ summary: 'Get tickets for the authenticated member' })
     async getMyTickets(@Request() req: any) {
         return this.supportService.getMemberTickets(req.user.id);
+    }
+
+    @Get('cases/:id')
+    @ApiOperation({ summary: 'Get a specific ticket by Case ID' })
+    async getTicketByCaseId(@Param('id') id: string) {
+        console.log(`[SupportController] HIT: Fetching case: ${id}`);
+        const result = await this.supportService.getTicketById(id);
+        console.log(`[SupportController] RESULT for case ${id}: ${result ? 'Found' : 'Not Found'}`);
+        return result;
+    }
+
+    @Get('tickets/:id')
+    @ApiOperation({ summary: 'Get a specific ticket by ID' })
+    async getTicketById(@Param('id') id: string) {
+        console.log(`[SupportController] HIT: Fetching ticket: ${id}`);
+        const result = await this.supportService.getTicketById(id);
+        console.log(`[SupportController] RESULT for ticket ${id}: ${result ? 'Found' : 'Not Found'}`);
+        return result;
     }
 
     @Put('tickets/:id/resolve')
@@ -43,12 +66,6 @@ export class SupportController {
         return this.supportService.updateTicket(id, dto);
     }
 
-    @Get('cases/:id')
-    @ApiOperation({ summary: 'Get a specific ticket by ID' })
-    async getTicketById(@Param('id') id: string) {
-        return this.supportService.getTicketById(id);
-    }
-
     @Post('tickets/:id/messages')
     @ApiOperation({ summary: 'Add a new message to a ticket thread' })
     async addMessage(@Request() req: any, @Param('id') id: string, @Body() dto: { message: string, isAdmin?: boolean }) {
@@ -56,6 +73,7 @@ export class SupportController {
         const isAdmin = dto.isAdmin || false; 
         return this.supportService.addMessage(id, req.user.id, dto.message, isAdmin);
     }
+
 
     // --- FAQS ---
     @Post('faqs')

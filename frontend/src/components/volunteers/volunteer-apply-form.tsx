@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import api from "@/services/api";
 import {
     Loader2,
@@ -13,6 +14,8 @@ import {
     Plus,
     X,
     Check,
+    Phone,
+    UserCircle,
 } from "lucide-react";
 import type { ApplyVolunteerPayload } from "@/types/volunteers";
 
@@ -82,6 +85,8 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
     // Statement
     const [reasonForApplying, setReasonForApplying] = useState("");
     const [questionsForAdmin, setQuestionsForAdmin] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [birthDate, setBirthDate] = useState("");
 
     // Role Details (if applicable)
     const [role, setRole] = useState<any>(null);
@@ -156,6 +161,8 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
                 hoursAvailablePerWeek: Object.values(gridToApiFormat(availGrid)).flat().length * 4,
                 reasonForApplying,
                 questionsForAdmin: questionsForAdmin.trim() || undefined,
+                phoneNumber: phoneNumber.trim() || undefined,
+                birthDate: birthDate || undefined,
             };
             await api.post("/volunteers/apply", payload);
             setSuccess(true);
@@ -294,6 +301,39 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
                                     <Plus className="h-3.5 w-3.5" /> Add Custom
                                 </button>
                             )}
+                        </div>
+                    </section>
+
+                    {/* Contact & Personal details */}
+                    <section className="bg-surface rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-5">
+                            <span className="size-9 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0">
+                                <UserCircle className="h-5 w-5" />
+                            </span>
+                            <h3 className="text-base font-bold text-foreground">Personal Details</h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                    <Phone className="h-4 w-4 text-tatt-gray" /> Phone Number
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    placeholder="e.g. +233 24 123 4567"
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-foreground">Date of Birth</label>
+                                <input
+                                    type="date"
+                                    value={birthDate}
+                                    onChange={(e) => setBirthDate(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none"
+                                />
+                            </div>
                         </div>
                     </section>
 
@@ -482,12 +522,12 @@ export function VolunteerApplyForm({ roleId, onSuccess, compact = false }: Volun
                         <p className="text-xs text-white/50 mb-4 leading-relaxed">
                             If you&apos;re unsure about any section, contact our regional support team or browse our FAQs.
                         </p>
-                        <a
-                            href="mailto:volunteers@tatt.org"
+                        <Link
+                            href="/dashboard/support"
                             className="block w-full py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold text-white text-center transition-colors cursor-pointer"
                         >
                             Contact Support
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </div>

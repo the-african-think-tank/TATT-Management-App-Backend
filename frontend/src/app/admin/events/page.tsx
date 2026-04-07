@@ -28,6 +28,7 @@ import Image from "next/image";
 import api from "@/services/api";
 import { toast, Toaster } from "react-hot-toast";
 import { useAuth } from "@/context/auth-context";
+import { useRouter } from "next/navigation";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from "date-fns";
 
 // --- Types ---
@@ -63,6 +64,7 @@ interface Chapter {
 
 export default function AdminEventsPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const [events, setEvents] = useState<Event[]>([]);
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [loading, setLoading] = useState(true);
@@ -73,8 +75,8 @@ export default function AdminEventsPage() {
     const [loadingAttendees, setLoadingAttendees] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
     const [searchQuery, setSearchQuery] = useState("");
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar'>('grid');
 
     const safeDate = (dateStr: string) => {
         try {
@@ -172,9 +174,9 @@ export default function AdminEventsPage() {
     };
 
     const handleEventClick = (event: Event) => {
-        setSelectedEvent(event);
-        fetchAttendees(event.id);
+        router.push(`/admin/events/${event.id}`);
     };
+
 
     const handleEditClick = (event: Event, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -222,14 +224,20 @@ export default function AdminEventsPage() {
                 <div className="flex items-center gap-4">
                     <div className="flex p-1 bg-surface border border-border rounded-xl shadow-sm">
                         <button 
-                            onClick={() => setActiveTab('list')}
-                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'list' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
+                            onClick={() => setViewMode('grid')}
+                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'grid' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
                         >
-                            List View
+                            Grid
                         </button>
                         <button 
-                            onClick={() => setActiveTab('calendar')}
-                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'calendar' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
+                            onClick={() => setViewMode('list')}
+                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'list' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
+                        >
+                            List
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('calendar')}
+                            className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${viewMode === 'calendar' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-tatt-black'}`}
                         >
                             Calendar
                         </button>
@@ -279,8 +287,9 @@ export default function AdminEventsPage() {
                 />
             </section>
 
-            {activeTab === 'calendar' ? (
+            {viewMode === 'calendar' ? (
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {/* Calendar code remains similar but update handleEventClick to navigate or maybe show card on click */}
                     <section className="xl:col-span-3 bg-surface p-10 rounded-3xl border border-border shadow-xl min-h-[600px]">
                         <div className="flex items-center justify-between mb-10">
                             <div>
@@ -361,10 +370,26 @@ export default function AdminEventsPage() {
                         </div>
                     </aside>
                 </div>
+            ) : viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {loading ? (
+                        Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-[400px] bg-surface rounded-[32px] animate-pulse border border-border"></div>
+                        ))
+                    ) : events.length === 0 ? (
+                        <div className="col-span-full py-20 text-center text-tatt-gray italic border-2 border-dashed border-border rounded-[40px] opacity-40">
+                             No events in established protocols. Initialize your first gathering.
+                        </div>
+                    ) : (
+                        events.map(event => (
+                            <EventCard key={event.id} event={event} onEdit={(e) => handleEditClick(event, e)} onClick={() => handleEventClick(event)} onDelete={(e) => handleDeleteEvent(event.id, e)} />
+                        ))
+                    )}
+                </div>
             ) : (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="bg-surface rounded-3xl border border-border shadow-xl">
-                        <div className="p-8 border-b border-border flex flex-wrap items-center justify-between gap-6 bg-surface/50">
+                    <div className="bg-surface rounded-3xl border border-border shadow-xl overflow-hidden">
+                        <div className="p-8 bg-surface/50 border-b border-border flex flex-wrap items-center justify-between gap-6">
                             <div>
                                 <h2 className="text-2xl font-black uppercase tracking-tight">Management Directory</h2>
                                 <p className="text-tatt-gray text-sm font-medium">Archive of all past and scheduled community gatherings.</p>
@@ -372,119 +397,74 @@ export default function AdminEventsPage() {
                             <div className="flex gap-4">
                                 <div className="relative">
                                     <input
-                                        className="pl-12 pr-6 py-3.5 bg-background border border-border rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-tatt-lime/50 w-80 font-medium transition-all"
-                                        placeholder="Search events by title..."
+                                        className="pl-12 pr-6 py-3.5 bg-background border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-tatt-lime/50 w-80 font-bold transition-all transition-all placeholder:text-tatt-gray/40"
+                                        placeholder="Filter events directory..."
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-5" />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-gray size-4" />
                                 </div>
-                                <button className="p-3.5 bg-background border border-border rounded-2xl hover:bg-surface transition-all text-tatt-gray hover:text-tatt-black">
-                                    <Filter className="size-5" />
-                                </button>
                             </div>
                         </div>
 
-                        <div className="">
+                        <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-border/30 text-tatt-gray text-xs font-bold uppercase tracking-wider">
+                                <thead className="bg-border/10 text-tatt-gray text-[10px] font-black uppercase tracking-[0.2em]">
                                     <tr>
-                                        <th className="px-6 py-4">Event Name</th>
-                                        <th className="px-6 py-4">Date</th>
-                                        <th className="px-6 py-4">Chapter</th>
-                                        <th className="px-6 py-4">Type</th>
-                                        <th className="px-6 py-4">Visibility</th>
-                                        <th className="px-6 py-4">Actions</th>
+                                        <th className="px-8 py-5">Event Signature</th>
+                                        <th className="px-8 py-5">Timeline</th>
+                                        <th className="px-8 py-5">Logistic Unit</th>
+                                        <th className="px-8 py-5">Classification</th>
+                                        <th className="px-8 py-5">Protocol</th>
+                                        <th className="px-8 py-5">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-tatt-gray italic">
-                                                <Loader2 className="size-6 animate-spin mx-auto mb-2" />
-                                                Loading events...
+                                <tbody className="divide-y divide-border/50">
+                                    {events.map(event => (
+                                        <tr
+                                            key={event.id}
+                                            onClick={() => handleEventClick(event)}
+                                            className="hover:bg-tatt-lime/5 transition-colors cursor-pointer group"
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm text-foreground group-hover:text-tatt-lime transition-colors">{event.title}</span>
+                                                    <span className="text-[10px] font-black text-tatt-gray uppercase tracking-tighter opacity-60">Revenue Unit: ${Number(event.basePrice).toFixed(2)}</span>
+                                                </div>
                                             </td>
-                                        </tr>
-                                    ) : events.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-tatt-gray italic">No events found. Create your first event!</td>
-                                        </tr>
-                                    ) : (
-                                        events.map(event => (
-                                            <tr
-                                                key={event.id}
-                                                onClick={() => handleEventClick(event)}
-                                                className="hover:bg-border/20 transition-colors cursor-pointer"
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-sm">{event.title}</span>
-                                                        <span className="text-xs text-tatt-gray">Base Price: ${Number(event.basePrice).toFixed(2) || "0.00"}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm font-medium">
-                                                    {format(safeDate(event.dateTime), "MMM dd, yyyy")}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm">
+                                            <td className="px-8 py-6">
+                                                <div className="text-xs font-bold text-foreground">{format(safeDate(event.dateTime), "MMM dd, yyyy")}</div>
+                                                <div className="text-[10px] text-tatt-gray font-medium">{format(safeDate(event.dateTime), "HH:mm")}</div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className="text-xs font-bold text-foreground">
                                                     {event.locations && event.locations.length > 0 ? (
                                                         event.locations.length === 1 ? event.locations?.[0]?.chapter?.name : `${event.locations.length} Locations`
                                                     ) : "All Chapters"}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${getTypeBadgeClass(event.type)}`}>
-                                                        {event.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className={`px-2 py-1 rounded-[4px] text-[9px] font-black uppercase tracking-widest ${getTypeBadgeClass(event.type)}`}>
+                                                    {event.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-2">
+                                                    {event.isForAllMembers ? <Globe className="size-3 text-tatt-lime" /> : <Lock className="size-3 text-tatt-bronze" />}
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${event.isForAllMembers ? "text-tatt-lime" : "text-tatt-bronze"}`}>
+                                                        {event.isForAllMembers ? "Public Domain" : "Tier Restricted"}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="flex items-center gap-1 text-tatt-lime-dark text-xs font-bold">
-                                                        {event.isForAllMembers ? <Globe className="size-3" /> : <Lock className="size-3 text-tatt-bronze" />}
-                                                        <span className={event.isForAllMembers ? "text-tatt-lime-dark" : "text-tatt-bronze"}>
-                                                            {event.isForAllMembers ? "Public" : "Members Only"}
-                                                        </span>
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="relative">
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenMenuId(openMenuId === event.id ? null : event.id);
-                                                            }}
-                                                            className="p-2 hover:bg-border/50 rounded-lg transition-colors"
-                                                        >
-                                                            <MoreVertical className="size-4" />
-                                                        </button>
-                                                        
-                                                        {openMenuId === event.id && (
-                                                            <>
-                                                                <div 
-                                                                    className="fixed inset-0 z-[60]" 
-                                                                    onClick={() => setOpenMenuId(null)}
-                                                                ></div>
-                                                                <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-xl z-[70] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200 text-left">
-                                                                    <button 
-                                                                        onClick={(e) => handleEditClick(event, e)}
-                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-tatt-gray hover:bg-border/30 hover:text-tatt-black transition-colors"
-                                                                    >
-                                                                        <Edit2 className="size-3.5" />
-                                                                        Edit Event
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={(e) => handleDeleteEvent(event.id, e)}
-                                                                        className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border-t border-border"
-                                                                    >
-                                                                        <Trash2 className="size-3.5" />
-                                                                        Delete Event
-                                                                    </button>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => handleEditClick(event, e)} className="p-2 hover:bg-tatt-lime/10 text-tatt-gray hover:text-tatt-lime rounded-lg transition-all"><Edit2 size={14} /></button>
+                                                    <button onClick={(e) => handleDeleteEvent(event.id, e)} className="p-2 hover:bg-red-500/10 text-tatt-gray hover:text-red-500 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -799,17 +779,92 @@ export default function AdminEventsPage() {
     );
 }
 
+function EventCard({ event, onClick, onEdit, onDelete }: { event: Event, onClick: () => void, onEdit: (e: any) => void, onDelete: (e: any) => void }) {
+    return (
+        <div 
+            onClick={onClick}
+            className="group relative bg-surface border border-border rounded-[32px] overflow-hidden cursor-pointer hover:shadow-2xl hover:shadow-tatt-lime/10 transition-all duration-500 hover:-translate-y-1"
+        >
+            <div className="relative h-56 w-full">
+                {event.imageUrl ? (
+                    <Image src={event.imageUrl} alt={event.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                ) : (
+                    <div className="size-full bg-tatt-black flex items-center justify-center">
+                         <CalendarIcon className="size-12 text-tatt-lime/20" />
+                    </div>
+                )}
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                    <span className="px-3 py-1 bg-tatt-black/60 backdrop-blur-md text-white text-[9px] font-black uppercase tracking-widest rounded-full border border-white/10">
+                        {event.type}
+                    </span>
+                    <span className="px-3 py-1 bg-tatt-lime text-tatt-black text-[9px] font-black uppercase tracking-widest rounded-full">
+                        {event.registrationsCount || 0} Registered
+                    </span>
+                </div>
+                
+                <div className="absolute top-4 right-4 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit(e); }}
+                        className="bg-white/90 hover:bg-white text-tatt-black p-2 rounded-xl transition-all shadow-sm"
+                    >
+                        <Edit2 size={14} />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onDelete(e); }}
+                        className="bg-red-500/90 hover:bg-red-500 text-white p-2 rounded-xl transition-all shadow-sm"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+
+                <div className="absolute inset-0 bg-gradient-to-t from-tatt-black to-transparent opacity-60"></div>
+                <div className="absolute bottom-6 left-6 right-6">
+                    <h3 className="text-xl font-black text-white leading-tight uppercase tracking-tight group-hover:text-tatt-lime transition-colors">
+                        {event.title}
+                    </h3>
+                </div>
+            </div>
+
+            <div className="p-6 space-y-4 bg-surface group-hover:bg-background/20 transition-colors">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-tatt-gray">
+                        <CalendarIcon size={14} className="text-tatt-lime" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{format(new Date(event.dateTime), "MMM dd, yyyy")}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-tatt-gray">
+                        <MapPin size={14} className="text-tatt-lime" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                            {event.locations?.[0]?.chapter?.name || "Global"}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-2">
+                        <DollarSign size={14} className="text-tatt-lime" />
+                        <span className="text-base font-black text-foreground">${event.basePrice}</span>
+                        <span className="text-[8px] font-black text-tatt-gray uppercase tracking-widest opacity-40">Entry</span>
+                    </div>
+                    <div className="size-8 rounded-full bg-tatt-lime/10 flex items-center justify-center text-tatt-lime group-hover:bg-tatt-lime group-hover:text-tatt-black transition-all">
+                        <ChevronRight size={16} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function StatCard({ icon, label, value, trend }: { icon: React.ReactNode, label: string, value: string, trend: string }) {
     return (
-        <div className="bg-surface p-6 rounded-xl border border-border">
+        <div className="bg-surface p-6 rounded-[32px] border border-border group hover:border-tatt-lime/30 transition-all shadow-sm">
             <div className="flex items-center justify-between mb-4">
-                <span className="p-2 bg-tatt-lime-light rounded-lg">{icon}</span>
-                <span className="text-tatt-lime-dark text-sm font-bold flex items-center gap-1">
-                    {trend} <TrendingUp className="size-4" />
+                <span className="p-3 bg-tatt-lime/10 rounded-2xl text-tatt-lime group-hover:bg-tatt-lime group-hover:text-tatt-black transition-all">{icon}</span>
+                <span className="text-tatt-lime text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                    {trend} <TrendingUp className="size-3" />
                 </span>
             </div>
-            <p className="text-tatt-gray text-sm font-medium">{label}</p>
-            <p className="text-3xl font-black mt-1">{value}</p>
+            <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest opacity-60 leading-none">{label}</p>
+            <p className="text-3xl font-black mt-2 tracking-tighter text-foreground">{value}</p>
         </div>
     );
 }

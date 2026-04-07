@@ -77,6 +77,10 @@ export default function VolunteerCenterPage() {
     const [roles, setRoles] = useState<any[]>([]);
     const [rolesLoading, setRolesLoading] = useState(false);
     const [isChapterOpen, setIsChapterOpen] = useState(false);
+    
+    // Global Modal States
+    const [assignActivityVol, setAssignActivityVol] = useState<Volunteer | null>(null);
+    const [assignTrainingVol, setAssignTrainingVol] = useState<Volunteer | null>(null);
 
     const fetchStats = async () => {
         try {
@@ -397,13 +401,6 @@ export default function VolunteerCenterPage() {
                                     </div>
                                 )}
                             </div>
-                            <button 
-                                onClick={handleExport}
-                                className="px-4 py-3 rounded-xl border border-border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-background transition-all"
-                            >
-                                <Download size={14} className="text-tatt-lime" />
-                                Export CSV
-                            </button>
                         </div>
                     </div>
 
@@ -446,15 +443,60 @@ export default function VolunteerCenterPage() {
                                                     <span className="text-[9px] font-black text-tatt-gray uppercase tracking-widest">Efficiency Matrix</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <button 
-                                                    onClick={() => router.push(`/admin/volunteers/${v.id}`)}
-                                                    className="p-2 hover:bg-background rounded-lg transition-colors text-tatt-gray hover:text-tatt-lime"
-                                                >
-                                                    <MoreVertical size={18} />
-                                                </button>
+                                            <td className="px-8 py-5 text-right relative">
+                                                <details className="dropdown dropdown-end">
+                                                    <summary className="p-2 inline-flex justify-center hover:bg-background rounded-lg transition-colors text-tatt-gray hover:text-tatt-lime cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
+                                                        <MoreVertical size={18} />
+                                                    </summary>
+                                                    <ul className="dropdown-content menu p-2 shadow-2xl shadow-black/50 bg-surface border border-border border-t-tatt-lime/50 rounded-xl w-52 z-[100] text-left mt-1">
+                                                        <li>
+                                                            <a onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                                                router.push(`/admin/volunteers/${v.id}`);
+                                                            }} className="text-xs font-bold text-foreground hover:text-tatt-lime hover:bg-background">
+                                                                Edit Volunteer
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                                                const loadingToast = toast.loading("Dismissing volunteer...");
+                                                                api.patch(`/volunteers/admin/profile/${v.id}/stats`, { status: "INACTIVE" })
+                                                                    .then(() => {
+                                                                        toast.success("Volunteer dismissed from program", { id: loadingToast });
+                                                                        fetchVolunteers();
+                                                                    })
+                                                                    .catch(() => toast.error("Failed to dismiss volunteer", { id: loadingToast }));
+                                                            }} className="text-xs font-bold text-red-500 hover:text-red-400 hover:bg-background">
+                                                                Dismiss Volunteering
+                                                            </a>
+                                                        </li>
+                                                        <div className="h-px bg-border my-1"></div>
+                                                        <li>
+                                                            <a onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                                                setAssignActivityVol(v);
+                                                            }} className="text-xs font-bold text-tatt-gray hover:text-tatt-lime hover:bg-background">
+                                                                Assign Activity
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                                                setAssignTrainingVol(v);
+                                                            }} className="text-xs font-bold text-tatt-gray hover:text-tatt-lime hover:bg-background">
+                                                                Assign Training
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </details>
                                             </td>
                                         </tr>
+
                                     ))
                                 )}
                             </tbody>
@@ -666,6 +708,77 @@ export default function VolunteerCenterPage() {
                     </div>
                 </div>
             )}
+
+            {/* Global Modals */}
+            {/* Global Modals */}
+            {assignActivityVol && (
+                <dialog open className="modal modal-open">
+                    <div className="modal-box bg-surface border border-border/50 text-left relative z-50">
+                        <h3 className="font-black italic text-lg uppercase mb-4 text-foreground">Assign Activity</h3>
+                        <p className="text-xs text-tatt-gray font-bold mb-6">
+                            Select available activities to assign to {assignActivityVol.firstName} {assignActivityVol.lastName}.
+                        </p>
+                        <div className="space-y-3 mb-8">
+                            {['Community Outreach coordination', 'Event Setup Assistance', 'Local Mentorship Meeting'].map((act, i) => (
+                                <label key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background cursor-pointer hover:border-tatt-lime/50 transition-colors">
+                                    <input type="checkbox" className="checkbox checkbox-sm checkbox-success rounded" />
+                                    <span className="text-xs font-black text-foreground">{act}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="modal-action">
+                            <button onClick={() => setAssignActivityVol(null)} className="px-4 py-2 font-black uppercase text-xs tracking-widest text-tatt-gray hover:text-foreground">Cancel</button>
+                            <button 
+                                onClick={() => {
+                                    toast.success("Activity successfully assigned!");
+                                    setAssignActivityVol(null);
+                                }}
+                                className="px-5 py-2 font-black uppercase text-xs tracking-widest bg-tatt-lime text-tatt-black rounded-lg hover:brightness-110"
+                            >
+                                Assign Selection
+                            </button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop fixed inset-0 bg-background/80 backdrop-blur-sm z-40" onClick={() => setAssignActivityVol(null)}>
+                        <button className="hidden">close</button>
+                    </div>
+                </dialog>
+            )}
+
+            {assignTrainingVol && (
+                <dialog open className="modal modal-open">
+                    <div className="modal-box bg-surface border border-border/50 text-left relative z-50">
+                        <h3 className="font-black italic text-lg uppercase mb-4 text-foreground">Assign Training</h3>
+                        <p className="text-xs text-tatt-gray font-bold mb-6">
+                            Select mandatory trainings to assign to {assignTrainingVol.firstName} {assignTrainingVol.lastName}.
+                        </p>
+                        <div className="space-y-3 mb-8">
+                            {['Leadership Readiness 101', 'Conflict Resolution Seminar', 'Community Building Basics'].map((train, i) => (
+                                <label key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background cursor-pointer hover:border-blue-500/50 transition-colors">
+                                    <input type="checkbox" className="checkbox checkbox-sm checkbox-info rounded" />
+                                    <span className="text-xs font-black text-foreground">{train}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="modal-action">
+                            <button onClick={() => setAssignTrainingVol(null)} className="px-4 py-2 font-black uppercase text-xs tracking-widest text-tatt-gray hover:text-foreground">Cancel</button>
+                            <button 
+                                onClick={() => {
+                                    toast.success("Training assigned successfully!");
+                                    setAssignTrainingVol(null);
+                                }}
+                                className="px-5 py-2 font-black uppercase text-xs tracking-widest bg-blue-500 text-white rounded-lg hover:brightness-110"
+                            >
+                                Assign Selection
+                            </button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop fixed inset-0 bg-background/80 backdrop-blur-sm z-40" onClick={() => setAssignTrainingVol(null)}>
+                        <button className="hidden">close</button>
+                    </div>
+                </dialog>
+            )}
+
         </main>
     );
 }

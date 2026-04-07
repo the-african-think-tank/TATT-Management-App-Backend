@@ -118,7 +118,9 @@ export class VolunteersService {
         });
         if (existing) throw new BadRequestException('You already have a pending application.');
 
-        const application = await this.applicationModel.create({ ...dto, userId });
+        const payload: any = { ...dto, userId };
+        if (dto.birthDate) payload.birthDate = new Date(dto.birthDate);
+        const application = await this.applicationModel.create(payload);
         const user = await this.userModel.findByPk(userId);
         
         // Notify Admins, Super Admins, and Regional Admins

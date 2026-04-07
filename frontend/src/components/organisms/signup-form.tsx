@@ -13,6 +13,7 @@ import { useAuth } from "@/context/auth-context";
 import { toast } from "react-hot-toast";
 import { Eye, EyeOff, CheckCircle, XCircle, AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
 import { useHibpCheck } from "@/hooks/use-hibp-check";
+import { TermsModal } from "@/components/shared/terms-modal";
 
 // ─── Password validation rules ───────────────────────────────────────────────
 const PASSWORD_RULES = [
@@ -176,6 +177,8 @@ export function SignupForm() {
   const [error, setError] = useState<React.ReactNode | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   // HIBP breach check
   const hibp = useHibpCheck();
@@ -201,6 +204,12 @@ export function SignupForm() {
   }, [passwordValue]);
 
   const onSubmit = async (data: SignupFormData) => {
+    // Block submission if ToS not agreed
+    if (!termsAgreed) {
+      toast.error("Please read and agree to the Terms of Service to continue.");
+      return;
+    }
+
     // Warn (soft-block) if the password is known to be pwned
     if (hibp.status === "pwned") {
       toast.error(
@@ -377,34 +386,55 @@ export function SignupForm() {
         </div>
 
         {/* Terms & Privacy */}
-        <label className="flex items-start gap-3 py-2 text-sm leading-5 text-tatt-gray cursor-pointer">
-          <input
-            type="checkbox"
-            required
-            className="mt-0.5 h-4 w-4 rounded-[4px] border border-border bg-surface accent-tatt-lime shrink-0"
-          />
-          <span>
-            I agree to the{" "}
-            <a
-              href="https://www.theafricanthinktank.com/terms-and-conditions"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-tatt-black underline decoration-tatt-lime hover:opacity-80 transition-opacity"
+        <div className="py-2">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (!termsAgreed) setTermsModalOpen(true);
+                else setTermsAgreed(false);
+              }}
+              aria-label={termsAgreed ? "Uncheck terms agreement" : "Read and agree to terms"}
+              className={`mt-0.5 size-4 rounded-[4px] border shrink-0 flex items-center justify-center transition-colors ${
+                termsAgreed
+                  ? "bg-tatt-lime border-tatt-lime"
+                  : "bg-surface border-border hover:border-tatt-lime/60"
+              }`}
             >
-              Terms of Service
-            </a>
-            {" "}and{" "}
-            <a
-              href="https://www.theafricanthinktank.com/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-tatt-black underline decoration-tatt-lime hover:opacity-80 transition-opacity"
-            >
-              Privacy Policy
-            </a>
-            .
-          </span>
-        </label>
+              {termsAgreed && <CheckCircle className="size-3 text-tatt-black" />}
+            </button>
+            <span className="text-sm leading-5 text-tatt-gray">
+              I agree to the{" "}
+              <button
+                type="button"
+                onClick={() => setTermsModalOpen(true)}
+                className="font-semibold text-tatt-black underline decoration-tatt-lime hover:opacity-80 transition-opacity"
+              >
+                Terms of Service
+              </button>
+              {" "}and{" "}
+              <a
+                href="https://www.theafricanthinktank.com/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-tatt-black underline decoration-tatt-lime hover:opacity-80 transition-opacity"
+              >
+                Privacy Policy
+              </a>
+              .
+            </span>
+          </div>
+          {!termsAgreed && (
+            <p className="mt-1 ml-7 text-[11px] text-tatt-gray/70">Click "Terms of Service" to read and accept before continuing.</p>
+          )}
+        </div>
+
+        <TermsModal
+          open={termsModalOpen}
+          onClose={() => setTermsModalOpen(false)}
+          requireAgreement={true}
+          onAgree={() => setTermsAgreed(true)}
+        />
 
         <AuthButton
           disabled={isLoading || hibp.status === "checking"}

@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             inactivityTimer = setTimeout(() => {
                 console.log('[Auth] Session timed out due to inactivity.');
                 logout();
-            }, 60 * 60 * 1000); // 1 hour
+            }, 12 * 60 * 60 * 1000); // 12 hours
         };
 
         const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];

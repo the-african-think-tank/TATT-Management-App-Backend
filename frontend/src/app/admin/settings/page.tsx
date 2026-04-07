@@ -391,31 +391,7 @@ export default function SystemConfigurationPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 mb-20 px-8">
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black text-tatt-gray uppercase tracking-[0.2em] flex items-center gap-2">
-                   <Shield className="size-3" /> System Policy
-                 </h4>
-                 <div className="p-6 bg-background border border-border rounded-2xl">
-                    <p className="text-xs text-tatt-gray font-medium leading-relaxed">
-                      Manual overrides of system configuration variables take effect immediately. Ensure you have the 
-                      necessary credentials before modifying key infrastructure parameters.
-                    </p>
-                 </div>
-              </div>
-              <div className="space-y-4">
-                 <h4 className="text-[10px] font-black text-tatt-gray uppercase tracking-[0.2em] flex items-center gap-2">
-                   <CheckCircle2 className="size-3" /> Deployment Status
-                 </h4>
-                 <div className="p-6 bg-background border border-border rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="size-2 bg-tatt-lime rounded-full animate-pulse shadow-[0_0_8px_rgba(157,255,0,0.5)]" />
-                      <span className="text-xs font-black text-tatt-black uppercase tracking-tight">System Validated</span>
-                    </div>
-                    <span className="text-[10px] font-bold text-tatt-gray">Sync Latency: 12ms</span>
-                  </div>
-              </div>
-            </div>
+
           </>
           )}
         </div>

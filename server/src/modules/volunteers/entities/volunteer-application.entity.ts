@@ -72,6 +72,18 @@ export class VolunteerApplication extends Model<VolunteerApplication> {
         allowNull: true,
     })
     questionsForAdmin?: string;
+    
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    phoneNumber?: string;
+
+    @Column({
+        type: DataType.DATEONLY, // Use DATEONLY for birth date
+        allowNull: true,
+    })
+    birthDate?: Date;
 
     @Column({
         type: DataType.ENUM(...Object.values(ApplicationStatus)),

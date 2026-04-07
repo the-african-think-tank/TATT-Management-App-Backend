@@ -25,4 +25,6 @@ export interface ApplyVolunteerPayload {
   hoursAvailablePerWeek: number;
   reasonForApplying: string;
   questionsForAdmin?: string | undefined;
+  phoneNumber?: string | undefined;
+  birthDate?: string | undefined;
 }

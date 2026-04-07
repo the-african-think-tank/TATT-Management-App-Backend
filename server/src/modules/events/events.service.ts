@@ -9,7 +9,7 @@ import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { RegisterEventDto } from './dto/register-event.dto';
-import { SystemRole, CommunityTier } from '../iam/enums/roles.enum';
+import { SystemRole, CommunityTier, AccountFlags } from '../iam/enums/roles.enum';
 import { Op } from 'sequelize';
 import Stripe from 'stripe';
 import { MailService } from '../../common/mail/mail.service';
@@ -42,7 +42,7 @@ export class EventsService {
 
     async createEvent(admin: User, dto: CreateEventDto) {
         const allowedRoles = [SystemRole.SUPERADMIN, SystemRole.ADMIN, SystemRole.CONTENT_ADMIN];
-        if (!allowedRoles.includes(admin.systemRole)) {
+        if (!allowedRoles.includes(admin.systemRole) && !admin.flags?.includes(AccountFlags.CAN_ACCESS_EVENTS)) {
             throw new ForbiddenException('Only Org admins and content admins can create events.');
         }
 
@@ -82,7 +82,7 @@ export class EventsService {
 
     async updateEvent(admin: User, id: string, dto: CreateEventDto) {
         const allowedRoles = [SystemRole.SUPERADMIN, SystemRole.ADMIN, SystemRole.CONTENT_ADMIN];
-        if (!allowedRoles.includes(admin.systemRole)) {
+        if (!allowedRoles.includes(admin.systemRole) && !admin.flags?.includes(AccountFlags.CAN_ACCESS_EVENTS)) {
             throw new ForbiddenException('Only Org admins and content admins can update events.');
         }
 
@@ -126,7 +126,7 @@ export class EventsService {
 
     async deleteEvent(admin: User, id: string) {
         const allowedRoles = [SystemRole.SUPERADMIN, SystemRole.ADMIN, SystemRole.CONTENT_ADMIN];
-        if (!allowedRoles.includes(admin.systemRole)) {
+        if (!allowedRoles.includes(admin.systemRole) && !admin.flags?.includes(AccountFlags.CAN_ACCESS_EVENTS)) {
             throw new ForbiddenException('Only Org admins and content admins can delete events.');
         }
 

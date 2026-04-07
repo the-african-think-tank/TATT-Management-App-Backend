@@ -45,12 +45,23 @@ function isPaidMember(tier: string | undefined) {
 }
 
 function PremiumGate() {
+  const benefits = [
+    { icon: Briefcase, title: "Curated Listings", desc: "Roles matched to TATT Professionals" },
+    { icon: Star, title: "Priority Applications", desc: "Apply directly through the TATT platform" },
+    { icon: TrendingUp, title: "Talent Matchmaking", desc: "Get discovered by top employers in our network" },
+    { icon: Users, title: "TATT Job Alerts", desc: "Get notified when roles match your profile" },
+  ];
+
+  const plans = [
+    { name: "Ubuntu", color: "bg-[#333] text-white", badge: "Entry" },
+    { name: "Imani", color: "bg-tatt-black text-white border border-white/20", badge: "Growth" },
+    { name: "Kiongozi", color: "bg-tatt-lime text-black", badge: "Elite" },
+  ];
+
   return (
     <div className="relative min-h-screen w-full bg-background text-foreground overflow-hidden">
-
       {/* ── Blurred full-page background preview ───────────────── */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-        {/* Fake header */}
         <div className="bg-surface px-4 sm:px-8 py-6 flex items-center justify-between border-b border-border blur-sm opacity-50">
           <div>
             <div className="h-8 w-40 rounded-lg bg-foreground/20 mb-2" />
@@ -86,7 +97,6 @@ function PremiumGate() {
             </div>
           ))}
         </div>
-        {/* Full overlay to dim everything */}
         <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
       </div>
 
@@ -113,34 +123,28 @@ function PremiumGate() {
 
               {/* Benefits */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-                {[
-                  { icon: Briefcase, title: "Curated Listings", desc: "Roles matched to think tank professionals" },
-                  { icon: Star, title: "Priority Applications", desc: "Apply directly through the TATT platform" },
-                  { icon: TrendingUp, title: "Talent Matchmaking", desc: "Get discovered by top employers in our network" },
-                  { icon: Users, title: "TATT Job Alerts", desc: "Get notified when roles match your profile" },
-                ].map(({ icon: Icon, title, desc }) => (
-                  <div key={title} className="flex items-start gap-3 p-4 rounded-2xl bg-background border border-border">
-                    <div className="size-8 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime shrink-0 mt-0.5">
-                      <Icon className="size-4" />
+                {benefits.map((benefit) => {
+                  const Icon = benefit.icon;
+                  return (
+                    <div key={benefit.title} className="flex items-start gap-3 p-4 rounded-2xl bg-background border border-border">
+                      <div className="size-8 rounded-xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime shrink-0 mt-0.5">
+                        <Icon className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{benefit.title}</p>
+                        <p className="text-xs text-tatt-gray mt-0.5">{benefit.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">{title}</p>
-                      <p className="text-xs text-tatt-gray mt-0.5">{desc}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Plans */}
               <div className="grid grid-cols-3 gap-3 mb-8">
-                {[
-                  { name: "Ubuntu", color: "bg-[#333] text-white", badge: "Entry" },
-                  { name: "Imani", color: "bg-tatt-black text-white border border-white/20", badge: "Growth" },
-                  { name: "Kiongozi", color: "bg-tatt-lime text-black", badge: "Elite" },
-                ].map(({ name, color, badge }) => (
-                  <div key={name} className="text-center">
-                    <div className={`rounded-xl py-3 px-2 text-center font-black text-sm mb-1 ${color}`}>{name}</div>
-                    <p className="text-[10px] text-tatt-gray font-medium">{badge}</p>
+                {plans.map((plan) => (
+                  <div key={plan.name} className="text-center">
+                    <div className={`rounded-xl py-3 px-2 text-center font-black text-sm mb-1 ${plan.color}`}>{plan.name}</div>
+                    <p className="text-[10px] text-tatt-gray font-medium">{plan.badge}</p>
                   </div>
                 ))}
               </div>
@@ -187,7 +191,6 @@ export default function JobsPage() {
 
   // Show gate for FREE tier or no tier 
   const userTier = user?.communityTier;
-  const isLoaded = !loading || user !== undefined;
 
   const fetchJobs = useCallback(async () => {
     if (!user?.id) return;

@@ -19,7 +19,11 @@ import {
     Hash,
     Filter,
     UserCog,
-    Layers
+    Layers,
+    FileText,
+    CheckCircle2,
+    History,
+    ShieldCheck,
 } from "lucide-react";
 import api from "@/services/api";
 import { toast, Toaster } from "react-hot-toast";
@@ -50,11 +54,18 @@ interface Industry {
 const Tiers = ["FREE", "UBUNTU", "IMANI", "KIONGOZI"];
 
 export default function PlatformManagement() {
-    const [activeTab, setActiveTab] = useState<'ANNOUNCEMENTS' | 'INTERESTS' | 'INDUSTRIES'>('ANNOUNCEMENTS');
+    const [activeTab, setActiveTab] = useState<'ANNOUNCEMENTS' | 'INTERESTS' | 'INDUSTRIES' | 'TERMS'>('ANNOUNCEMENTS');
     const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
     const [interests, setInterests] = useState<Interest[]>([]);
     const [industries, setIndustries] = useState<Industry[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Terms of Service
+    const [termsContent, setTermsContent] = useState("");
+    const [termsHistory, setTermsHistory] = useState<any[]>([]);
+    const [activeTerms, setActiveTerms] = useState<any | null>(null);
+    const [termsLoading, setTermsLoading] = useState(false);
+    const [termsSubmitting, setTermsSubmitting] = useState(false);
     
     // Broadcast Form States
     const [title, setTitle] = useState("");
@@ -75,6 +86,10 @@ export default function PlatformManagement() {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        if (activeTab === 'TERMS') fetchTermsData();
+    }, [activeTab]);
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -90,6 +105,39 @@ export default function PlatformManagement() {
             toast.error("Failed to load platform data");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchTermsData = async () => {
+        setTermsLoading(true);
+        try {
+            const [histRes, activeRes] = await Promise.all([
+                api.get("/terms/history"),
+                api.get("/terms/active"),
+            ]);
+            setTermsHistory(Array.isArray(histRes.data) ? histRes.data : []);
+            setActiveTerms(activeRes.data);
+            if (activeRes.data?.content) setTermsContent(activeRes.data.content);
+        } catch {
+            // No terms yet
+        } finally {
+            setTermsLoading(false);
+        }
+    };
+
+    const handlePublishTerms = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!termsContent.trim()) { toast.error("Content cannot be empty"); return; }
+        if (!confirm("Publish this as the new Terms of Service? All users will be notified.")) return;
+        setTermsSubmitting(true);
+        try {
+            await api.post("/terms/publish", { content: termsContent });
+            toast.success("Terms of Service published. Users have been notified.");
+            fetchTermsData();
+        } catch {
+            toast.error("Failed to publish Terms of Service");
+        } finally {
+            setTermsSubmitting(false);
         }
     };
 
@@ -172,37 +220,50 @@ export default function PlatformManagement() {
                     <p className="text-tatt-gray font-medium">Govern platform communications and taxonomies</p>
                 </div>
                 <div className="flex gap-4">
-                    <Link href="/admin/platform/roles" className="bg-surface border border-border hover:border-tatt-lime text-foreground flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm group">
-                        <UserCog size={16} className="text-tatt-lime group-hover:scale-110 transition-transform" />
-                        Role Matrix
-                    </Link>
+                    {/* Header actions can go here in the future */}
                 </div>
             </div>
 
             {/* Custom Tab Switcher */}
-            <div className="flex p-1 bg-surface border border-border rounded-2xl w-full max-w-2xl overflow-x-auto no-scrollbar">
+            <div className="flex p-1 bg-surface border border-border rounded-2xl w-full max-w-4xl overflow-x-auto no-scrollbar">
                 {[
                     { id: 'ANNOUNCEMENTS', icon: Megaphone, label: 'Announcements' },
                     { id: 'INTERESTS', icon: Hash, label: 'Interests' },
                     { id: 'INDUSTRIES', icon: Layers, label: 'Industries' },
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => {
-                            setActiveTab(tab.id as any);
-                            setNewValue("");
-                            setEditingItem(null);
-                        }}
-                        className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                            activeTab === tab.id 
-                            ? 'bg-background text-tatt-lime border border-border shadow-sm ring-1 ring-tatt-lime/10' 
-                            : 'text-tatt-gray hover:text-foreground'
-                        }`}
-                    >
-                        <tab.icon size={16} />
-                        {tab.label}
-                    </button>
-                ))}
+                    { id: 'TERMS', icon: FileText, label: 'Terms of Service' },
+                    { id: 'ROLE_ALLOCATION', icon: UserCog, label: 'Role Allocation', href: '/admin/platform/roles' },
+                ].map((tab) => {
+                    if (tab.href) {
+                        return (
+                            <Link
+                                key={tab.id}
+                                href={tab.href}
+                                className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-tatt-gray hover:text-foreground`}
+                            >
+                                <tab.icon size={16} />
+                                {tab.label}
+                            </Link>
+                        );
+                    }
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => {
+                                setActiveTab(tab.id as any);
+                                setNewValue("");
+                                setEditingItem(null);
+                            }}
+                            className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                activeTab === tab.id 
+                                ? 'bg-background text-tatt-lime border border-border shadow-sm ring-1 ring-tatt-lime/10' 
+                                : 'text-tatt-gray hover:text-foreground'
+                            }`}
+                        >
+                            <tab.icon size={16} />
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {activeTab === 'ANNOUNCEMENTS' && (
@@ -428,6 +489,109 @@ export default function PlatformManagement() {
                                             >
                                                 <Trash2 size={14} />
                                             </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'TERMS' && (
+                <div className="grid grid-cols-12 gap-8">
+                    {/* Editor */}
+                    <div className="col-span-12 xl:col-span-7">
+                        <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+                            <div className="p-8 border-b border-border bg-surface/50 flex items-center gap-4">
+                                <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime">
+                                    <ShieldCheck size={24} />
+                                </div>
+                                <div>
+                                    <h5 className="text-xl font-black uppercase italic tracking-tighter text-foreground">Terms of Service Editor</h5>
+                                    <p className="text-xs text-tatt-gray font-medium uppercase tracking-widest">
+                                        {activeTerms ? `Currently Active: Version ${activeTerms.version}` : 'No terms published yet'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {termsLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="animate-spin text-tatt-lime" size={32} />
+                                </div>
+                            ) : (
+                                <form onSubmit={handlePublishTerms} className="p-8 space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-2">Content</label>
+                                        <textarea
+                                            className="w-full bg-background border border-border rounded-2xl p-6 text-sm font-medium min-h-[400px] focus:ring-1 focus:ring-tatt-lime/20 outline-none transition-all resize-y font-mono"
+                                            placeholder="Enter the full Terms of Service content here. Supports plain text or markdown-style formatting..."
+                                            value={termsContent}
+                                            onChange={(e) => setTermsContent(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-tatt-lime/5 border border-tatt-lime/20 flex items-start gap-3">
+                                        <CheckCircle2 size={16} className="text-tatt-lime shrink-0 mt-0.5" />
+                                        <p className="text-xs text-tatt-gray leading-relaxed">
+                                            Publishing will <strong className="text-foreground">archive the current version</strong> and send an in-app notification and system broadcast to <strong className="text-foreground">all active members</strong>. This action is logged with your name and timestamp.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={termsSubmitting}
+                                        className="w-full bg-tatt-lime text-tatt-black h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-tatt-lime/20 transition-all disabled:opacity-60"
+                                    >
+                                        {termsSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                                        {termsSubmitting ? 'Publishing...' : 'Publish New Version'}
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Version History */}
+                    <div className="col-span-12 xl:col-span-5">
+                        <div className="bg-surface border border-border rounded-[2.5rem] shadow-xl shadow-black/5 overflow-hidden">
+                            <div className="p-8 border-b border-border bg-surface/50 flex items-center gap-4">
+                                <History size={22} className="text-tatt-lime" />
+                                <h5 className="text-xl font-black uppercase italic tracking-tighter">Version History</h5>
+                            </div>
+                            <div className="divide-y divide-border">
+                                {termsLoading ? (
+                                    <div className="flex items-center justify-center py-16">
+                                        <Loader2 className="animate-spin text-tatt-lime" size={28} />
+                                    </div>
+                                ) : termsHistory.length === 0 ? (
+                                    <div className="py-16 text-center">
+                                        <FileText size={40} className="mx-auto text-tatt-gray opacity-30 mb-3" />
+                                        <p className="text-xs font-bold text-tatt-gray uppercase tracking-widest">No versions published yet</p>
+                                    </div>
+                                ) : termsHistory.map((t) => (
+                                    <div key={t.id} className={`p-6 flex items-start gap-4 transition-colors hover:bg-background/30 ${t.isActive ? 'bg-tatt-lime/5' : ''}`}>
+                                        <div className={`size-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
+                                            t.isActive ? 'bg-tatt-lime text-tatt-black' : 'bg-surface border border-border text-tatt-gray'
+                                        }`}>
+                                            v{t.version}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-black text-foreground">Version {t.version}</span>
+                                                {t.isActive && (
+                                                    <span className="px-2 py-0.5 bg-tatt-lime/20 text-tatt-lime text-[9px] font-black uppercase tracking-widest rounded-full">Active</span>
+                                                )}
+                                            </div>
+                                            <p className="text-[11px] text-tatt-gray mt-1">
+                                                Published by{' '}
+                                                <span className="font-bold text-foreground">
+                                                    {t.updatedBy ? `${t.updatedBy.firstName} ${t.updatedBy.lastName}` : 'Admin'}
+                                                </span>
+                                            </p>
+                                            <p className="text-[10px] text-tatt-gray/70 mt-0.5">
+                                                {new Date(t.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}

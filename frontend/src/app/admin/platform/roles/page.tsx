@@ -80,9 +80,9 @@ export default function RoleManagementPage() {
                 </Link>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                     <div>
-                        <h1 className="text-3xl lg:text-4xl font-black tracking-tight italic uppercase">Role Management Matrix</h1>
+                        <h1 className="text-3xl lg:text-4xl font-black tracking-tight italic uppercase text-foreground">Role Management</h1>
                         <p className="text-tatt-gray mt-2 text-sm font-medium max-w-2xl">
-                            Configure and review system-level roles and internal organization hierarchy. This matrix dictates access levels across the entire TATT framework.
+                            Configure and review system-level roles and internal organization hierarchy. Access levels and page permissions are managed at the user level to allow for specific overrides.
                         </p>
                     </div>
                 </div>
@@ -109,14 +109,14 @@ export default function RoleManagementPage() {
                         </div>
 
                         <div className="xl:flex-1 relative z-10">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 border-b border-border/50 pb-2">Description & Scope</h4>
-                            <p className="text-sm font-medium text-foreground leading-relaxed">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 border-b border-border/50 pb-2 text-foreground">Description & Scope</h4>
+                            <p className="text-sm font-medium text-tatt-gray leading-relaxed group-hover:text-foreground transition-colors">
                                 {role.description}
                             </p>
                         </div>
 
                         <div className="xl:flex-1 relative z-10">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 border-b border-border/50 pb-2">Key Permissions Overview</h4>
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 border-b border-border/50 pb-2 text-foreground">Key Permissions Overview</h4>
                             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {role.permissions.map((perm, idx) => (
                                     <li key={idx} className="flex items-center gap-2 text-xs font-bold text-foreground">
@@ -129,12 +129,18 @@ export default function RoleManagementPage() {
 
                         {/* Actions */}
                         <div className="xl:w-48 shrink-0 flex flex-col gap-3 relative z-10 mt-4 xl:mt-0 pt-6 xl:pt-0 border-t xl:border-t-0 border-border">
-                            <button className="w-full bg-background border border-border hover:border-tatt-lime hover:text-tatt-lime rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
+                            <Link 
+                                href={`/admin/org-management?role=${role.id}`}
+                                className="w-full bg-background border border-border hover:border-tatt-lime hover:text-tatt-lime rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center"
+                            >
                                 View Linked Users
-                            </button>
-                            <button className="w-full bg-tatt-black text-white hover:bg-white hover:text-black rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">
-                                Edit Capabilities (Locked)
-                            </button>
+                            </Link>
+                            <Link 
+                                href={`/admin/org-management?role=${role.id}`}
+                                className="w-full bg-tatt-black text-white hover:bg-white hover:text-black border border-transparent hover:border-tatt-black rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center"
+                            >
+                                Edit Capabilities
+                            </Link>
                         </div>
 
                     </div>

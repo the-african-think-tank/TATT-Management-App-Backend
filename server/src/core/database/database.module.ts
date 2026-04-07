@@ -23,6 +23,8 @@ import { Resource } from '../../modules/resources/entities/resource.entity';
 import { ResourceInteraction } from '../../modules/resources/entities/resource-interaction.entity';
 import { Notification } from '../../modules/notifications/entities/notification.entity';
 import { CommunityIndustry } from '../../modules/industries/entities/industry.entity';
+import { SystemSetting } from '../../modules/system-settings/entities/system-setting.entity';
+import { PlatformTerms } from '../../modules/system-settings/entities/platform-terms.entity';
 
 import { MembershipPlan } from '../../modules/membership/entities/membership-plan.entity';
 import { Event } from '../../modules/events/entities/event.entity';
@@ -70,7 +72,7 @@ import { SupportMessage } from '../../modules/support/entities/support-message.e
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
                     Product, ProductVariant, Order, OrderItem, Partnership,
                     SupportMessage, SupportTicket, SupportFaq,
-                    CommunityIndustry,
+                    CommunityIndustry, SystemSetting, PlatformTerms,
                 ],
                 autoLoadModels: true,
                 // Default to true unless explicitly set to false, 'false', or '0'

@@ -85,7 +85,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIs
                         <div className="size-10 rounded-lg flex items-center justify-center shrink-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                                src="/assets/tattlogoIcon.svg"
+                                src="/assets/tatt-logo.webp"
                                 alt="TATT Logo"
                                 width={40}
                                 height={40}

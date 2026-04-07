@@ -13,4 +13,8 @@ import { SupportMessage } from './entities/support-message.entity';
     providers: [SupportService],
     exports: [SupportService]
 })
-export class SupportModule {}
+export class SupportModule {
+    onModuleInit() {
+        console.log('[SupportModule] Initialized - controllers registered.');
+    }
+}

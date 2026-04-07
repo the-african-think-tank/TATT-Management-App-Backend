@@ -72,6 +72,9 @@ import { IndustriesModule } from './modules/industries/industries.module';
     providers: [],
 })
 export class AppModule implements NestModule {
+    onModuleInit() {
+        console.log('[AppModule] Root Module Initialization Complete.');
+    }
     configure(consumer: MiddlewareConsumer) {
         // Top-level middleware bindings (e.g. correlational IDs, logging)
     }

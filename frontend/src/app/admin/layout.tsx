@@ -202,8 +202,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 `}>
                     <div className="p-6 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-lg bg-tatt-lime flex items-center justify-center p-1">
-                                <Image src="/assets/tattlogoIcon.svg" alt="TATT" width={32} height={32} className="invert brightness-0" />
+                            <div className="size-10 flex items-center justify-center p-1">
+                                <Image src="/assets/tatt-logo.webp" alt="TATT" width={32} height={32} className="object-contain" />
                             </div>
                             <div>
                                 <h1 className="text-lg font-bold leading-tight tracking-tight">TATT</h1>

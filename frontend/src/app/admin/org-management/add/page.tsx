@@ -29,7 +29,7 @@ import { toast } from "react-hot-toast";
 const roles = [
     { id: 'SUPERADMIN', name: 'Superadmin', desc: 'Full access to all platform features and organization settings.', icon: Shield },
     { id: 'ADMIN', name: 'Admin', desc: 'Can manage users and standard organizational content.', icon: Shield },
-    { id: 'REGIONAL_ADMIN', name: 'Regional Admin', desc: 'Access restricted to their assigned chapter or region.', icon: Globe },
+    { id: 'REGIONAL_ADMIN', name: 'Regional Director', desc: 'Access restricted to their assigned chapter or region.', icon: Globe },
     { id: 'MODERATOR', name: 'Moderator', desc: 'Focused on community interactions and forum management.', icon: MessageSquare },
     { id: 'CONTENT_ADMIN', name: 'Content-Admin', desc: 'Full control over knowledge base and public resources.', icon: BookOpen },
     { id: 'SALES', name: 'Sales', desc: 'Access to subscription data and billing records.', icon: BarChart3 },
@@ -229,7 +229,7 @@ export default function AddMemberPage() {
                                     <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
                                 ))}
                             </select>
-                            <p className="text-xs text-tatt-gray mt-2 italic font-medium">This defines the visibility scope for Regional Admins.</p>
+                            <p className="text-xs text-tatt-gray mt-2 italic font-medium">This defines the visibility scope for Regional Directors.</p>
                         </div>
                     </section>
                 )}

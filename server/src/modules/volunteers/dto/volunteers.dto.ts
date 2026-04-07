@@ -74,6 +74,14 @@ export class ApplyVolunteerDto {
     @ApiPropertyOptional({ example: 'How do I access training?' })
     @IsString() @IsOptional()
     questionsForAdmin?: string;
+
+    @ApiPropertyOptional({ example: '+233 24 000 0000' })
+    @IsString() @IsOptional()
+    phoneNumber?: string;
+
+    @ApiPropertyOptional({ example: '1995-12-31' })
+    @IsDateString() @IsOptional()
+    birthDate?: string;
 }
 
 export class UpdateApplicationStatusDto {
