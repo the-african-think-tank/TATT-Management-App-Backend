@@ -92,11 +92,11 @@ export default function SystemConfigurationPage() {
     setIsBulkSaving(true);
     try {
       const updates = filteredSettings.map(s => {
-        const is2FA = s.key.startsWith("REQUIRE_2FA");
+        const isBoolean = s.key.startsWith("REQUIRE_2FA") || ["MAIL_SECURE", "MAIL_REQUIRE_TLS", "MAIL_REJECT_UNAUTHORIZED"].includes(s.key);
         const el = document.getElementById(`input-${s.key}`) as HTMLInputElement | HTMLSelectElement;
         if (!el) return null;
         let val = "";
-        if (is2FA || ["MAIL_SECURE", "MAIL_REQUIRE_TLS", "MAIL_REJECT_UNAUTHORIZED"].includes(s.key)) {
+        if (isBoolean) {
           val = (el as HTMLInputElement).checked ? "true" : "false";
         } else {
           val = el.value;
@@ -324,7 +324,7 @@ export default function SystemConfigurationPage() {
                             )}
 
                             <div className="flex gap-1">
-                              {s.isSecret && !isRotation && !is2FA && (
+                              {s.isSecret && !isSelect && !isBoolean && (
                                 <button 
                                   onClick={() => toggleSecret(s.key)}
                                   className="size-10 rounded-xl bg-background border border-border flex items-center justify-center text-tatt-gray hover:text-tatt-black transition-colors"
