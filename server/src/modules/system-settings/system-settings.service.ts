@@ -122,7 +122,12 @@ export class SystemSettingsService {
                 host,
                 port,
                 secure: port === 465,
+                requireTLS: port === 587,
                 auth: { user, pass },
+                tls: {
+                    rejectUnauthorized: false,
+                    minVersion: 'TLSv1.2',
+                },
             } as any);
 
             await transporter.verify();
