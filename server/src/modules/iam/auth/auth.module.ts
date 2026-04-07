@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthService } from './auth.service';
@@ -21,7 +21,7 @@ import { UserSeederService } from './user-seeder.service';
                 return {
                     secret: process.env.JWT_SECRET,
                     signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1h') as any },
-                };
+                } as JwtModuleOptions;
             },
         }),
         SecurityModule, // Provides SecurityPolicyService + TwoFactorService
