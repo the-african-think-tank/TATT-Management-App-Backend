@@ -90,7 +90,17 @@ export default function CommunityFeedPage() {
             });
             toast.success("Admin post published successfully.");
             setAdminPostContent("");
-            setLiveFeed(prev => [res.data, ...prev]);
+            // Ensure the new post has author information for immediate UI consistency
+            const finalPost = {
+                ...res.data,
+                author: res.data.author || {
+                    firstName: user?.firstName || "TATT",
+                    lastName: user?.lastName || "Admin",
+                    profilePicture: user?.profilePicture || null,
+                    systemRole: user?.systemRole
+                }
+            };
+            setLiveFeed(prev => [finalPost, ...prev]);
         } catch (error) {
             toast.error("Failed to publish post.");
         } finally {
@@ -286,19 +296,19 @@ export default function CommunityFeedPage() {
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-background border border-border overflow-hidden">
-                                                {post.author.profilePicture ? (
+                                                {post.author?.profilePicture ? (
                                                     <img src={post.author.profilePicture} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center bg-tatt-lime text-tatt-black font-bold">
-                                                        {post.author.firstName[0]}
+                                                        {post.author?.firstName?.[0] || 'A'}
                                                     </div>
                                                 )}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-sm tracking-tight">{post.author.firstName} {post.author.lastName}</p>
+                                                <p className="font-bold text-sm tracking-tight">{post.author?.firstName || "Unknown"} {post.author?.lastName || "User"}</p>
                                                 <p className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex gap-2">
                                                     <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
-                                                    {post.author.chapterId && <span>• {post.author.chapter?.name || "Chapter Member"}</span>}
+                                                    {post.author?.chapterId && <span>• {post.author.chapter?.name || "Chapter Member"}</span>}
                                                 </p>
                                             </div>
                                         </div>
