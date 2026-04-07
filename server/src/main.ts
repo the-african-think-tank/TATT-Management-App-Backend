@@ -162,7 +162,7 @@ async function bootstrap() {
         console.log('[TATT-Management-App] Database synchronization skipped (DB_SYNC is not true).');
     }
 
-    const port = process.env.PORT || 5000;
+    const port = configService.get<number>('PORT') || 5000;
     await app.listen(port, '0.0.0.0');
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
     console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api-docs`);

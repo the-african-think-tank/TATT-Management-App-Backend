@@ -18,7 +18,8 @@ import {
     TrendingDown,
     AlertCircle,
     Trash2,
-    X
+    X,
+    Mail
 } from "lucide-react";
 import api from "@/services/api";
 import { toast } from "react-hot-toast";
@@ -89,6 +90,16 @@ function OrgManagementContent() {
         } catch (error: any) {
             console.error("Error deleting member:", error);
             toast.error(error.response?.data?.message || "Failed to delete team member");
+        }
+    };
+
+    const handleResendInvite = async (id: string, name: string) => {
+        try {
+            await api.post(`/auth/org-member/resend-invite/${id}`);
+            toast.success(`Invitation resent to ${name}`);
+        } catch (error: any) {
+            console.error("Error resending invite:", error);
+            toast.error(error.response?.data?.message || "Failed to resend invitation");
         }
     };
 
@@ -268,6 +279,15 @@ function OrgManagementContent() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-1">
+                                                {!member.isActive && (
+                                                    <button 
+                                                        onClick={() => handleResendInvite(member.id, `${member.firstName} ${member.lastName}`)}
+                                                        className="p-2 inline-block text-tatt-gray hover:text-blue-500 transition-colors"
+                                                        title="Resend Invitation"
+                                                    >
+                                                        <Mail size={16} />
+                                                    </button>
+                                                )}
                                                 <Link href={`/admin/org-management/edit/${member.id}`} className="p-2 inline-block text-tatt-gray hover:text-tatt-lime transition-colors">
                                                     <Edit2 size={16} />
                                                 </Link>

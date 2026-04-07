@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
+import { SystemSettingsService } from '../../modules/system-settings/system-settings.service';
 
 @Injectable()
 export class MailService {
@@ -10,15 +11,44 @@ export class MailService {
     constructor(
         private mailerService: MailerService,
         private configService: ConfigService,
+        private systemSettingsService: SystemSettingsService,
     ) {
         this.frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+    }
+
+    /**
+     * Helper to wrap mailerService.sendMail with dynamic transport settings from DB
+     */
+    private async sendTransactionalMail(options: any) {
+        const host = await this.systemSettingsService.getRawValue('MAIL_HOST');
+        const port = parseInt(await this.systemSettingsService.getRawValue('MAIL_PORT') || '587', 10);
+        const user = await this.systemSettingsService.getRawValue('MAIL_USER');
+        const pass = await this.systemSettingsService.getRawValue('MAIL_PASS');
+        const fromSetting = await this.systemSettingsService.getRawValue('MAIL_FROM') || 'no-reply@tatt.org';
+
+        const dynamicTransport = {
+            host,
+            port,
+            secure: port === 465,
+            auth: { user, pass },
+        };
+
+        return this.mailerService.sendMail({
+            ...options,
+            transport: dynamicTransport,
+            from: options.from || fromSetting,
+            envelope: {
+                from: user, // Mail from authenticated user
+                to: Array.isArray(options.to) ? options.to : [options.to],
+            },
+        });
     }
 
     async sendAdminInvite(email: string, firstName: string, token: string) {
         const inviteLink = `${this.frontendUrl}/auth/complete-registration?token=${token}`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: 'Welcome to The African Think Tank',
                 // For a robust system, we would inject Handlebars compiled templates,
@@ -43,7 +73,7 @@ export class MailService {
         const resetLink = `${this.frontendUrl}/reset-password?token=${token}`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: 'TATT Password Reset Request',
                 html: `
@@ -64,7 +94,7 @@ export class MailService {
 
     async sendSubscriptionDowngradeNotice(email: string, firstName: string, reason: string) {
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: 'Your TATT Membership Has Been Updated',
                 html: `
@@ -87,7 +117,7 @@ export class MailService {
         const renewLink = `${this.frontendUrl}/member/subscription`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: 'Your TATT Membership is Expiring Soon',
                 html: `
@@ -114,7 +144,7 @@ export class MailService {
         const profileLink = `${this.frontendUrl}/member/network/requests`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: recipientEmail,
                 subject: `${senderFullName} wants to connect with you on TATT`,
                 html: `
@@ -144,7 +174,7 @@ export class MailService {
 
     async sendTwoFactorOtp(email: string, firstName: string, otp: string) {
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: 'Your TATT Sign-In Verification Code',
                 html: `
@@ -173,7 +203,7 @@ export class MailService {
         const changeLink = `${this.frontendUrl}/auth/password/change`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: `Action Required: Your TATT password expires in ${timeframe}`,
                 html: `
@@ -203,7 +233,7 @@ export class MailService {
         const eventLink = `${this.frontendUrl}/events/${eventId}`;
 
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: `New ${eventType} Announced: ${eventTitle}`,
                 html: `
@@ -231,7 +261,7 @@ export class MailService {
 
     async sendNotificationEmail(email: string, firstName: string, title: string, message: string, actionLink?: string, actionLabel?: string) {
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: `TATT: ${title}`,
                 html: `
@@ -259,7 +289,7 @@ export class MailService {
 
     async sendDailyDigest(email: string, firstName: string, platformPosts: number, chapterPosts: number, chapterName?: string) {
         try {
-            await this.mailerService.sendMail({
+            await this.sendTransactionalMail({
                 to: email,
                 subject: `Daily Community Update — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
                 html: `

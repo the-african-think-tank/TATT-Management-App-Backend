@@ -269,6 +269,25 @@ export class AuthService {
         return { message: 'Org member added successfully. Invitation email dispatched.' };
     }
 
+    async resendOrgInvite(userId: string, currentAdmin: User) {
+        if (currentAdmin.systemRole !== SystemRole.SUPERADMIN && currentAdmin.systemRole !== SystemRole.ADMIN) {
+            throw new UnauthorizedException('Insufficient permissions to resend invitations');
+        }
+
+        const user = await this.userRepository.findByPk(userId);
+        if (!user) throw new BadRequestException('User not found');
+        if (user.isActive) throw new BadRequestException('User has already activated their account');
+
+        const inviteToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = await bcrypt.hash(inviteToken, 10);
+
+        user.inviteToken = tokenHash;
+        await user.save();
+
+        await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+        return { message: 'Invitation email resent successfully.' };
+    }
+
     // ─── COMPLETE ORG MEMBER REGISTRATION ────────────────────────────────────
     async completeOrgMemberRegistration(dto: CompleteOrgMemberDto) {
         const users = await this.userRepository.findAll({ where: { isActive: false } });

@@ -40,7 +40,10 @@ export class SystemSettingsSeeder implements OnModuleInit {
         ];
 
         for (const s of initialSettings) {
-            await this.settingsService.update(s.key, s.value, s.category, s.description, s.isSecret || false);
+            const existing = await this.settingsService.findByKey(s.key);
+            if (!existing) {
+                await this.settingsService.update(s.key, s.value, s.category, s.description, s.isSecret || false);
+            }
         }
 
         this.logger.log('System configuration sync complete.');
