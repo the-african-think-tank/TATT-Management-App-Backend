@@ -1,6 +1,6 @@
 import {
     Controller, Get, Post, Body, HttpCode, HttpStatus,
-    Request, UseGuards, Ip,
+    Request, UseGuards, Ip, Param,
 } from '@nestjs/common';
 import {
     ApiTags, ApiOperation, ApiBearerAuth, ApiBody,
@@ -217,6 +217,19 @@ export class AuthController {
     @HttpCode(HttpStatus.CREATED)
     async addOrgMember(@Body() addMemberDto: AddOrgMemberDto, @Request() req) {
         return this.authService.addOrgMember(addMemberDto, req.user);
+    }
+
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Resend invitation to an org member' })
+    @ApiResponse({ status: 200, description: 'Invitation email resent successfully.', type: GenericAuthMessageResponseSchema })
+    @ApiResponse({ status: 403, description: 'Insufficient role.' })
+    @ApiResponse({ status: 404, description: 'User not found.' })
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Post('org-member/resend-invite/:id')
+    @HttpCode(HttpStatus.OK)
+    async resendInvite(@Param('id') id: string, @Request() req) {
+        return this.authService.resendOrgInvite(id, req.user);
     }
 
     @ApiOperation({ summary: 'Complete organisational member registration via invite link' })

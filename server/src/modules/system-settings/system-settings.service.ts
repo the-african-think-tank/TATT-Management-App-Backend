@@ -118,12 +118,16 @@ export class SystemSettingsService {
                 port,
                 secure: port === 465,
                 auth: { user, pass },
-            });
+            } as any);
 
             await transporter.verify();
 
             await transporter.sendMail({
                 from,
+                envelope: {
+                    from: user, // Use the authenticated user for the envelope
+                    to: [testEmail],
+                },
                 to: testEmail,
                 subject: 'TATT SMTP Configuration Test',
                 text: 'This is a test email from your TATT platform configuration page. If you are reading this, your SMTP settings are correct.',
