@@ -118,14 +118,20 @@ export class SystemSettingsService {
             const pass = await this.getRawValue('MAIL_PASS');
             const from = await this.getRawValue('MAIL_FROM') || 'no-reply@tatt.org';
 
+            const mailSecure = (await this.getRawValue('MAIL_SECURE')) === 'true';
+            const mailRequireTLS = (await this.getRawValue('MAIL_REQUIRE_TLS')) === 'true';
+            const mailRejectUnauthorized = (await this.getRawValue('MAIL_REJECT_UNAUTHORIZED')) === 'true';
+            const mailTLSMinVersion = (await this.getRawValue('MAIL_TLS_MIN_VERSION')) || 'TLSv1.2';
+
             const transporter = nodemailer.createTransport({
                 host,
                 port,
-                secure: port === 465,
+                secure: mailSecure,
+                requireTLS: mailRequireTLS,
                 auth: { user, pass },
                 tls: {
-                    rejectUnauthorized: false,
-                    minVersion: 'TLSv1.2',
+                    rejectUnauthorized: mailRejectUnauthorized,
+                    minVersion: mailTLSMinVersion,
                 },
             } as any);
 

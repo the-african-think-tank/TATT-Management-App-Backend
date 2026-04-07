@@ -28,14 +28,20 @@ export class MailService {
 
         this.logger.debug(`SMTP Dispatch Config: host=${host}, port=${port}, user=${user}, from=${fromSetting}`);
 
+        const mailSecure = (await this.systemSettingsService.getRawValue('MAIL_SECURE')) === 'true';
+        const mailRequireTLS = (await this.systemSettingsService.getRawValue('MAIL_REQUIRE_TLS')) === 'true';
+        const mailRejectUnauthorized = (await this.systemSettingsService.getRawValue('MAIL_REJECT_UNAUTHORIZED')) === 'true';
+        const mailTLSMinVersion = (await this.systemSettingsService.getRawValue('MAIL_TLS_MIN_VERSION')) || 'TLSv1.2';
+
         const dynamicTransport = {
             host: host || 'localhost',
             port,
-            secure: port === 465,
+            secure: mailSecure,
+            requireTLS: mailRequireTLS,
             auth: { user, pass },
             tls: {
-                rejectUnauthorized: false,
-                minVersion: 'TLSv1.2',
+                rejectUnauthorized: mailRejectUnauthorized,
+                minVersion: mailTLSMinVersion,
             },
         };
 

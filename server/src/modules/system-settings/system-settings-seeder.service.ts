@@ -30,6 +30,10 @@ export class SystemSettingsSeeder implements OnModuleInit {
             { key: 'MAIL_USER', value: process.env.MAIL_USER || '', category: 'SMTP', description: 'System email account username.' },
             { key: 'MAIL_PASS', value: process.env.MAIL_PASS || '', category: 'SMTP', isSecret: true, description: 'SMTP password.' },
             { key: 'MAIL_FROM', value: process.env.MAIL_FROM || 'no-reply@tatt.org', category: 'SMTP', description: 'Sender address for transactional emails.' },
+            { key: 'MAIL_SECURE', value: process.env.MAIL_SECURE || 'false', category: 'SMTP', description: 'Whether to use implicit SSL/TLS (true for port 465, false for 587).' },
+            { key: 'MAIL_REQUIRE_TLS', value: 'false', category: 'SMTP', description: 'Whether to reject connections without STARTTLS support.' },
+            { key: 'MAIL_REJECT_UNAUTHORIZED', value: 'false', category: 'SMTP', description: 'Whether to reject self-signed certificates.' },
+            { key: 'MAIL_TLS_MIN_VERSION', value: 'TLSv1.2', category: 'SMTP', description: 'Minimum TLS version for SMTP handshake.' },
 
             // PAYMENT
             { key: 'STRIPE_PUBLIC_KEY', value: process.env.STRIPE_PUBLIC_KEY || '', category: 'PAYMENT', description: 'Stripe JS publishable key.' },
