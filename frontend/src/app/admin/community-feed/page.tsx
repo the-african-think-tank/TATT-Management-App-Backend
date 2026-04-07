@@ -67,6 +67,13 @@ export default function CommunityFeedPage() {
 
     useEffect(() => {
         fetchData();
+        
+        // Auto-refresh every 30 seconds
+        const interval = setInterval(() => {
+            fetchData();
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, []);
 
     const handleRefresh = async () => {
@@ -267,11 +274,16 @@ export default function CommunityFeedPage() {
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold tracking-tight">Recent Community Activity</h2>
                         <div className="hidden sm:flex gap-4">
-                            <span className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span> Live
-                            </span>
-                            <span className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-tatt-lime"></span> {liveFeed.length} Posts Loaded
+                            <button 
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className={`text-[10px] tracking-[0.15em] uppercase font-bold flex items-center gap-2 px-3 py-1 bg-surface border border-border rounded-lg hover:text-tatt-lime hover:border-tatt-lime transition-all ${refreshing ? "opacity-50" : ""}`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${refreshing ? "bg-orange-500 animate-pulse" : "bg-green-500"}`}></span> 
+                                {refreshing ? "Syncing..." : "Live Feed"}
+                            </button>
+                            <span className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex items-center gap-2 bg-surface border border-border px-3 py-1 rounded-lg">
+                                <RefreshCcw className={`size-3 text-tatt-lime ${refreshing ? "animate-spin" : ""}`} /> {liveFeed.length} Posts
                             </span>
                         </div>
                     </div>
