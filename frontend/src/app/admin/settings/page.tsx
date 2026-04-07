@@ -96,7 +96,7 @@ export default function SystemConfigurationPage() {
         const el = document.getElementById(`input-${s.key}`) as HTMLInputElement | HTMLSelectElement;
         if (!el) return null;
         let val = "";
-        if (is2FA) {
+        if (is2FA || ["MAIL_SECURE", "MAIL_REQUIRE_TLS", "MAIL_REJECT_UNAUTHORIZED"].includes(s.key)) {
           val = (el as HTMLInputElement).checked ? "true" : "false";
         } else {
           val = el.value;
@@ -255,8 +255,8 @@ export default function SystemConfigurationPage() {
               
               <div className="divide-y divide-border/30">
                 {filteredSettings.map((s) => {
-                  const isRotation = s.key === "PWD_ROTATION_POLICY";
-                  const is2FA = s.key.startsWith("REQUIRE_2FA");
+                  const isSelect = s.key === "PWD_ROTATION_POLICY" || s.key === "MAIL_TLS_MIN_VERSION";
+                  const isBoolean = s.key.startsWith("REQUIRE_2FA") || ["MAIL_SECURE", "MAIL_REQUIRE_TLS", "MAIL_REJECT_UNAUTHORIZED"].includes(s.key);
                   const isNumber = ["PWD_MIN_LENGTH", "PWD_PREVENT_REUSE_COUNT", "THROTTLE_LIMIT"].includes(s.key);
 
                   return (
@@ -277,18 +277,29 @@ export default function SystemConfigurationPage() {
                             <Lock className="size-2.5" /> Parameter Value
                           </label>
                           <div className="relative group/input flex gap-2">
-                            {isRotation ? (
+                            {isSelect ? (
                               <select 
                                 id={`input-${s.key}`}
                                 defaultValue={s.value}
                                 className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-xs font-bold focus:ring-1 focus:ring-tatt-lime outline-none appearance-none cursor-pointer"
                               >
-                                <option value="NEVER">NEVER</option>
-                                <option value="MONTHLY">MONTHLY</option>
-                                <option value="QUARTERLY">QUARTERLY</option>
-                                <option value="YEARLY">YEARLY</option>
+                                {s.key === "PWD_ROTATION_POLICY" ? (
+                                  <>
+                                    <option value="NEVER">NEVER</option>
+                                    <option value="MONTHLY">MONTHLY</option>
+                                    <option value="QUARTERLY">QUARTERLY</option>
+                                    <option value="YEARLY">YEARLY</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="TLSv1">TLSv1</option>
+                                    <option value="TLSv1.1">TLSv1.1</option>
+                                    <option value="TLSv1.2">TLSv1.2</option>
+                                    <option value="TLSv1.3">TLSv1.3</option>
+                                  </>
+                                )}
                               </select>
-                            ) : is2FA ? (
+                            ) : isBoolean ? (
                               <div className="flex-1 flex items-center">
                                 <label className="relative inline-flex items-center cursor-pointer">
                                   <input 
@@ -325,7 +336,7 @@ export default function SystemConfigurationPage() {
                                 onClick={() => {
                                   let val = "";
                                   const el = document.getElementById(`input-${s.key}`) as HTMLInputElement | HTMLSelectElement;
-                                  if (is2FA) {
+                                  if (isBoolean) {
                                     val = (el as HTMLInputElement).checked ? "true" : "false";
                                   } else {
                                     val = el.value;
