@@ -281,7 +281,10 @@ export class TwoFactorService {
     // ════════════════════════════════════════════════════════════════════════════
 
     private getEncryptionKey(): Buffer {
-        const secret = process.env.APP_SECRET || 'change_me_in_production_min32chars!!';
+        const secret = process.env.APP_SECRET;
+        if (!secret) {
+            throw new Error('APP_SECRET environment variable is not defined for TOTP encryption.');
+        }
         return crypto.createHash('sha256').update(secret).digest();
     }
 

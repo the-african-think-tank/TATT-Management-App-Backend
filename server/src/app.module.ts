@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './core/database/database.module';
@@ -19,7 +20,7 @@ import { JobsModule } from './modules/jobs/jobs.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { MembershipModule } from './modules/membership/membership.module';
 import { MailModule } from './common/mail/mail.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { StoreModule } from './modules/store/store.module';
 import { PartnershipsModule } from './modules/partnerships/partnerships.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -69,7 +70,12 @@ import { IndustriesModule } from './modules/industries/industries.module';
         IndustriesModule,   // Platform Taxonomy: Industries
     ],
     controllers: [],
-    providers: [],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+        },
+    ],
 })
 export class AppModule implements NestModule {
     onModuleInit() {

@@ -12,6 +12,9 @@ import { UseGuards, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MessagesService } from './messages.service';
 import { MessageStatus } from './entities/direct-message.entity';
+import { InjectModel } from '@nestjs/sequelize';
+import { User } from '../iam/entities/user.entity';
+import { Op } from 'sequelize';
 
 // Use same CORS origins as REST (main.ts) so WebSocket upgrade is not blocked
 @WebSocketGateway({
@@ -43,6 +46,7 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     constructor(
         private readonly messagesService: MessagesService,
         private readonly jwtService: JwtService,
+        @InjectModel(User) private readonly userRepo: typeof User,
     ) { }
 
     /**
@@ -64,6 +68,14 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
 
             if (!userId) {
                 this.logger.error(`Token verified but no sub/userId found in payload: ${JSON.stringify(payload)}`);
+                client.disconnect();
+                return;
+            }
+
+            // Verify account status (Item #3 from assessment)
+            const user = await this.userRepo.findByPk(userId);
+            if (!user || !user.isActive || (user.jailUntil && user.jailUntil > new Date())) {
+                this.logger.warn(`Connection rejected: User ${userId} is inactive or suspended.`);
                 client.disconnect();
                 return;
             }

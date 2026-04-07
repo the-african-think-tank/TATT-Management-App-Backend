@@ -14,10 +14,14 @@ import { MessagesGateway } from './messages.gateway';
         SequelizeModule.forFeature([DirectMessage, Connection, User]),
         JwtModule.registerAsync({
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
-                signOptions: { expiresIn: '7d' },
-            }),
+            useFactory: (configService: ConfigService) => {
+                const secret = configService.get<string>('JWT_SECRET');
+                if (!secret) throw new Error('JWT_SECRET is not defined for MessagesModule');
+                return {
+                    secret,
+                    signOptions: { expiresIn: '7d' },
+                };
+            },
         }),
     ],
     controllers: [MessagesController],

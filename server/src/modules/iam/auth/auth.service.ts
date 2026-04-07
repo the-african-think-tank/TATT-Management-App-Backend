@@ -6,6 +6,7 @@ import {
     ForbiddenException,
     Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -34,6 +35,7 @@ export class AuthService {
         private securityPolicyService: SecurityPolicyService,
         private twoFactorService: TwoFactorService,
         private settingsService: SystemSettingsService,
+        private configService: ConfigService,
     ) { }
 
     private async getStripe() {
@@ -180,6 +182,13 @@ export class AuthService {
      * Use this once to create an account you can use to sign in and then add other org members.
      */
     async bootstrapFirstAdmin(dto: BootstrapAdminDto) {
+        // Secure bootstrap with optional env secret (Item #4)
+        const bootstrapSecret = this.configService.get<string>('BOOTSTRAP_SECRET');
+        if (bootstrapSecret && dto.bootstrapSecret !== bootstrapSecret) {
+            this.logger.warn(`Unauthorized bootstrap attempt: Secret mismatch.`);
+            throw new ForbiddenException('Invalid bootstrap secret.');
+        }
+
         const existingAdmin = await this.userRepository.findOne({
             where: { systemRole: { [Op.in]: [SystemRole.ADMIN, SystemRole.SUPERADMIN] } },
         });

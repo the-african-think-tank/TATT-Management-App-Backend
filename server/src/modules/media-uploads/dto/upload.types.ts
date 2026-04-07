@@ -7,7 +7,7 @@ export type MediaCategory = 'image' | 'video' | 'audio' | 'document';
 export const ALLOWED_MIME_TYPES: Record<MediaCategory, string[]> = {
     image: [
         'image/jpeg', 'image/png', 'image/gif',
-        'image/webp', 'image/svg+xml', 'image/bmp', 'image/tiff',
+        'image/webp', 'image/bmp', 'image/tiff',
     ],
     video: [
         'video/mp4', 'video/quicktime', 'video/x-msvideo',
