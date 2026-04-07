@@ -9,10 +9,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
         @InjectModel(User) private userRepository: typeof User,
     ) {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) throw new Error('JWT_SECRET is not defined for JwtStrategy');
+
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
+            secretOrKey: secret,
         });
     }
 

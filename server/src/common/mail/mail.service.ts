@@ -31,11 +31,9 @@ export class MailService {
         const dynamicTransport = {
             host: host || 'localhost',
             port,
-            secure: port === 465, // Use SSL/TLS for 465
-            requireTLS: port === 587, // Force STARTTLS for 587
+            secure: port === 465,
             auth: { user, pass },
             tls: {
-                // Do not fail on invalid certs (common issue with some mail servers)
                 rejectUnauthorized: false,
                 minVersion: 'TLSv1.2',
             },

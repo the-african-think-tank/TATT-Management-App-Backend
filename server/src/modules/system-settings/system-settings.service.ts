@@ -122,7 +122,6 @@ export class SystemSettingsService {
                 host,
                 port,
                 secure: port === 465,
-                requireTLS: port === 587,
                 auth: { user, pass },
                 tls: {
                     rejectUnauthorized: false,
