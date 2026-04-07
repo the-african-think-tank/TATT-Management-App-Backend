@@ -90,11 +90,12 @@ export default function CommunityFeedPage() {
             });
             toast.success("Admin post published successfully.");
             setAdminPostContent("");
-            // Ensure the new post has author information and timestamp for immediate UI consistency
+            // Ensure the new post has author information, unique ID, and timestamp for immediate UI consistency
             const finalPost = {
                 ...res.data,
-                createdAt: res.data.createdAt || new Date().toISOString(),
-                author: res.data.author || {
+                id: res.data?.id || `admin-post-${Date.now()}`,
+                createdAt: res.data?.createdAt || new Date().toISOString(),
+                author: res.data?.author || {
                     firstName: user?.firstName || "TATT",
                     lastName: user?.lastName || "Admin",
                     profilePicture: user?.profilePicture || null,
