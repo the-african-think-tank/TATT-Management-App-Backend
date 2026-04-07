@@ -274,57 +274,56 @@ export class AuthService {
             isApproved: true,
         });
 
+        // Email dispatch is non-fatal for member creation
         try {
             await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
         } catch (mailError: any) {
-            this.logger.error(`Failed to send initial invite to ${user.email} (non-fatal): ${mailError.message}`);
+            this.logger.error(`Failed to send initial invite to ${user.email} (non-fatal): ${mailError.message}`, mailError.stack);
             return { 
                 message: 'Org member added successfully, but invitation email failed to send. You can resend it from the management dashboard once email settings are verified.',
                 warning: 'EMAIL_DISPATCH_FAILED'
             };
         }
+
         return { message: 'Org member added successfully. Invitation email dispatched.' };
     }
 
     async resendOrgInvite(userId: string, currentAdmin: User) {
         this.logger.log(`Resending invite attempt for user ID: ${userId} by admin: ${currentAdmin.email}`);
+        
+        if (currentAdmin.systemRole !== SystemRole.SUPERADMIN && currentAdmin.systemRole !== SystemRole.ADMIN) {
+            this.logger.warn(`Insufficient permissions for ${currentAdmin.email} to resend invitation`);
+            throw new UnauthorizedException('Insufficient permissions to resend invitations');
+        }
+
+        const user = await this.userRepository.findByPk(userId);
+        if (!user) {
+            this.logger.warn(`Resend invite failed: User not found for ID ${userId}`);
+            throw new BadRequestException('User not found');
+        }
+
+        if (user.isActive) {
+            this.logger.warn(`Resend invite failed: User ${user.email} is already active`);
+            throw new BadRequestException('User has already activated their account');
+        }
+
+        const inviteToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = await bcrypt.hash(inviteToken, 10);
+
+        user.inviteToken = tokenHash;
+        await user.save();
+
+        // Email dispatch is non-fatal for invitation resending
         try {
-            if (currentAdmin.systemRole !== SystemRole.SUPERADMIN && currentAdmin.systemRole !== SystemRole.ADMIN) {
-                this.logger.warn(`Insufficient permissions for ${currentAdmin.email} to resend invitation`);
-                throw new UnauthorizedException('Insufficient permissions to resend invitations');
-            }
-
-            const user = await this.userRepository.findByPk(userId);
-            if (!user) {
-                this.logger.warn(`Resend invite failed: User not found for ID ${userId}`);
-                throw new BadRequestException('User not found');
-            }
-
-            if (user.isActive) {
-                this.logger.warn(`Resend invite failed: User ${user.email} is already active`);
-                throw new BadRequestException('User has already activated their account');
-            }
-
-            const inviteToken = crypto.randomBytes(32).toString('hex');
-            const tokenHash = await bcrypt.hash(inviteToken, 10);
-
-            user.inviteToken = tokenHash;
-            await user.save();
-
-            try {
-                await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
-                this.logger.log(`Invitation email successfully resent to ${user.email}`);
-                return { message: 'Invitation email resent successfully.' };
-            } catch (mailError: any) {
-                this.logger.error(`Failed to resend invite to ${user.email} (non-fatal): ${mailError.message}`);
-                return { 
-                    message: 'Member updated with new token, but invitation email failed to send again. Please check your SMTP configuration.',
-                    warning: 'EMAIL_DISPATCH_FAILED'
-                };
-            }
-        } catch (error) {
-            this.logger.error(`Resend invitation error for user ${userId}: ${error.message}`, error.stack);
-            throw error;
+            await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+            this.logger.log(`Invitation email successfully resent to ${user.email}`);
+            return { message: 'Invitation email resent successfully.' };
+        } catch (mailError: any) {
+            this.logger.error(`Failed to resend invite to ${user.email} (non-fatal): ${mailError.message}`, mailError.stack);
+            return { 
+                message: 'Member updated with new token, but invitation email failed to send again. Please check your SMTP configuration.',
+                warning: 'EMAIL_DISPATCH_FAILED'
+            };
         }
     }
 
