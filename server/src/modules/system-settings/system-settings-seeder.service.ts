@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { SystemSettingsService } from './system-settings.service';
 import { SystemSetting } from './entities/system-setting.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SystemSettingsSeeder implements OnModuleInit {
@@ -8,9 +9,14 @@ export class SystemSettingsSeeder implements OnModuleInit {
 
     constructor(
         private settingsService: SystemSettingsService,
+        private configService: ConfigService,
     ) {}
 
     async onModuleInit() {
+        if (this.configService.get('NODE_ENV') === 'production') {
+            this.logger.log('Production environment detected. Skipping System Settings synchronization.');
+            return;
+        }
         this.logger.log('Synchronizing system configurations...');
 
         const initialSettings = [

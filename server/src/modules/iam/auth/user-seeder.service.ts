@@ -16,6 +16,10 @@ export class UserSeederService implements OnApplicationBootstrap {
     ) { }
 
     async onApplicationBootstrap() {
+        if (this.configService.get('NODE_ENV') === 'production') {
+            this.logger.log('Production environment detected. Skipping User Seeding.');
+            return;
+        }
         this.logger.log('Starting User Seeding process...');
         await this.seedDefaultAdmin();
         await this.seedDefaultTestUser();

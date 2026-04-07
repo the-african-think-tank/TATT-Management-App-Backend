@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { MembershipTier } from './entities/membership-tier.entity';
@@ -29,6 +30,7 @@ export class MembershipService implements OnApplicationBootstrap {
         private notificationsService: NotificationsService,
         private broadcastsService: BroadcastsService,
         private settingsService: SystemSettingsService,
+        private configService: ConfigService,
     ) { }
 
     private async getStripe() {
@@ -36,6 +38,10 @@ export class MembershipService implements OnApplicationBootstrap {
     }
 
     async onApplicationBootstrap() {
+        if (this.configService.get('NODE_ENV') === 'production') {
+            this.logger.log('Production environment detected. Skipping Membership Plan seeding.');
+            return;
+        }
         this.logger.log('Checking Membership Plans for seeding...');
         const planCount = await this.planRepo.count();
         if (planCount === 0) {
