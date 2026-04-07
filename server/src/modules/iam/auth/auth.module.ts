@@ -14,10 +14,15 @@ import { UserSeederService } from './user-seeder.service';
         SequelizeModule.forFeature([User]),
         PassportModule.register({ defaultStrategy: 'jwt', session: false }),
         JwtModule.registerAsync({
-            useFactory: () => ({
-                secret: process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
-                signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1h') as any },
-            }),
+            useFactory: () => {
+                if (!process.env.JWT_SECRET) {
+                    throw new Error('JWT_SECRET environment variable is not defined.');
+                }
+                return {
+                    secret: process.env.JWT_SECRET,
+                    signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1h') as any },
+                };
+            },
         }),
         SecurityModule, // Provides SecurityPolicyService + TwoFactorService
     ],

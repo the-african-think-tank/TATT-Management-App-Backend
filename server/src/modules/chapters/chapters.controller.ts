@@ -1,6 +1,6 @@
 import {
     Controller, Post, Get, Patch, Delete, Param, Body, Query,
-    UseGuards, Request, HttpCode, HttpStatus, ParseIntPipe, DefaultValuePipe,
+    UseGuards, Request, HttpCode, HttpStatus, ParseIntPipe, DefaultValuePipe, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiExtraModels, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
@@ -16,6 +16,7 @@ import { SystemRole } from '../iam/enums/roles.enum';
 @ApiExtraModels(ChapterSchema)
 @Controller('chapters')
 export class ChaptersController {
+    private readonly logger = new Logger(ChaptersController.name);
     constructor(private readonly chaptersService: ChaptersService) { }
 
     @ApiBearerAuth()
@@ -54,13 +55,13 @@ export class ChaptersController {
     @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN, SystemRole.REGIONAL_ADMIN)
     @Get(':id/volunteers')
     async getVolunteers(@Param('id') id: string) {
-        console.log(`[ChaptersController] Fetching volunteers for chapter: ${id}`);
+        this.logger.log(`Fetching volunteers for chapter: ${id}`);
         try {
             const result = await this.chaptersService.getChapterVolunteers(id);
-            console.log(`[ChaptersController] Successfully fetched volunteers for ${id}`);
+            this.logger.log(`Successfully fetched volunteers for ${id}`);
             return result;
         } catch (error) {
-            console.error(`[ChaptersController] Error fetching volunteers for ${id}:`, error);
+            this.logger.error(`Error fetching volunteers for ${id}:`, error);
             throw error;
         }
     }

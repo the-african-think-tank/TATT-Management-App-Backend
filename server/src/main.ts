@@ -127,8 +127,10 @@ async function bootstrap() {
         .addTag('Billing & Subscriptions', 'Subscription management, Stripe webhooks, and revenue metrics')
         .build();
 
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    if (process.env.NODE_ENV !== 'production') {
+    const isProduction = configService.get<string>('NODE_ENV') === 'production';
+
+    if (!isProduction) {
+        const document = SwaggerModule.createDocument(app, swaggerConfig);
         SwaggerModule.setup('api-docs', app, document, {
             customSiteTitle: 'TATT API Docs',
             swaggerOptions: {
@@ -140,6 +142,7 @@ async function bootstrap() {
                 syntaxHighlight: { activate: true, theme: 'monokai' },
             },
         });
+        console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${configService.get<number>('PORT') || 5000}/api-docs`);
     }
 
     // ── Database Synchronization ──────────────────────────────────────────────
@@ -165,7 +168,6 @@ async function bootstrap() {
     const port = configService.get<number>('PORT') || 5000;
     await app.listen(port, '0.0.0.0');
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
-    console.log(`[TATT-Management-App] Swagger UI  → http://localhost:${port}/api-docs`);
     console.log(`[TATT-Management-App] Upload dir  → ${uploadDir}`);
 }
 

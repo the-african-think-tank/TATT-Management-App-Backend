@@ -26,8 +26,10 @@ export class MailService {
         const pass = await this.systemSettingsService.getRawValue('MAIL_PASS');
         const fromSetting = await this.systemSettingsService.getRawValue('MAIL_FROM') || 'no-reply@tatt.org';
 
+        this.logger.debug(`SMTP Dispatch Config: host=${host}, port=${port}, user=${user}, from=${fromSetting}`);
+
         const dynamicTransport = {
-            host,
+            host: host || 'localhost',
             port,
             secure: port === 465,
             auth: { user, pass },
