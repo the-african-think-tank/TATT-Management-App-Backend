@@ -270,22 +270,37 @@ export class AuthService {
     }
 
     async resendOrgInvite(userId: string, currentAdmin: User) {
-        if (currentAdmin.systemRole !== SystemRole.SUPERADMIN && currentAdmin.systemRole !== SystemRole.ADMIN) {
-            throw new UnauthorizedException('Insufficient permissions to resend invitations');
+        this.logger.log(`Resending invite attempt for user ID: ${userId} by admin: ${currentAdmin.email}`);
+        try {
+            if (currentAdmin.systemRole !== SystemRole.SUPERADMIN && currentAdmin.systemRole !== SystemRole.ADMIN) {
+                this.logger.warn(`Insufficient permissions for ${currentAdmin.email} to resend invitation`);
+                throw new UnauthorizedException('Insufficient permissions to resend invitations');
+            }
+
+            const user = await this.userRepository.findByPk(userId);
+            if (!user) {
+                this.logger.warn(`Resend invite failed: User not found for ID ${userId}`);
+                throw new BadRequestException('User not found');
+            }
+
+            if (user.isActive) {
+                this.logger.warn(`Resend invite failed: User ${user.email} is already active`);
+                throw new BadRequestException('User has already activated their account');
+            }
+
+            const inviteToken = crypto.randomBytes(32).toString('hex');
+            const tokenHash = await bcrypt.hash(inviteToken, 10);
+
+            user.inviteToken = tokenHash;
+            await user.save();
+
+            await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
+            this.logger.log(`Invitation email successfully resent to ${user.email}`);
+            return { message: 'Invitation email resent successfully.' };
+        } catch (error) {
+            this.logger.error(`Resend invitation error for user ${userId}: ${error.message}`, error.stack);
+            throw error;
         }
-
-        const user = await this.userRepository.findByPk(userId);
-        if (!user) throw new BadRequestException('User not found');
-        if (user.isActive) throw new BadRequestException('User has already activated their account');
-
-        const inviteToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = await bcrypt.hash(inviteToken, 10);
-
-        user.inviteToken = tokenHash;
-        await user.save();
-
-        await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
-        return { message: 'Invitation email resent successfully.' };
     }
 
     // ─── COMPLETE ORG MEMBER REGISTRATION ────────────────────────────────────

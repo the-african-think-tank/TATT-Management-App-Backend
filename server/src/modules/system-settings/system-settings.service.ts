@@ -9,12 +9,17 @@ import * as nodemailer from 'nodemailer';
 export class SystemSettingsService {
     private readonly logger = new Logger(SystemSettingsService.name);
     private readonly algorithm = 'aes-256-gcm';
-    private readonly secretKey = crypto.scryptSync(process.env.APP_SECRET || 'fallback-secret-at-least-thirty-two-chars', 'salt', 32);
+    private readonly secretKey: Buffer;
     private readonly ivLength = 12;
 
     constructor(
         @InjectModel(SystemSetting) private settingRepo: typeof SystemSetting,
-    ) { }
+    ) {
+        if (!process.env.APP_SECRET) {
+            throw new Error('APP_SECRET environment variable is not defined.');
+        }
+        this.secretKey = crypto.scryptSync(process.env.APP_SECRET, 'salt', 32);
+    }
 
     private encrypt(text: string): string {
         const iv = crypto.randomBytes(this.ivLength);
