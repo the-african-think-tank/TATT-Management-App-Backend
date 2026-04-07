@@ -90,9 +90,10 @@ export default function CommunityFeedPage() {
             });
             toast.success("Admin post published successfully.");
             setAdminPostContent("");
-            // Ensure the new post has author information for immediate UI consistency
+            // Ensure the new post has author information and timestamp for immediate UI consistency
             const finalPost = {
                 ...res.data,
+                createdAt: res.data.createdAt || new Date().toISOString(),
                 author: res.data.author || {
                     firstName: user?.firstName || "TATT",
                     lastName: user?.lastName || "Admin",
@@ -307,7 +308,11 @@ export default function CommunityFeedPage() {
                                             <div>
                                                 <p className="font-bold text-sm tracking-tight">{post.author?.firstName || "Unknown"} {post.author?.lastName || "User"}</p>
                                                 <p className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex gap-2">
-                                                    <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+                                                    <span>
+                                                        {post.createdAt && !isNaN(new Date(post.createdAt).getTime()) 
+                                                            ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true }) 
+                                                            : "just now"}
+                                                    </span>
                                                     {post.author?.chapterId && <span>• {post.author.chapter?.name || "Chapter Member"}</span>}
                                                 </p>
                                             </div>
