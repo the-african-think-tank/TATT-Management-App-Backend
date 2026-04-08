@@ -24,7 +24,7 @@ export function Navbar() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 border-b border-border bg-white/80 backdrop-blur-md">
+            <header className="sticky top-0 z-50 border-b border-white/10 bg-tatt-black">
                 <div className="flex items-center justify-between px-4 lg:px-20 py-4 max-w-[1600px] mx-auto">
                     <div className="flex items-center gap-2 lg:gap-3 shrink-0">
                         <Link href="/" className="flex items-center gap-2 lg:gap-3 group">
@@ -38,7 +38,7 @@ export function Navbar() {
                                 />
                             </div>
                             <div className="flex flex-col justify-center">
-                                <h1 className="text-sm sm:text-base lg:text-xl font-black tracking-tight uppercase text-tatt-black leading-none whitespace-nowrap">
+                                <h1 className="text-sm sm:text-base lg:text-xl font-black tracking-tight uppercase text-white leading-none whitespace-nowrap">
                                     The African Think Tank
                                 </h1>
                             </div>
@@ -56,7 +56,7 @@ export function Navbar() {
                                         className={`text-[10px] font-black uppercase tracking-widest transition-all relative py-1 ${
                                             isActive 
                                                 ? "text-tatt-lime hover:text-tatt-lime/80" 
-                                                : "text-tatt-black hover:text-tatt-lime"
+                                                : "text-white hover:text-tatt-lime"
                                         }`}
                                     >
                                         {link.label}
@@ -71,7 +71,7 @@ export function Navbar() {
                         <div className="flex items-center gap-2">
 
 
-                            <div className="hidden md:block h-6 w-px bg-border mx-2"></div>
+                            <div className="hidden md:block h-6 w-px bg-white/10 mx-2"></div>
 
                             <div className="hidden md:flex items-center gap-6">
                                 {isAuthenticated ? (
@@ -85,7 +85,7 @@ export function Navbar() {
                                     <div className="flex items-center gap-6">
                                         <Link 
                                             href="/" 
-                                            className="text-[10px] font-black text-tatt-black hover:text-tatt-lime transition-colors uppercase tracking-widest"
+                                            className="text-[10px] font-black text-white hover:text-tatt-lime transition-colors uppercase tracking-widest"
                                         >
                                             Log In
                                         </Link>
@@ -101,7 +101,7 @@ export function Navbar() {
 
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="xl:hidden p-2 text-tatt-black hover:bg-surface rounded-full transition-colors"
+                                className="xl:hidden p-2 text-white hover:bg-white/10 rounded-full transition-colors"
                             >
                                 {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
                             </button>

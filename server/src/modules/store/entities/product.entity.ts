@@ -10,7 +10,9 @@ export enum ProductCategory {
     HOME_DECOR = 'HOME_DECOR',
     LIMITED_DROPS = 'LIMITED_DROPS',
     BOOKS = 'BOOKS',
+    MEDIA_BOOKS = 'MEDIA_BOOKS',
     DIGITAL = 'DIGITAL',
+    KITS = 'KITS',
     OTHER = 'OTHER',
 }
 
