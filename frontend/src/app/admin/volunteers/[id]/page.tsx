@@ -188,7 +188,7 @@ export default function VolunteerProfilePage() {
                 <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black mb-2">
                     <span className="text-tatt-gray/60 cursor-pointer hover:text-foreground transition-all" onClick={() => router.push('/admin/volunteers')}>Volunteer Center</span>
                     <ChevronRight size={14} className="text-tatt-gray/40" />
-                    <span className="text-tatt-lime">Volunteer Details</span>
+                    <span className="text-tatt-lime">{profile?.user?.firstName} {profile?.user?.lastName}</span>
                 </nav>
                 <div className="flex items-center gap-4">
                     <button onClick={() => router.back()} className="text-tatt-gray hover:text-tatt-lime transition-colors">
@@ -268,9 +268,11 @@ export default function VolunteerProfilePage() {
                     <div className="bg-surface p-6 rounded-2xl border border-border shadow-sm group hover:border-border/80 transition-all">
                         <p className="text-[10px] uppercase tracking-[0.2em] font-black text-tatt-gray">Total Hours</p>
                         <p className="text-3xl font-black mt-2 text-foreground">{stats?.totalHours || 0} <span className="text-sm text-tatt-gray">hrs</span></p>
-                        <p className="text-[10px] font-bold text-green-600 mt-3 flex items-center gap-1 uppercase tracking-widest">
-                            <TrendingUp size={14} /> +0% from last month
-                        </p>
+                        <div className="mt-3">
+                            <span className="text-[10px] font-bold text-tatt-lime-dark bg-tatt-lime/10 px-2 py-0.5 rounded uppercase tracking-widest">
+                                Lifetime Performance
+                            </span>
+                        </div>
                     </div>
                     <div className="bg-surface p-6 rounded-2xl border border-border shadow-sm group hover:border-border/80 transition-all">
                         <p className="text-[10px] uppercase tracking-[0.2em] font-black text-tatt-gray">Attendance Rate</p>
@@ -400,7 +402,7 @@ export default function VolunteerProfilePage() {
                                         <div className="size-8 rounded-lg bg-background border border-border flex items-center justify-center shrink-0">
                                             <Globe size={14} className="text-tatt-gray" />
                                         </div>
-                                        <span>{stats?.languages || 'English'}</span>
+                                        <span>{stats?.languages || 'Not specified'}</span>
                                     </div>
                                 </div>
                                 <hr className="border-border" />

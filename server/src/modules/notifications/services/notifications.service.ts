@@ -76,6 +76,19 @@ export class NotificationsService {
         return notification;
     }
 
+    async markAllRead(userId: string) {
+        return this.notificationRepo.update(
+            { readAt: new Date() },
+            {
+                where: {
+                    userId,
+                    readAt: null,
+                    dismissedAt: null,
+                },
+            },
+        );
+    }
+
     async dismiss(userId: string, id: string) {
         const notification = await this.notificationRepo.findOne({
             where: { id, userId },

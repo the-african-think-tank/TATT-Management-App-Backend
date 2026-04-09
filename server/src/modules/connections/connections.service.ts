@@ -12,6 +12,7 @@ import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CommunityTier } from '../iam/enums/roles.enum';
 import { ProfessionalInterest } from '../interests/entities/interest.entity';
+import { CommunityIndustry } from '../industries/entities/industry.entity';
 import { Post } from '../feed/entities/post.entity';
 import { SendConnectionRequestDto, RespondToConnectionDto } from './dto/connection.dto';
 import { MailService } from '../../common/mail/mail.service';
@@ -381,54 +382,65 @@ export class ConnectionsService {
 
     // ─── GET MEMBER PUBLIC PROFILE ────────────────────────────────────────────────
     async getMemberProfile(memberId: string) {
-        const member = await this.userRepo.findByPk(memberId, {
-            attributes: [
-                'id', 'firstName', 'lastName', 'profilePicture', 'professionTitle',
-                'companyName', 'location', 'tattMemberId', 'communityTier', 'industry',
-                'chapterId', 'professionalHighlight', 'isActive', 'linkedInProfileUrl',
-                'connectionPreference', 'expertise', 'businessName', 'businessRole',
-                'businessProfileLink', 'createdAt'
-            ],
-            include: [
-                {
-                    model: Chapter,
-                    as: 'chapter',
-                    attributes: ['id', 'name', 'code'],
-                    required: false,
-                },
-                {
-                    model: ProfessionalInterest,
-                    as: 'interests',
-                    attributes: ['name'],
-                    through: { attributes: [] },
-                    required: false,
-                },
-                {
-                    model: Post,
-                    as: 'posts',
-                    required: false,
-                    attributes: ['id', 'content', 'createdAt'],
-                    limit: 5,
-                    order: [['createdAt', 'DESC']]
-                }
-            ],
-        });
+        try {
+            const member = await this.userRepo.findByPk(memberId, {
+                attributes: [
+                    'id', 'firstName', 'lastName', 'profilePicture', 'professionTitle',
+                    'companyName', 'location', 'tattMemberId', 'communityTier',
+                    'chapterId', 'professionalHighlight', 'isActive', 'linkedInProfileUrl',
+                    'connectionPreference', 'expertise', 'businessName', 'businessRole',
+                    'businessProfileLink', 'createdAt'
+                ],
+                include: [
+                    {
+                        model: Chapter,
+                        as: 'chapter',
+                        attributes: ['id', 'name', 'code'],
+                        required: false,
+                    },
+                    {
+                        model: CommunityIndustry,
+                        as: 'industry',
+                        attributes: ['id', 'name'],
+                        required: false,
+                    },
+                    {
+                        model: ProfessionalInterest,
+                        as: 'interests',
+                        attributes: ['name'],
+                        through: { attributes: [] },
+                        required: false,
+                    },
+                    {
+                        model: Post,
+                        as: 'posts',
+                        required: false,
+                        attributes: ['id', 'content', 'createdAt'],
+                        limit: 5,
+                        order: [['createdAt', 'DESC']]
+                    }
+                ],
+            });
 
-        if (!member || !member.isActive) {
-            throw new NotFoundException('Member not found.');
-        }
-
-        const connectionCount = await this.connectionRepo.count({
-            where: {
-                [Op.or]: [{ requesterId: memberId }, { recipientId: memberId }],
-                status: ConnectionStatus.ACCEPTED
+            if (!member || !member.isActive) {
+                throw new NotFoundException('Member not found.');
             }
-        });
 
-        const memberData = member.toJSON();
-        return {
-            ...memberData,
-            connectionCount
-        };
+            const connectionCount = await this.connectionRepo.count({
+                where: {
+                    [Op.or]: [{ requesterId: memberId }, { recipientId: memberId }],
+                    status: ConnectionStatus.ACCEPTED
+                }
+            });
+
+            const memberData = member.toJSON();
+            return {
+                ...memberData,
+                connectionCount
+            };
+        } catch (error) {
+            console.error('[ConnectionsService] Error fetching member profile:', error);
+            throw error;
+        }
     }
 }

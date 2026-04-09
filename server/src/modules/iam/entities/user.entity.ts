@@ -114,7 +114,7 @@ export class User extends Model<User> {
     })
     industryId?: string;
 
-    @BelongsTo(() => CommunityIndustry)
+    @BelongsTo(() => CommunityIndustry, 'industryId')
     industry: CommunityIndustry;
 
     // -- ACTIVATION & INVITATION --
@@ -224,7 +224,7 @@ export class User extends Model<User> {
     })
     chapterId?: string;
 
-    @BelongsTo(() => Chapter)
+    @BelongsTo(() => Chapter, 'chapterId')
     chapter: Chapter;
 
     @BelongsToMany(() => ProfessionalInterest, () => UserInterest)

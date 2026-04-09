@@ -69,6 +69,15 @@ export function NotificationDropdown() {
         }
     };
 
+    const markAllRead = async () => {
+        try {
+            await api.patch(`/notifications/read-all`);
+            setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+        } catch (error) {
+            console.error("Failed to mark all notifications as read", error);
+        }
+    };
+
 
     const getIcon = (type: NotificationType) => {
         switch (type) {
@@ -224,9 +233,7 @@ export function NotificationDropdown() {
                         <div className="p-3 bg-black/5 border-t border-border flex items-center justify-center">
                             <button
                                 className="text-[11px] font-black uppercase tracking-[0.2em] text-tatt-gray hover:text-tatt-lime transition-colors"
-                                onClick={() => {
-                                    // Logic for mark all as read could go here
-                                }}
+                                onClick={markAllRead}
                             >
                                 Mark All as Read
                             </button>

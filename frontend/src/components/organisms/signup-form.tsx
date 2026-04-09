@@ -390,11 +390,8 @@ export function SignupForm() {
           <div className="flex items-start gap-3">
             <button
               type="button"
-              onClick={() => {
-                if (!termsAgreed) setTermsModalOpen(true);
-                else setTermsAgreed(false);
-              }}
-              aria-label={termsAgreed ? "Uncheck terms agreement" : "Read and agree to terms"}
+              onClick={() => setTermsAgreed(!termsAgreed)}
+              aria-label={termsAgreed ? "Uncheck terms agreement" : "Agree to terms"}
               className={`mt-0.5 size-4 rounded-[4px] border shrink-0 flex items-center justify-center transition-colors ${
                 termsAgreed
                   ? "bg-tatt-lime border-tatt-lime"
@@ -408,7 +405,7 @@ export function SignupForm() {
               <button
                 type="button"
                 onClick={() => setTermsModalOpen(true)}
-                className="font-semibold text-tatt-black underline decoration-tatt-lime hover:opacity-80 transition-opacity"
+                className="font-semibold text-tatt-lime underline decoration-tatt-lime hover:opacity-80 transition-opacity"
               >
                 Terms of Service
               </button>
@@ -424,9 +421,6 @@ export function SignupForm() {
               .
             </span>
           </div>
-          {!termsAgreed && (
-            <p className="mt-1 ml-7 text-[11px] text-tatt-gray/70">Click "Terms of Service" to read and accept before continuing.</p>
-          )}
         </div>
 
         <TermsModal
