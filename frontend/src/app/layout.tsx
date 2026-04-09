@@ -34,7 +34,6 @@ export const metadata: Metadata = {
 
 import { ToastProvider } from "@/components/organisms/ToastProvider";
 import QueryProvider from "@/context/query-provider";
-import { CartProvider } from "@/context/cart-context";
 
 export default function RootLayout({
   children,
@@ -48,11 +47,9 @@ export default function RootLayout({
       >
         <ToastProvider />
         <QueryProvider>
-          <AuthProvider>
-            <CartProvider>
+            <AuthProvider>
               {children}
-            </CartProvider>
-          </AuthProvider>
+            </AuthProvider>
         </QueryProvider>
       </body>
     </html>

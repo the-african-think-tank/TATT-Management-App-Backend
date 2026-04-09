@@ -4,7 +4,7 @@
   "description": "Th",
   "main": "index.js",
   "scripts": {
-    "dev": "npx ts-node -r tsconfig-paths/register src/main.ts",
+    "dev": "nest start --watch",
     "watch": "nest start --watch",
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.json",

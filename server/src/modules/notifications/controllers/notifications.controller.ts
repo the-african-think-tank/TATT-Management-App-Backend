@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Delete, Patch, UseGuards, Req } from '@ne
 import { NotificationsService } from '../services/notifications.service';
 import { JwtAuthGuard } from '../../iam/auth/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Public } from '../../../common/decorators/public.decorator';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -14,6 +15,18 @@ export class NotificationsController {
     @ApiOperation({ summary: 'Get all user notifications' })
     async findAll(@Req() req: any) {
         return this.notificationsService.findAll(req.user.id);
+    }
+
+    @Get('test-route')
+    @Public()
+    async testRoute() {
+        return { message: 'Notifications controller is live' };
+    }
+
+    @Patch('read-all')
+    @ApiOperation({ summary: 'Mark all notifications as read' })
+    async markAllRead(@Req() req: any) {
+        return this.notificationsService.markAllRead(req.user.id);
     }
 
     @Patch(':id/read')

@@ -45,13 +45,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [sessionId, setSessionId] = useState<string | null>(null);
 
     useEffect(() => {
-        // Initialize Session ID
-        let sid = localStorage.getItem("tatt_cart_sid");
-        if (!sid) {
-            sid = uuidv4();
-            localStorage.setItem("tatt_cart_sid", sid);
+        // Initialize Session ID Safely
+        try {
+            if (typeof window !== "undefined" && window.localStorage) {
+                let sid = localStorage.getItem("tatt_cart_sid");
+                if (!sid) {
+                    sid = uuidv4();
+                    localStorage.setItem("tatt_cart_sid", sid);
+                }
+                setSessionId(sid);
+            }
+        } catch (error) {
+            console.error("[Cart] Storage access failed. Using transient session ID.", error);
+            // Fallback to a one-time ID for this session if storage is blocked
+            setSessionId(uuidv4());
         }
-        setSessionId(sid);
     }, []);
 
     useEffect(() => {

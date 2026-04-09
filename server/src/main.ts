@@ -168,6 +168,7 @@ async function bootstrap() {
     const port = configService.get<number>('PORT') || 5000;
     await app.listen(port, '0.0.0.0');
     console.log(`[TATT-Management-App] Core Platform running on port ${port}`);
+    console.log(`[TATT-Management-App] Heartbeat: ${new Date().toISOString()}`);
     console.log(`[TATT-Management-App] Upload dir  → ${uploadDir}`);
 }
 

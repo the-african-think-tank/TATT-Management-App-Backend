@@ -5,16 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import Image from "next/image";
-import { ShoppingBag, Menu, X, ArrowRight } from "lucide-react";
-import { useCart } from "@/context/cart-context";
-import { CartDrawer } from "./cart-drawer";
+import { Menu, X, ArrowRight } from "lucide-react";
 
 export function Navbar() {
     const { isAuthenticated, logout } = useAuth();
-    const { totalItems } = useCart();
     const router = useRouter();
     const pathname = usePathname();
-    const [isCartOpen, setIsCartOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const navLinks = [
@@ -202,7 +198,7 @@ export function Navbar() {
                 </div>
             </div>
 
-            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+
         </>
     );
 }
