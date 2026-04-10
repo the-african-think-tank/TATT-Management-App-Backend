@@ -9,27 +9,7 @@ import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 
 
-interface Plan {
-    id: string;
-    tier: string;
-    name: string;
-    tagline: string;
-    monthlyPrice: number;
-    yearlyPrice: number;
-    features: string[];
-    isPopular: boolean;
-    hasYearlyDiscount: boolean;
-    yearlyDiscountPercent?: number;
-    eventDiscountPercent?: number;
-    accessControls?: { title: string; subtitle: string; enabled: boolean }[];
-    activeDiscount?: {
-        code: string;
-        name: string;
-        value: number;
-        type: 'percentage' | 'fixed';
-        validUntil?: string;
-    };
-}
+import { PricingPlanCard, Plan } from "@/components/molecules/pricing-plan-card";
 
 export function OnboardingPlansPage() {
     const [isYearly, setIsYearly] = useState(false);
@@ -126,82 +106,13 @@ export function OnboardingPlansPage() {
                         </div>
                     ) : (
                         plans.map((plan) => (
-                            <div
+                            <PricingPlanCard
                                 key={plan.id}
-                                className={`flex flex-col border rounded-xl p-6 sm:p-8 shadow-sm hover:shadow-md transition-all relative overflow-hidden group ${plan.isPopular ? 'border-2 border-tatt-lime bg-white sm:scale-105 z-20' : 'bg-white border-border'
-                                    }`}
-                            >
-
-                                {plan.isPopular && (
-                                    <div className="absolute top-0 right-0 bg-tatt-lime text-tatt-black text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-lg">
-                                        Most Popular
-                                    </div>
-                                )}
-                                {(plan.monthlyPrice > 0 && isYearly && plan.hasYearlyDiscount && plan.yearlyDiscountPercent) && (
-                                    <div className={`absolute ${plan.isPopular ? 'top-6' : 'top-0'} right-0 bg-tatt-lime/30 text-tatt-black text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg`}>
-                                        Save {plan.yearlyDiscountPercent}%
-                                    </div>
-                                )}
-                                <div className="mb-8">
-                                    <h3 className={`text-2xl font-black mb-2 ${plan.tier === 'FREE' ? 'text-gray-500' : ''}`}>{plan.name}</h3>
-                                    <p className="text-tatt-gray text-sm leading-relaxed mb-6">{plan.tagline}</p>
-                                    <div className="flex items-baseline gap-1">
-                                        {plan.activeDiscount ? (
-                                            <div className="flex flex-col">
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className={`text-4xl font-black ${plan.tier === 'FREE' ? 'text-gray-400' : plan.isPopular ? 'text-tatt-lime' : ''}`}>
-                                                        ${isYearly 
-                                                            ? (plan.activeDiscount.type === 'percentage' ? plan.yearlyPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, plan.yearlyPrice - plan.activeDiscount.value / 100))
-                                                            : (plan.activeDiscount.type === 'percentage' ? plan.monthlyPrice * (1 - plan.activeDiscount.value / 100) : Math.max(0, plan.monthlyPrice - plan.activeDiscount.value / 100))
-                                                        }
-                                                    </span>
-                                                    <span className="text-sm font-black text-tatt-gray line-through decoration-red-500/50">${isYearly ? plan.yearlyPrice : plan.monthlyPrice}</span>
-                                                </div>
-                                                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-1">
-                                                    {plan.activeDiscount.name} Applied 
-                                                    {plan.activeDiscount.validUntil && ` • Ends ${new Date(plan.activeDiscount.validUntil).toLocaleDateString()}`}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className={`text-4xl font-black ${plan.tier === 'FREE' ? 'text-gray-400' : plan.isPopular ? 'text-tatt-lime' : ''}`}>
-                                                ${isYearly ? plan.yearlyPrice : plan.monthlyPrice}
-                                            </span>
-                                        )}
-                                        <span className="text-tatt-gray font-bold">/{isYearly ? 'yr' : 'mo'}</span>
-                                    </div>
-                                </div>
-                                <ul className="flex-1 flex flex-col gap-4 mb-8">
-                                    {plan.features.map((feature, idx) => (
-                                        <li key={`feat-${idx}`} className="flex items-start gap-3 text-sm">
-                                            <CheckCircle className={`${plan.tier === 'FREE' ? 'text-gray-400' : 'text-tatt-lime'} h-5 w-5 shrink-0`} />
-                                            <span className={plan.isPopular ? 'font-semibold' : ''}>{feature}</span>
-                                        </li>
-                                    ))}
-                                    {plan.accessControls?.filter(c => c.enabled).map((control, idx) => (
-                                        <li key={`ctrl-${idx}`} className="flex items-start gap-3 text-sm">
-                                            <CheckCircle className={`text-tatt-lime h-5 w-5 shrink-0`} />
-                                            <span className={plan.isPopular ? 'font-semibold' : ''}>{control.title}</span>
-                                        </li>
-                                    ))}
-                                    {plan.eventDiscountPercent !== undefined && plan.eventDiscountPercent > 0 && (
-                                        <li className="flex items-start gap-3 text-sm">
-                                            <CheckCircle className={`text-tatt-lime h-5 w-5 shrink-0`} />
-                                            <span className={plan.isPopular ? 'font-semibold' : ''}>{plan.eventDiscountPercent}% off TATT Events</span>
-                                        </li>
-                                    )}
-                                </ul>
-                                <button
-                                    onClick={() => handleSelectPlan(plan.tier, plan.monthlyPrice)}
-                                    className={`w-full py-4 rounded-lg font-black text-sm uppercase tracking-wider transition-all ${plan.tier === 'FREE'
-                                        ? 'bg-white border border-border text-gray-500 hover:bg-gray-100'
-                                        : plan.isPopular
-                                            ? 'bg-tatt-lime text-tatt-black hover:brightness-110 shadow-lg shadow-tatt-lime/20'
-                                            : 'bg-gray-100 text-tatt-black group-hover:bg-tatt-lime'
-                                        }`}
-                                >
-                                    {plan.tier === 'FREE' ? 'Join for Free' : `Choose ${plan.name}`}
-                                </button>
-                            </div>
+                                plan={plan}
+                                isYearly={isYearly}
+                                onSelect={(p) => handleSelectPlan(p.tier, p.monthlyPrice)}
+                                ctaLabel={plan.tier === "FREE" ? "Join for Free" : `Choose ${plan.name}`}
+                            />
                         ))
                     )}
                 </div>

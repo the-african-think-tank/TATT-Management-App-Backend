@@ -495,6 +495,7 @@ export class BillingService {
                     validUntil: discount.validUntil,
                 };
             }
+            planData.isPopular = plan.tier === 'IMANI';
             return planData;
         });
     }
