@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/auth-context";
 import api from "@/services/api";
 import { 
-  Building2, ShoppingBag, TrendingUp, 
+  Building2, ShoppingBag, TrendingUp, TrendingDown,
   Download, Search, Bell, Grid, Banknote, 
   ChevronLeft, ChevronRight, Loader2, ArrowUpRight, 
   ArrowDownRight, Filter, Calendar, Users, Briefcase, 

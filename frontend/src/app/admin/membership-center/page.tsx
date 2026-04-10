@@ -137,7 +137,7 @@ export default function MembershipCenterPage() {
             };
             await api.post("/membership-center/discounts", payload);
             toast.success("Campaign Applied! Members notified.");
-            setPromoForm({ name: "", value: "", validUntil: "", applicablePlans: ["KIONGOZI"] });
+            setPromoForm({ name: "", value: "", validUntil: "", applicablePlans: ["KIONGOZI"], applyToAnnualOnly: true });
             fetchAllData();
         } catch (err) {
             toast.error("Failed to apply campaign");

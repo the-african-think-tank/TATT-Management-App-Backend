@@ -220,7 +220,7 @@ export default function PartnershipsPage() {
         setFormError(null);
 
         try {
-            const totalQuota = Object.values(formData.tierQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
+            const totalQuota = Object.values(formData.tierQuotas).reduce((acc: number, curr) => acc + (Number(curr) || 0), 0);
             const payload = {
                 ...formData,
                 quotaAmount: totalQuota,
@@ -286,7 +286,7 @@ export default function PartnershipsPage() {
                 newQuotas[tier] = 0; // Default to 0 (Unlimited in UI logic)
             }
 
-            const nextQuotaAmount = Object.values(newQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
+            const nextQuotaAmount = Object.values(newQuotas).reduce((acc: number, curr) => acc + (Number(curr) || 0), 0);
 
             return {
                 ...prev,
@@ -299,13 +299,13 @@ export default function PartnershipsPage() {
 
     const handleQuotaChange = (tier: string, value: string) => {
         const numValue = value === "" ? 0 : parseInt(value);
-        setFormData(prev => {
-            const nextTierQuotas = {
+        setFormData((prev: typeof initialFormData) => {
+            const nextTierQuotas: Record<string, number | null> = {
                 ...prev.tierQuotas,
                 [tier]: numValue
             };
             // Calculate total quota as sum of all tier quotas
-            const nextQuotaAmount = Object.values(nextTierQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
+            const nextQuotaAmount = Object.values(nextTierQuotas).reduce((acc: number, curr) => acc + (Number(curr) || 0), 0);
             return {
                 ...prev,
                 tierQuotas: nextTierQuotas,
