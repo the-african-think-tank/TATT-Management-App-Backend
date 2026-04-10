@@ -228,13 +228,6 @@ export default function UpgradePage() {
                                                     )}
                                                     <span className="text-tatt-gray font-bold text-sm">/{period}</span>
                                                 </div>
-                                                {!isFree && isYearly && plan.hasYearlyDiscount && !plan.activeDiscount && (
-                                                    <p className="text-xs text-tatt-gray mt-1">
-                                                        <span className="line-through">${fmt(plan.monthlyPrice * 12)}/yr</span>
-                                                        {" → "}
-                                                        <span className="font-black text-tatt-lime-dark text-xs">${fmt(plan.yearlyPrice)}/yr</span>
-                                                    </p>
-                                                )}
                                             </div>
 
                                             <div className="flex-1 mb-8 overflow-hidden">

@@ -25,8 +25,10 @@ import { Notification } from '../../modules/notifications/entities/notification.
 import { CommunityIndustry } from '../../modules/industries/entities/industry.entity';
 import { SystemSetting } from '../../modules/system-settings/entities/system-setting.entity';
 import { PlatformTerms } from '../../modules/system-settings/entities/platform-terms.entity';
-
+import { MembershipTier } from '../../modules/membership/entities/membership-tier.entity';
 import { MembershipPlan } from '../../modules/membership/entities/membership-plan.entity';
+import { Discount } from '../../modules/membership/entities/discount.entity';
+
 import { Event } from '../../modules/events/entities/event.entity';
 import { EventChapter } from '../../modules/events/entities/event-chapter.entity';
 import { EventGuest } from '../../modules/events/entities/event-guest.entity';
@@ -66,7 +68,7 @@ import { SupportMessage } from '../../modules/support/entities/support-message.e
                     FeedInsight, FeedPrompt, FeedTopic,
                     DirectMessage,
                     Resource, ResourceInteraction, Notification,
-                    MembershipPlan,
+                    MembershipPlan, MembershipTier, Discount,
                     Event, EventChapter, EventGuest, EventRegistration,
                     JobListing, JobApplication, SavedJob,
                     VolunteerRole, VolunteerActivity, VolunteerApplication, VolunteerStat, VolunteerTrainingResource,
@@ -74,9 +76,9 @@ import { SupportMessage } from '../../modules/support/entities/support-message.e
                     SupportMessage, SupportTicket, SupportFaq,
                     CommunityIndustry, SystemSetting, PlatformTerms,
                 ],
-                autoLoadModels: true,
-                // Default to true unless explicitly set to false, 'false', or '0'
                 synchronize: config.get<string | boolean>('DB_SYNC') !== 'false' && config.get<string | boolean>('DB_SYNC') !== false && config.get<string | boolean>('DB_SYNC') !== '0',
+                autoLoadModels: true,
+                alter: true,
                 logging: config.get<string>('NODE_ENV') === 'development' ? console.log : false,
             }),
         }),

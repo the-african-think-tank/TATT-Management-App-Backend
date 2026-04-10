@@ -17,7 +17,7 @@ export default function BusinessDirectoryLanding() {
               <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-6 md:mb-8">
                 TATT Business Directory
               </p>
-              <h1 className="text-3xl sm:text-4xl md:text-7xl lg:text-[5.5rem] font-[900] leading-[0.9] tracking-[-0.04em] uppercase mb-8 md:mb-10">
+              <h1 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] uppercase text-tatt-black mb-8 md:mb-10">
                 The Founding <br className="hidden sm:block"/> Business Partner <br className="hidden sm:block"/> Program
               </h1>
 
@@ -59,7 +59,7 @@ export default function BusinessDirectoryLanding() {
             <div className="grid lg:grid-cols-12 gap-8 md:gap-12 mb-16 md:mb-24 items-end text-left">
               <div className="lg:col-span-4">
                 <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-4">The Philosophy</p>
-                <h2 className="text-4xl md:text-6xl font-[900] tracking-tighter uppercase leading-none">Core<br className="hidden md:block"/>Pillars</h2>
+                <h2 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] uppercase text-tatt-black">Core<br className="hidden md:block"/>Pillars</h2>
               </div>
               <div className="lg:col-span-8">
                 <p className="text-2xl md:text-4xl font-bold leading-tight tracking-tighter uppercase">
@@ -101,7 +101,7 @@ export default function BusinessDirectoryLanding() {
           <div className="max-w-[1440px] mx-auto grid lg:grid-cols-2 gap-0 border-2 border-tatt-black bg-white overflow-hidden shadow-2xl">
             <div className="order-2 lg:order-1 p-10 md:p-20 border-b-2 lg:border-b-0 lg:border-r-2 border-tatt-black flex flex-col justify-center text-left items-start">
               <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-8">Strategic Advantage</p>
-              <h2 className="text-3xl sm:text-4xl md:text-7xl lg:text-[5.5rem] font-[900] tracking-tighter uppercase mb-12 md:mb-16 leading-none">Authority<br className="hidden md:block"/>& Visibility</h2>
+              <h2 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] uppercase text-tatt-black mb-12 md:mb-16">Authority<br className="hidden md:block"/>& Visibility</h2>
               
               <div className="space-y-12">
                 {[
@@ -138,7 +138,7 @@ export default function BusinessDirectoryLanding() {
           
           <div className="max-w-4xl mx-auto relative z-10">
             <p className="text-[10px] tracking-[0.3em] uppercase font-black text-tatt-gray mb-10">Application Phase Active</p>
-            <h2 className="text-4xl sm:text-6xl md:text-8xl font-[900] tracking-tighter uppercase mb-8 md:mb-12 leading-none">
+            <h2 className="text-[32px] sm:text-[42px] font-black leading-[1.2] tracking-[-0.75px] uppercase text-tatt-black mb-8 md:mb-12">
               Join the <br/><span className="text-tatt-lime">Ecosystem</span>
             </h2>
             <p className="text-lg md:text-2xl font-bold mb-12 md:mb-16 max-w-2xl mx-auto uppercase tracking-tight opacity-70">

@@ -103,4 +103,18 @@ export class MembershipController {
     async getChapters() {
         return this.membershipService.getChapters();
     }
+
+    @ApiOperation({ summary: 'Bulk archive members' })
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Post('bulk-archive')
+    async bulkArchive(@Body() body: { memberIds: string[] }) {
+        return this.membershipService.bulkArchive(body.memberIds);
+    }
+
+    @ApiOperation({ summary: 'Bulk reassign members to a tier' })
+    @Roles(SystemRole.ADMIN, SystemRole.SUPERADMIN)
+    @Post('bulk-reassign')
+    async bulkReassign(@Body() body: { memberIds: string[], targetTier?: string }) {
+        return this.membershipService.bulkReassign(body.memberIds, body.targetTier);
+    }
 }

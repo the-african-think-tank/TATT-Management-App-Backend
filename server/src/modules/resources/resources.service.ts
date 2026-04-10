@@ -124,7 +124,8 @@ export class ResourcesService {
             if (chapterId) where.chapterId = chapterId;
             if (tag) where.tags = { [Op.contains]: [tag] };
 
-            // Layer A: Visibility — for non-admins, restrict in DB so pagination is correct
+            // Layer A: Visibility — for non-admins, show PUBLIC resources always;
+            // RESTRICTED resources are filtered by member tier.
             if (!isContentAdmin(user)) {
                 const allowedMinTiers = (Object.values(CommunityTier) as CommunityTier[]).filter(
                     (t) => tierOrder(t) <= tierOrder(user.communityTier),
@@ -132,7 +133,9 @@ export class ResourcesService {
                 const visibilityCondition = user.chapterId
                     ? {
                         [Op.or]: [
+                            // Always show PUBLIC resources (regardless of minTier)
                             { visibility: ResourceVisibility.PUBLIC },
+                            // Show RESTRICTED resources only if user's tier qualifies
                             {
                                 visibility: ResourceVisibility.RESTRICTED,
                                 minTier: { [Op.in]: allowedMinTiers },
@@ -142,7 +145,9 @@ export class ResourcesService {
                     }
                     : {
                         [Op.or]: [
+                            // Always show PUBLIC resources (regardless of minTier)
                             { visibility: ResourceVisibility.PUBLIC },
+                            // Show RESTRICTED resources only if user's tier qualifies
                             {
                                 visibility: ResourceVisibility.RESTRICTED,
                                 minTier: { [Op.in]: allowedMinTiers },
@@ -162,7 +167,7 @@ export class ResourcesService {
 
             const totalPages = Math.ceil(count / limit) || 0;
             return {
-                data: rows.map((r) => this.toCardSchema(r)),
+                data: rows.map((r) => this.toCardSchema(r, user)),
                 meta: { total: count, page, limit, totalPages },
             };
         } catch (err: any) {
@@ -211,7 +216,10 @@ export class ResourcesService {
         }
     }
 
-    private toCardSchema(resource: Resource) {
+    private toCardSchema(resource: Resource, user?: User) {
+        const isLocked = user
+            ? !meetsTierRequirement(user.communityTier, resource.minTier)
+            : false;
         return {
             id: resource.id,
             title: resource.title,
@@ -222,6 +230,7 @@ export class ResourcesService {
             visibility: resource.visibility,
             minTier: resource.minTier,
             tags: resource.tags ?? [],
+            isLocked,
             createdAt: resource.createdAt?.toISOString(),
         };
     }

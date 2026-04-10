@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/services/api";
@@ -21,16 +21,7 @@ const CATEGORIES = [
 
 const JOB_TYPES = ["Full-time", "Part-time", "Contract", "Freelance", "Seasonal", "Internship"];
 
-const LOCATION_MODES = [
-    "Remote (Global)",
-    "On-site (Lagos, Nigeria)",
-    "On-site (Accra, Ghana)",
-    "On-site (Nairobi, Kenya)",
-    "On-site (Johannesburg, SA)",
-    "Hybrid (Accra, Ghana)",
-    "Hybrid (Lagos, Nigeria)",
-    "Hybrid (Nairobi, Kenya)",
-];
+const LOCATION_TYPES = ["Remote", "On-site", "Hybrid"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,7 +51,8 @@ const EMPTY_FORM: FormState = {
     companyDescription: "",
     title: "",
     type: "Full-time",
-    location: "Remote (Global)",
+    locationType: "Remote",
+    locationChapter: "",
     salaryMin: "",
     salaryMax: "",
     salaryLabel: "",
@@ -99,12 +91,20 @@ const fieldCls = "w-full bg-background border border-border rounded-xl px-4 py-3
 
 export default function AdminCreateJobPage() {
     const router = useRouter();
-    const [form, setForm] = useState<FormState>(EMPTY_FORM);
+    const [form, setForm] = useState<any>(EMPTY_FORM);
     const [loading, setLoading] = useState(false);
+    const [chapters, setChapters] = useState<any[]>([]);
 
-    const upd = (k: keyof FormState, v: string) => setForm(p => ({ ...p, [k]: v }));
+    useEffect(() => {
+        api.get("/chapters").then(res => setChapters(res.data)).catch(() => {});
+    }, []);
+
+    const upd = (k: string, v: string) => setForm((p: any) => ({ ...p, [k]: v }));
 
     const buildPayload = () => {
+        const locationStr = form.locationType === "Remote" 
+            ? "Remote (Global)" 
+            : `${form.locationType} (${form.locationChapter || "TATT Global Office"})`;
         // Build a human-readable salary label if not explicitly set
         let salaryLabel = form.salaryLabel.trim();
         if (!salaryLabel && (form.salaryMin || form.salaryMax)) {
@@ -126,7 +126,7 @@ export default function AdminCreateJobPage() {
         return {
             title: form.title.trim(),
             companyName: form.companyName.trim(),
-            location: form.location,
+            location: locationStr,
             type: form.type,
             category: form.category,
             description: fullDescription || undefined,
@@ -156,7 +156,7 @@ export default function AdminCreateJobPage() {
     };
 
     const completeness = (() => {
-        const fields = [form.title, form.companyName, form.location, form.type, form.category, form.description];
+        const fields = [form.title, form.companyName, form.locationType, form.type, form.category, form.description];
         return Math.round((fields.filter(f => f.trim() !== "").length / fields.length) * 100);
     })();
 
@@ -288,13 +288,30 @@ export default function AdminCreateJobPage() {
 
                                 <div>
                                     <FieldLabel>Location Mode *</FieldLabel>
-                                    <select
-                                        value={form.location}
-                                        onChange={e => upd("location", e.target.value)}
-                                        className={fieldCls}
-                                    >
-                                        {LOCATION_MODES.map(l => <option key={l}>{l}</option>)}
-                                    </select>
+                                    <div className="flex flex-col gap-3">
+                                        <select
+                                            value={form.locationType}
+                                            onChange={e => upd("locationType", e.target.value)}
+                                            className={fieldCls}
+                                        >
+                                            {LOCATION_TYPES.map(l => <option key={l} value={l}>{l}</option>)}
+                                        </select>
+                                        
+                                        {form.locationType !== "Remote" && (
+                                            <select
+                                                value={form.locationChapter}
+                                                onChange={e => upd("locationChapter", e.target.value)}
+                                                className={`${fieldCls} border-tatt-lime/30 bg-tatt-lime/5`}
+                                                required
+                                            >
+                                                <option value="">Select Target Chapter / Office...</option>
+                                                {chapters.map(c => (
+                                                    <option key={c.id} value={c.name}>{c.name} ({c.code || "TATT"})</option>
+                                                ))}
+                                                <option value="TATT Global Office">TATT Global Office (Accra, Ghana)</option>
+                                            </select>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="sm:col-span-2">

@@ -259,6 +259,19 @@ export class JobsService {
         const offset = (page - 1) * limit;
         const { count, rows } = await this.jobRepo.findAndCountAll({
             where,
+            attributes: {
+                include: [
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM "job_applications" AS "apps"
+                            WHERE
+                                "apps"."jobId" = "JobListing"."id"
+                        )`),
+                        'applicationsCount'
+                    ]
+                ]
+            },
             include: [{ model: this.userRepo, as: 'postedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'communityTier'] }],
             order: [['createdAt', 'DESC']],
             limit,
@@ -358,6 +371,36 @@ export class JobsService {
         if (!job) throw new NotFoundException('Job not found');
         await job.destroy({ force: true });
         return { message: 'Job permanently deleted.' };
+    }
+
+    async getAdminApplications(params: { jobId?: string; page?: number; limit?: number }) {
+        const { jobId, page = 1, limit = 20 } = params;
+        const where: any = {};
+        if (jobId) where.jobId = jobId;
+
+        const { count, rows } = await this.applicationRepo.findAndCountAll({
+            where,
+            include: [
+                { model: JobListing, as: 'job', attributes: ['title', 'companyName'] },
+                { model: User, as: 'applicant', attributes: ['firstName', 'lastName', 'email', 'profilePicture'] }
+            ],
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset: (page - 1) * limit,
+        });
+
+        return { data: rows, meta: { total: count, page, limit, totalPages: Math.ceil(count / limit) || 0 } };
+    }
+
+    async getApplicationById(id: string) {
+        const app = await this.applicationRepo.findByPk(id, {
+            include: [
+                { model: JobListing, as: 'job' },
+                { model: User, as: 'applicant' }
+            ]
+        });
+        if (!app) throw new NotFoundException('Application not found');
+        return app;
     }
 }
 

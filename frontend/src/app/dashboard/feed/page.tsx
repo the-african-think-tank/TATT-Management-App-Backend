@@ -153,11 +153,11 @@ interface TATTEvent {
 }
 
 const POST_TYPES = [
-    { id: "GENERAL", name: "General Update", icon: MessageSquare, description: "Share a thought, insight, or status update.", minTier: "FREE", staffOnly: false },
-    { id: "EVENT", name: "Event or Workshop", icon: Calendar, description: "Promote a chapter event, webinar, or workshop.", minTier: "FREE", staffOnly: false },
-    { id: "RESOURCE", name: "Strategic Resource", icon: Briefcase, description: "Share reports, whitepapers, or strategic frameworks.", minTier: "FREE", staffOnly: true },
-    { id: "ANNOUNCEMENT", name: "Organization Announcement", icon: Zap, description: "Official TATT news and major updates.", minTier: "FREE", staffOnly: true },
-    { id: "JOB", name: "Job Announcement", icon: Briefcase, description: "Share available career opportunities with the network.", minTier: "UBUNTU", staffOnly: false },
+    { id: "GENERAL", name: "General Update", icon: MessageSquare, description: "Share a thought, insight, or status update." },
+    { id: "EVENT", name: "Event or Workshop", icon: Calendar, description: "Promote a chapter event, webinar, or workshop." },
+    { id: "RESOURCE", name: "Strategic Resource", icon: Briefcase, description: "Share reports, whitepapers, or strategic frameworks." },
+    { id: "ANNOUNCEMENT", name: "Organization Announcement", icon: Zap, description: "Official TATT news and major updates." },
+    { id: "JOB", name: "Job Announcement", icon: Briefcase, description: "Share available career opportunities with the network." },
 ];
 
 export default function FeedPage() {
@@ -413,7 +413,8 @@ export default function FeedPage() {
 
     const isStaff = user?.systemRole !== "COMMUNITY_MEMBER";
     const isPaid = user?.communityTier && user.communityTier !== "FREE";
-    const isProfileComplete = isStaff || user?.flags?.includes("PROFILE_COMPLETED");
+    // Allow all authenticated users to post; profile completion is advisory only
+    const isProfileComplete = true;
 
     const handleCreatePostTrigger = () => {
         if (!isProfileComplete) {
@@ -423,11 +424,8 @@ export default function FeedPage() {
         setIsPostWizardOpen(true);
     };
 
-    const allowedPostTypes = POST_TYPES.filter(t => {
-        if (t.staffOnly) return isStaff;
-        if (t.minTier === "UBUNTU") return isPaid || isStaff;
-        return true;
-    });
+    // All authenticated members can use all post types
+    const allowedPostTypes = POST_TYPES;
 
     const getTierColor = (tier: string) => {
         switch (tier) {
@@ -500,7 +498,7 @@ export default function FeedPage() {
                     </div>
 
                     {!isProfileComplete && (
-                        <div className="bg-gradient-to-r from-tatt-lime/20 to-transparent border border-tatt-lime/30 rounded-2xl p-5 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="bg-gradient-to-r from-tatt-lime/20 to-transparent border border-tatt-lime/30 rounded-2xl p-5 flex items-start gap-4">
                             <div className="size-10 rounded-xl bg-tatt-lime/20 flex items-center justify-center shrink-0">
                                 <AlertCircle className="h-5 w-5 text-tatt-lime" />
                             </div>
@@ -561,7 +559,7 @@ export default function FeedPage() {
                                 setNewPostsAvailableCount(0);
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
-                            className="w-full bg-tatt-lime/10 border border-tatt-lime/20 text-tatt-lime font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-tatt-lime/20 transition-all animate-bounce shadow-xl shadow-tatt-lime/5"
+                            className="w-full bg-tatt-lime/10 border border-tatt-lime/20 text-tatt-lime font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-tatt-lime/20 transition-all shadow-xl shadow-tatt-lime/5"
                         >
                             <Zap size={18} fill="currentColor" /> {newPostsAvailableCount} New Community Insights Available — View Now
                         </button>
@@ -653,7 +651,6 @@ export default function FeedPage() {
                                     <h2 className="text-[12px] font-black uppercase tracking-widest text-foreground">Trending Insight</h2>
                                 </div>
                                 <span className="flex h-2 w-2 relative">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tatt-lime opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-2 w-2 bg-tatt-lime"></span>
                                 </span>
                             </div>
@@ -673,7 +670,7 @@ export default function FeedPage() {
                         <div className="space-y-5">
                             {isLoadingSidebar ? (
                                 Array(3).fill(0).map((_, i) => (
-                                    <div key={i} className="flex animate-pulse gap-3">
+                                    <div key={i} className="flex gap-3">
                                         <div className="size-12 bg-border rounded-full"></div>
                                         <div className="flex-1 space-y-2 py-1">
                                             <div className="h-3 bg-border rounded w-3/4"></div>
@@ -737,7 +734,7 @@ export default function FeedPage() {
                         <div className="space-y-6 relative z-10">
                             {isLoadingSidebar ? (
                                 Array(2).fill(0).map((_, i) => (
-                                    <div key={i} className="flex animate-pulse gap-4">
+                                    <div key={i} className="flex gap-4">
                                         <div className="w-12 h-14 bg-white/10 rounded"></div>
                                         <div className="flex-1 space-y-2 py-1">
                                             <div className="h-3 bg-white/10 rounded w-full"></div>
@@ -772,7 +769,12 @@ export default function FeedPage() {
                                 <p className="text-xs text-white/50 text-center py-4">Check back soon for new events!</p>
                             )}
                         </div>
-                        <button className="w-full mt-6 py-2 text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors">View Calendar</button>
+                        <Link 
+                            href="/dashboard/events"
+                            className="w-full mt-6 py-2 text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors block text-center"
+                        >
+                            See All Events
+                        </Link>
                     </div>
 
                     {/* Footer Links */}

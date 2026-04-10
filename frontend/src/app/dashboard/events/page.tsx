@@ -23,6 +23,7 @@ import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 import { toast, Toaster } from "react-hot-toast";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 
 interface Event {
     id: string;
@@ -45,6 +46,7 @@ interface Event {
 
 export default function EventsPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("ALL");
@@ -106,10 +108,6 @@ export default function EventsPage() {
             <Toaster position="top-right" />
 
             <header className="mb-10">
-                <div className="flex items-center gap-2 text-tatt-gray text-xs font-bold uppercase tracking-widest mb-2">
-                    <CalendarIcon className="size-4" />
-                    <span>Ecosystem Gatherings</span>
-                </div>
                 <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground">Events & Mixers</h1>
                 <p className="text-tatt-gray mt-2 font-medium max-w-2xl">
                     Connect with fellow thinking partners, join workshops, and attend our exclusive mixers across all chapters.
@@ -153,7 +151,11 @@ export default function EventsPage() {
                         const hasDiscount = price < event.basePrice;
 
                         return (
-                            <div key={event.id} className="group bg-surface rounded-3xl border border-border overflow-hidden hover:shadow-xl hover:border-tatt-lime/30 transition-all flex flex-col">
+                            <div 
+                                key={event.id} 
+                                onClick={() => router.push(`/dashboard/events/${event.id}`)}
+                                className="group bg-surface rounded-3xl border border-border overflow-hidden hover:shadow-xl hover:border-tatt-lime/30 transition-all flex flex-col cursor-pointer"
+                            >
                                 {/* Event Image */}
                                 <div className="relative h-48 bg-tatt-black">
                                     {event.imageUrl ? (
@@ -236,12 +238,11 @@ export default function EventsPage() {
                                                 </div>
                                             )}
                                         </div>
-                                        <Link
-                                            href={`/dashboard/events/${event.id}`}
-                                            className={`size-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isFree ? 'bg-tatt-black text-white hover:bg-tatt-lime hover:text-tatt-black' : 'bg-tatt-lime text-tatt-black hover:scale-110 active:scale-95'}`}
+                                        <div
+                                            className={`size-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isFree ? 'bg-tatt-black text-white group-hover:bg-tatt-lime group-hover:text-tatt-black' : 'bg-tatt-lime text-tatt-black group-hover:scale-110 active:scale-95'}`}
                                         >
                                             <ArrowRight className="size-5" />
-                                        </Link>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

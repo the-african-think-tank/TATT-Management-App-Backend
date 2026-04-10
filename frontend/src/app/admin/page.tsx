@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
     Users,
     IdCard,
@@ -20,6 +21,7 @@ import {
 import { useAdminDashboardOverview } from "@/hooks/use-queries";
 
 export default function AdminDashboardOverview() {
+    const router = useRouter();
     const { data, isLoading, isError, error, refetch } = useAdminDashboardOverview();
 
     if (isLoading) {
@@ -79,7 +81,8 @@ export default function AdminDashboardOverview() {
             trendType: backendKpis.monthlyRevenue.trendType,
             icon: <DollarSign size={20} />,
             subtitle: "USD Equivalent",
-            color: "text-tatt-lime bg-tatt-lime/10"
+            color: "text-tatt-lime bg-tatt-lime/10",
+            href: "/admin/revenue"
         },
         {
             label: "Volunteer Count",
@@ -120,7 +123,11 @@ export default function AdminDashboardOverview() {
             {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {kpis.map((kpi, idx) => (
-                    <div key={idx} className="bg-surface p-6 rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow">
+                    <div 
+                        key={idx} 
+                        onClick={() => kpi.href && router.push(kpi.href)}
+                        className={`bg-surface p-6 rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow ${kpi.href ? 'cursor-pointer' : ''}`}
+                    >
                         <div className="flex justify-between items-start mb-4">
                             <div className={`p-2 rounded-xl ${kpi.color}`}>
                                 {kpi.icon}
@@ -133,6 +140,14 @@ export default function AdminDashboardOverview() {
                         <h3 className="text-tatt-gray text-xs font-bold uppercase tracking-widest">{kpi.label}</h3>
                         <p className="text-2xl font-black text-foreground mt-1 tracking-tight">{kpi.value}</p>
                         <p className="text-[10px] text-tatt-gray font-bold mt-2 uppercase tracking-[0.2em]">{kpi.subtitle}</p>
+                        {kpi.label === "Monthly Revenue" && (
+                            <div className="absolute top-4 right-4 group/info">
+                                <AlertCircle size={14} className="text-tatt-gray/30 hover:text-tatt-lime transition-colors cursor-help" />
+                                <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-tatt-black text-white text-[10px] rounded-xl opacity-0 group-hover/info:opacity-100 pointer-events-none transition-all z-50 shadow-2xl font-medium leading-relaxed border border-white/10">
+                                    Historical Comparison: This metric reflects a rolling 30-day window. Figures in Revenue Center represent calendar months.
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -187,9 +202,10 @@ export default function AdminDashboardOverview() {
 
                     <div className="space-y-4">
                         {[
-                            { label: "Free Tier", value: subscriberBreakdown.freeTier, color: "bg-background border border-border" },
-                            { label: "Basic Tier", value: subscriberBreakdown.basicTier, color: "bg-tatt-lime/40" },
-                            { label: "Premium Tier", value: subscriberBreakdown.premiumTier, color: "bg-tatt-lime" }
+                            { label: "Free", value: subscriberBreakdown.freeTier, color: "bg-tatt-gray/20 border border-border/10" },
+                            { label: "Ubuntu", value: subscriberBreakdown.ubuntuTier, color: "bg-tatt-lime/10" },
+                            { label: "Imani", value: subscriberBreakdown.imaniTier, color: "bg-tatt-lime/40" },
+                            { label: "Kiongozi", value: subscriberBreakdown.kiongoziTier, color: "bg-tatt-lime shadow-sm shadow-tatt-lime/20" }
                         ].map((tier, i) => (
                             <div key={i} className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -211,13 +227,25 @@ export default function AdminDashboardOverview() {
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                             <Activity className="size-5 text-tatt-lime" /> Platform Activity
                         </h3>
-                        <button className="text-tatt-lime text-xs font-bold hover:underline transition-all">View All</button>
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                router.push('/admin/membership-center');
+                            }}
+                            className="bg-tatt-lime/10 text-tatt-lime px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-tatt-lime hover:text-tatt-black transition-all active:scale-95"
+                        >
+                            View All
+                        </button>
                     </div>
                     <div className="divide-y divide-border">
                         {activities.length === 0 ? (
                             <div className="p-8 text-center text-sm font-medium text-tatt-gray">No new activity detected.</div>
                         ) : activities.map((act: any, idx: number) => (
-                            <div key={idx} className="p-4 flex items-center gap-4 hover:bg-background/50 transition-colors cursor-pointer group">
+                            <div 
+                                key={idx} 
+                                onClick={() => router.push(act.type === 'MODERATION_FLAG' ? '/admin/feed-moderation' : '/admin/membership-center')}
+                                className="p-4 border-b border-border flex items-center gap-4 hover:bg-background/80 transition-all cursor-pointer group"
+                            >
                                 <div className={`size-10 rounded-xl ${getBgForActivity(act.type)} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
                                     {getIconForActivity(act.type)}
                                 </div>

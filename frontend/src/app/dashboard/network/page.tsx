@@ -219,7 +219,7 @@ export default function NetworkPage() {
 
     return (
         <>
-            <div className="p-4 lg:p-8 space-y-8 animate-in fade-in duration-500">
+            <div className="p-4 lg:p-8 space-y-8">
                 {/* Page Header */}
                 <div>
                     <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-2 text-foreground">
@@ -284,7 +284,7 @@ export default function NetworkPage() {
 
                 {/* Results */}
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-24 animate-pulse">
+                    <div className="flex flex-col items-center justify-center py-24">
                         <Loader2 className="h-12 w-12 text-tatt-lime animate-spin mb-4" />
                         <p className="text-tatt-gray font-bold">Discovering members...</p>
                     </div>
@@ -415,7 +415,7 @@ export default function NetworkPage() {
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
                 >
-                    <div className="bg-surface w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                    <div className="bg-surface w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col">
 
                         {/* Modal Header */}
                         <div className="bg-[#1a1a15] pt-10 pb-8 px-8 text-center flex flex-col items-center relative">

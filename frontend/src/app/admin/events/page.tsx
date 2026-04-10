@@ -475,14 +475,17 @@ export default function AdminEventsPage() {
             {/* Create Event Modal */}
             {isCreateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm">
-                    <div className="bg-surface w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-bold">{isEditMode ? 'Edit Event' : 'Create New Event'}</h2>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-border rounded-full transition-colors">
+                    <div className="bg-surface w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-border flex items-center justify-between bg-background/50">
+                            <div>
+                                <h2 className="text-2xl font-black italic text-foreground uppercase tracking-tight">{isEditMode ? 'Modify Narrative' : 'Establish Event'}</h2>
+                                <p className="text-xs text-tatt-gray font-bold uppercase tracking-widest mt-1">Configure signature activity parameters.</p>
+                            </div>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="bg-background hover:bg-surface h-10 w-10 flex items-center justify-center rounded-2xl border border-border text-tatt-gray hover:text-foreground transition-all">
                                 <X className="size-5" />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateEvent} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
+                        <form onSubmit={handleCreateEvent} className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar scrollbar-hide">
                             <div className="space-y-1">
                                 <label className="text-sm font-bold">Event Title</label>
                                 <input

@@ -131,17 +131,19 @@ export default function DashboardPage() {
                         <span className="text-tatt-gray text-sm font-medium">• {chapterName}</span>
                     </div>
                 </div>
-                <Link
-                    href={`/dashboard/network/${user?.id || ""}`}
-                    className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-sm ${
-                        isProfileComplete 
-                            ? "bg-foreground text-background hover:scale-[1.02] active:scale-95" 
-                            : "bg-surface border border-border text-tatt-gray hover:bg-black/5"
-                    }`}
-                >
-                    {isProfileComplete ? <Users className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    {isProfileComplete ? "View Public Profile" : "Profile Setup Pending"}
-                </Link>
+                {user?.id ? (
+                    <Link
+                        href={`/dashboard/network/${user.id}`}
+                        className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 shadow-sm ${
+                            isProfileComplete 
+                                ? "bg-foreground text-background hover:scale-[1.02] active:scale-95" 
+                                : "bg-surface border border-border text-tatt-gray hover:bg-black/5"
+                        }`}
+                    >
+                        {isProfileComplete ? <Users className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                        {isProfileComplete ? "View Public Profile" : "Profile Setup Pending"}
+                    </Link>
+                ) : null}
 
             </div>
 

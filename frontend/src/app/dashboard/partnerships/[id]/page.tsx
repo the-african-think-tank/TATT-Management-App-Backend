@@ -90,7 +90,7 @@ export default function PartnershipDetailsPage() {
         </div>
       </nav>
 
-      <main className="max-w-[1400px] mx-auto p-4 md:p-8 lg:p-12 space-y-8 animate-in fade-in duration-500">
+      <main className="max-w-[1400px] mx-auto p-4 md:p-8 lg:p-12 space-y-8">
         
         {/* Banner Hero Section */}
         <section className="relative overflow-hidden rounded-[2rem] bg-tatt-black text-white p-6 md:p-12 shadow-2xl">

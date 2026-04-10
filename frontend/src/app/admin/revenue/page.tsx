@@ -128,8 +128,28 @@ export default function RevenueCenterPage() {
     if (!isSuperAdmin) return;
     setLoading(true);
     try {
+      // Calculate start date based on timeRange to sync with Dashboard expectations
+      let startDate: string | undefined;
+      const now = new Date();
+      if (filters.timeRange === "week") {
+        const d = new Date(); d.setDate(now.getDate() - 7);
+        startDate = d.toISOString();
+      } else if (filters.timeRange === "month") {
+        const d = new Date(); d.setDate(now.getDate() - 30);
+        startDate = d.toISOString();
+      } else if (filters.timeRange === "year") {
+        const d = new Date(); d.setFullYear(now.getFullYear() - 1);
+        startDate = d.toISOString();
+      }
+
       const [statsRes, trendsRes, transRes, metaRes, distRes] = await Promise.all([
-        api.get("/admin/revenue/stats", { params: { chapterId: filters.chapterId !== "all" ? filters.chapterId : undefined, tier: filters.tier !== "all" ? filters.tier : undefined } }),
+        api.get("/admin/revenue/stats", { 
+          params: { 
+            chapterId: filters.chapterId !== "all" ? filters.chapterId : undefined, 
+            tier: filters.tier !== "all" ? filters.tier : undefined,
+            startDate
+          } 
+        }),
         api.get("/admin/revenue/trends", { params: { chapterId: filters.chapterId !== "all" ? filters.chapterId : undefined } }),
         api.get("/admin/revenue/transactions", { params: { page, limit: 10, chapterId: filters.chapterId !== "all" ? filters.chapterId : undefined } }),
         api.get("/admin/revenue/metadata"),
@@ -244,7 +264,7 @@ export default function RevenueCenterPage() {
               label="Chapter Division" 
               value={filters.chapterId}
               icon={Globe}
-              onChange={(val) => setFilters(prev => ({ ...prev, chapterId: val }))}
+              onChange={(val) => setFilters(prev => ({ ...prev, chapterId: prev.chapterId === val ? "all" : val }))}
               options={[
                 { id: "all", name: "Global Operations" },
                 ...chapters.map(c => ({ id: c.id, name: c.name }))
@@ -255,7 +275,14 @@ export default function RevenueCenterPage() {
               label="Taxonomy Tier" 
               value={filters.tier}
               icon={Users}
-              onChange={(val) => setFilters(prev => ({ ...prev, tier: val }))}
+              onChange={(val) => {
+                // If clicking the current filter or Aggregate, reset to all
+                if (val === 'all' || filters.tier === val) {
+                  setFilters(prev => ({ ...prev, tier: 'all' }));
+                } else {
+                  setFilters(prev => ({ ...prev, tier: val }));
+                }
+              }}
               options={[
                 { id: "all", name: "Aggregate Tiers" },
                 ...tiers
@@ -281,7 +308,9 @@ export default function RevenueCenterPage() {
                 <div className="size-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
                   <Wallet className="size-6 text-tatt-lime" />
                 </div>
-                <span className="text-[10px] tracking-[0.3em] font-black text-tatt-lime uppercase">Aggregate Revenue</span>
+                <span className="text-[10px] tracking-[0.3em] font-black text-tatt-lime uppercase">
+                  {filters.timeRange === 'week' ? 'Weekly' : filters.timeRange === 'month' ? 'Monthly' : 'Annual'} Revenue
+                </span>
               </div>
               <div className="flex flex-col mt-4">
                 <div className="flex items-baseline gap-4">
@@ -289,8 +318,8 @@ export default function RevenueCenterPage() {
                     {loading ? "..." : formatCurrency(stats?.totalRevenue || 0)}
                   </h3>
                   <div className="flex items-center gap-1.5 text-tatt-lime font-black text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-sm self-center">
-                    <TrendingUp className="size-3" />
-                    +12.5%
+                    {stats?.growth && stats.growth >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                    {stats?.growth ? `${stats.growth >= 0 ? '+' : ''}${stats.growth.toFixed(1)}%` : '0%'}
                   </div>
                 </div>
                 <p className="text-white/40 mt-6 text-sm font-medium leading-relaxed max-w-sm">

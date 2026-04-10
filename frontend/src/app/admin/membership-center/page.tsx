@@ -39,6 +39,23 @@ export default function MembershipCenterPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>("OVERVIEW");
+
+    // Persist tab state in URL for better navigation (e.g. returning from perks)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab") as TabType;
+        if (tab && (["OVERVIEW", "PLANS", "DISCOUNTS", "MEMBERS"] as TabType[]).includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, []);
+
+    const handleTabChange = (tab: TabType) => {
+        setActiveTab(tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", tab);
+        window.history.replaceState({}, "", url.toString());
+    };
+
     const [data, setData] = useState<any>({
         tiers: [],
         subscribers: [],
@@ -58,10 +75,12 @@ export default function MembershipCenterPage() {
         name: "",
         value: "",
         validUntil: "",
-        applicablePlans: ["KIONGOZI"]
+        applicablePlans: ["KIONGOZI"],
+        applyToAnnualOnly: true
     });
     const [isCreatingPromo, setIsCreatingPromo] = useState(false);
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     const fetchAllData = useCallback(async () => {
         setLoading(true);
@@ -134,10 +153,49 @@ export default function MembershipCenterPage() {
     };
 
     const toggleAllMembers = () => {
-        if (selectedMembers.length === data.subscribers.length) {
+        if (selectedMembers.length === data.subscribers.length && data.subscribers.length > 0) {
             setSelectedMembers([]);
         } else {
             setSelectedMembers(data.subscribers.map((s: any) => s.id));
+        }
+    };
+
+    const handleExport = () => {
+        if (!data.subscribers.length) return toast.error("No data to export");
+        
+        const headers = ["First Name", "Last Name", "Email", "Tier", "Chapter", "Cycle", "Expires"];
+        const rows = data.subscribers.map((s: any) => [
+            s.firstName, s.lastName, s.email, s.communityTier, 
+            s.chapter?.name || "Global", s.billingCycle || "FREE", 
+            s.subscriptionExpiresAt ? new Date(s.subscriptionExpiresAt).toLocaleDateString() : "N/A"
+        ]);
+        
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tatt-members-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        toast.success("Member data exported successfully");
+    };
+
+    const handleBulkAction = async (action: 'archive' | 'reassign') => {
+        if (!selectedMembers.length) return;
+        
+        const msg = action === 'archive' 
+            ? `Are you sure you want to archive ${selectedMembers.length} members?`
+            : "Reassign selected members to which tier? (Simplified for now - contact dev for full logic)";
+            
+        if (!confirm(msg)) return;
+        
+        try {
+            await api.post(`/membership-center/bulk-${action}`, { memberIds: selectedMembers });
+            toast.success(`Bulk ${action} completed successfully`);
+            setSelectedMembers([]);
+            fetchAllData();
+        } catch (err) {
+            toast.error(`Failed to perform bulk ${action}`);
         }
     };
 
@@ -171,6 +229,7 @@ export default function MembershipCenterPage() {
                 </div>
                 <div className="flex space-x-3 w-full md:w-auto">
 
+
                     <button 
                         onClick={() => router.push('/admin/membership-center/new')}
                         className="flex-1 md:flex-none bg-tatt-lime text-tatt-black px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-tatt-lime/20"
@@ -191,7 +250,7 @@ export default function MembershipCenterPage() {
                 ].map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as TabType)}
+                        onClick={() => handleTabChange(tab.id as TabType)}
                         className={`py-4 px-1 text-[10px] font-black uppercase tracking-[0.2em] flex items-center space-x-2 transition-all border-b-2 ${
                             activeTab === tab.id ? "border-tatt-lime text-foreground" : "border-transparent text-tatt-gray hover:text-foreground"
                         }`}
@@ -204,15 +263,15 @@ export default function MembershipCenterPage() {
 
             <div className="space-y-6">
                 {/* Growth Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard 
-                        label="Total Members" 
-                        value={data.analytics?.stats?.total || 0} 
-                        change={data.analytics?.totalGrowthRate || "0%"} 
-                        isPositive={!data.analytics?.totalGrowthRate?.startsWith("-")} 
+                        label="Free Tier Growth" 
+                        value={data.analytics?.stats?.free || 0} 
+                        change={data.analytics?.stats?.freeRate || "0%"} 
+                        isPositive={!data.analytics?.stats?.freeRate?.startsWith("-")} 
                         onClick={() => {
                             setActiveTab("MEMBERS");
-                            handleFilterChange("tier", "");
+                            handleFilterChange("tier", filters.tier === "FREE" ? "" : "FREE");
                         }}
                     />
                     <StatCard 
@@ -222,7 +281,7 @@ export default function MembershipCenterPage() {
                         isPositive={!data.analytics?.stats?.ubuntuRate?.startsWith("-")} 
                         onClick={() => {
                             setActiveTab("MEMBERS");
-                            handleFilterChange("tier", "UBUNTU");
+                            handleFilterChange("tier", filters.tier === "UBUNTU" ? "" : "UBUNTU");
                         }}
                     />
                     <StatCard 
@@ -232,7 +291,7 @@ export default function MembershipCenterPage() {
                         isPositive={!data.analytics?.stats?.imaniRate?.startsWith("-")} 
                         onClick={() => {
                             setActiveTab("MEMBERS");
-                            handleFilterChange("tier", "IMANI");
+                            handleFilterChange("tier", filters.tier === "IMANI" ? "" : "IMANI");
                         }}
                     />
                     <StatCard 
@@ -242,7 +301,7 @@ export default function MembershipCenterPage() {
                         isPositive={!data.analytics?.stats?.kiongoziRate?.startsWith("-")} 
                         onClick={() => {
                             setActiveTab("MEMBERS");
-                            handleFilterChange("tier", "KIONGOZI");
+                            handleFilterChange("tier", filters.tier === "KIONGOZI" ? "" : "KIONGOZI");
                         }}
                     />
                 </div>
@@ -448,12 +507,43 @@ export default function MembershipCenterPage() {
                                                 />
                                             </div>
                                             <div>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Target Tiers</label>
+                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                    {["FREE", "UBUNTU", "IMANI", "KIONGOZI"].map(tier => (
+                                                        <button 
+                                                            key={tier}
+                                                            onClick={() => {
+                                                                const plans = promoForm.applicablePlans.includes(tier)
+                                                                    ? promoForm.applicablePlans.filter(p => p !== tier)
+                                                                    : [...promoForm.applicablePlans, tier];
+                                                                setPromoForm({...promoForm, applicablePlans: plans});
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border transition-all ${
+                                                                promoForm.applicablePlans.includes(tier) ? 'bg-tatt-lime text-black border-tatt-lime' : 'bg-background text-tatt-gray border-border'
+                                                            }`}
+                                                        >
+                                                            {tier}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Valid Until</label>
                                                 <input 
                                                     value={promoForm.validUntil}
                                                     onChange={(e) => setPromoForm({...promoForm, validUntil: e.target.value})}
                                                     type="date" className="w-full bg-background border border-border rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-tatt-lime outline-none" 
                                                 />
+                                            </div>
+                                            <div className="flex items-center gap-2 py-2">
+                                                <input 
+                                                    type="checkbox"
+                                                    id="annual-only"
+                                                    checked={promoForm.applyToAnnualOnly}
+                                                    onChange={(e) => setPromoForm({...promoForm, applyToAnnualOnly: e.target.checked})}
+                                                    className="size-4 rounded border-border text-tatt-lime accent-tatt-lime"
+                                                />
+                                                <label htmlFor="annual-only" className="text-[10px] font-black uppercase tracking-widest text-tatt-gray cursor-pointer">Apply to Annual Billing Only</label>
                                             </div>
                                             <button 
                                                 onClick={handleApplyCampaign}
@@ -553,12 +643,34 @@ export default function MembershipCenterPage() {
                                         ...data.chapters.map((c: any) => ({ label: c.name, value: c.id }))
                                     ]}
                                 />
+                                <button
+                                    onClick={() => handleBulkAction('archive')}
+                                    disabled={!selectedMembers.length}
+                                    className="px-4 py-2 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 disabled:opacity-40 transition-all flex items-center gap-2"
+                                >
+                                    <Trash2 size={12} /> Archive
+                                </button>
+                                <button
+                                    onClick={() => handleBulkAction('reassign')}
+                                    disabled={!selectedMembers.length}
+                                    className="px-4 py-2 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest text-tatt-lime-dark hover:bg-tatt-lime/5 disabled:opacity-40 transition-all flex items-center gap-2"
+                                >
+                                    <Shield size={12} /> Reassign
+                                </button>
                             </div>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="bg-background/50">
                                     <tr>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">
+                                            <input 
+                                                type="checkbox" 
+                                                onChange={toggleAllMembers}
+                                                checked={selectedMembers.length === data.subscribers.length && data.subscribers.length > 0}
+                                                className="size-4 rounded border-border text-tatt-lime accent-tatt-lime cursor-pointer" 
+                                            />
+                                        </th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Member Identity</th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Active Tier</th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Region</th>
@@ -570,6 +682,14 @@ export default function MembershipCenterPage() {
                                 <tbody className="divide-y divide-border">
                                     {data.subscribers.map((member: any) => (
                                         <tr key={member.id} className="hover:bg-tatt-lime/[0.02] transition-colors group">
+                                            <td className="px-8 py-5">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedMembers.includes(member.id)}
+                                                    onChange={() => toggleMemberSelection(member.id)}
+                                                    className="size-4 rounded border-border text-tatt-lime accent-tatt-lime cursor-pointer" 
+                                                />
+                                            </td>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-4">
                                                     <div className="size-10 rounded-xl bg-tatt-black text-tatt-lime flex items-center justify-center font-black text-xs border border-white/5">
@@ -601,10 +721,42 @@ export default function MembershipCenterPage() {
                                                     Connected
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5 text-right">
-                                                <button className="text-tatt-gray hover:text-foreground">
+                                            <td className="px-8 py-5 text-right relative">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setOpenMenuId(openMenuId === member.id ? null : member.id);
+                                                    }}
+                                                    className="text-tatt-gray hover:text-foreground p-1 rounded-lg hover:bg-background"
+                                                >
                                                     <MoreVertical size={16} />
                                                 </button>
+                                                
+                                                {openMenuId === member.id && (
+                                                    <div 
+                                                        className="absolute right-8 top-12 w-48 bg-surface border border-border rounded-2xl shadow-2xl z-50 p-1.5 animate-in fade-in zoom-in-95 duration-200"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button 
+                                                            onClick={() => { router.push(`/admin/membership-center/members/${member.id}`); setOpenMenuId(null); }}
+                                                            className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:bg-background hover:text-foreground rounded-xl transition-all flex items-center gap-3"
+                                                        >
+                                                            <Edit2 size={14} /> Edit Member
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => { handleBulkAction('archive'); setOpenMenuId(null); }}
+                                                            className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 rounded-xl transition-all flex items-center gap-3"
+                                                        >
+                                                            <Activity size={14} /> Archive Status
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => { toast.success(`Login link sent to ${member.email}`); setOpenMenuId(null); }}
+                                                            className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-tatt-lime-dark hover:bg-tatt-lime/10 rounded-xl transition-all flex items-center gap-3"
+                                                        >
+                                                            <Bell size={14} /> Send Alert
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

@@ -28,6 +28,7 @@ export default function VolunteerProfilePage() {
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [availableRoles, setAvailableRoles] = useState<any[]>([]);
     const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+    const [showReviewModal, setShowReviewModal] = useState(false);
     
     // Form Inputs
     const [activityForm, setActivityForm] = useState({
@@ -42,6 +43,10 @@ export default function VolunteerProfilePage() {
         status: "ACTIVE",
         currentRoleId: "",
         attendanceRate: 100
+    });
+    const [reviewForm, setReviewForm] = useState({
+        rating: 5,
+        comment: ""
     });
 
     // Load Data
@@ -142,6 +147,24 @@ export default function VolunteerProfilePage() {
             setProfile(res.data);
         } catch (err) {
             toast.error("Failed to assign activity");
+        }
+    };
+
+    const handleAddReview = async () => {
+        try {
+            await api.post(`/volunteers/ratings`, {
+                volunteerId: id,
+                rating: reviewForm.rating,
+                comment: reviewForm.comment
+            });
+            toast.success("Review submitted successfully");
+            setShowReviewModal(false);
+            setReviewForm({ rating: 5, comment: "" });
+            // Reload profile
+            const res = await api.get(`/volunteers/admin/profile/${id}`);
+            setProfile(res.data);
+        } catch (err) {
+            toast.error("Failed to submit review");
         }
     };
 
@@ -335,7 +358,7 @@ export default function VolunteerProfilePage() {
                         <section className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
                             <div className="px-8 py-5 border-b border-border flex justify-between items-center bg-background/50">
                                 <h4 className="text-xs uppercase tracking-[0.2em] font-black text-tatt-gray">Ratings & Feedback</h4>
-                                <button className="bg-tatt-lime/10 text-tatt-lime-dark border border-tatt-lime/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-tatt-lime/20 transition-colors">Add Review</button>
+                                <button onClick={() => setShowReviewModal(true)} className="bg-tatt-lime/10 text-tatt-lime-dark border border-tatt-lime/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-tatt-lime/20 transition-colors cursor-pointer">Add Review</button>
                             </div>
                             <div className="divide-y divide-border">
                                 {feedback && feedback.length > 0 ? feedback.map((review: any, idx: number) => (
@@ -535,7 +558,7 @@ export default function VolunteerProfilePage() {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Select from Chapter Pool</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Predefined Activities</label>
                                 <select 
                                     className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-tatt-lime outline-none mb-4"
                                     onChange={(e) => {
@@ -604,6 +627,44 @@ export default function VolunteerProfilePage() {
                                 />
                             </div>
                             <button onClick={handleAssignActivity} className="w-full py-4 bg-tatt-lime text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-4">Assign Task</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showReviewModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tatt-black/60 backdrop-blur-sm">
+                    <div className="bg-surface rounded-2xl border border-border w-full max-w-md p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black uppercase tracking-tight">Add Administrative Review</h3>
+                            <button onClick={() => setShowReviewModal(false)} className="p-1 hover:bg-background rounded-lg"><X size={20} /></button>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Rating (1-5)</label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((num) => (
+                                        <button 
+                                            key={num}
+                                            onClick={() => setReviewForm({ ...reviewForm, rating: num })}
+                                            className={`size-10 rounded-xl flex items-center justify-center bg-background border transition-all ${reviewForm.rating >= num ? 'border-tatt-lime text-tatt-lime' : 'border-border text-tatt-gray hover:border-tatt-gray'}`}
+                                        >
+                                            <Star size={16} className={reviewForm.rating >= num ? "fill-tatt-lime" : ""} />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1.5 block">Feedback Notes</label>
+                                <textarea 
+                                    placeholder="Provide detailed feedback..."
+                                    rows={4}
+                                    value={reviewForm.comment}
+                                    onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-tatt-lime outline-none resize-none custom-scrollbar"
+                                />
+                            </div>
+                            <button onClick={handleAddReview} disabled={!reviewForm.comment.trim()} className="w-full py-4 bg-tatt-lime text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-4 disabled:opacity-50 disabled:grayscale">Submit Review</button>
                         </div>
                     </div>
                 </div>

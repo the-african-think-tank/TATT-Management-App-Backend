@@ -10,7 +10,7 @@ import { Op } from 'sequelize';
 import { Connection, ConnectionStatus } from './entities/connection.entity';
 import { User } from '../iam/entities/user.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
-import { CommunityTier } from '../iam/enums/roles.enum';
+import { CommunityTier, ConnectionPreference } from '../iam/enums/roles.enum';
 import { ProfessionalInterest } from '../interests/entities/interest.entity';
 import { CommunityIndustry } from '../industries/entities/industry.entity';
 import { Post } from '../feed/entities/post.entity';
@@ -296,41 +296,41 @@ export class ConnectionsService {
 
     // ─── GET ALL MEMBERS (DIRECTORY) ─────────────────────────────────────────────
     async getAllMembers(query: any, currentUser?: User) {
-        const { search, chapterId, industry, page = 1, limit = 10 } = query;
-        const offset = (page - 1) * limit;
+        const { search, chapterId, industry, page, limit } = query;
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 10;
+        const offset = (pageNum - 1) * limitNum;
 
         const requestingUserId = currentUser?.id;
         const requestingUserChapterId = currentUser?.chapterId;
 
+        const where: any = {
+            isActive: true,
+            ...(requestingUserId ? { id: { [Op.ne]: requestingUserId } } : {}),
+        };
+
         const andConditions: any[] = [];
-        
-        // Hide users with NO_CONNECTIONS or who have set CHAPTER_ONLY but don't share the viewer's chapter
+
+        // 1. Connection Preferences Logic
         andConditions.push({
-            [Op.and]: [
-                {
-                    connectionPreference: {
-                        [Op.ne]: 'NO_CONNECTIONS',
-                    },
-                },
-                {
-                    [Op.or]: [
-                        { connectionPreference: 'OPEN' },
-                        { connectionPreference: null },
-                        ...(requestingUserChapterId ? [{
-                            connectionPreference: 'CHAPTER_ONLY',
-                            chapterId: requestingUserChapterId,
-                        }] : []),
-                    ],
-                },
+            [Op.or]: [
+                { connectionPreference: ConnectionPreference.OPEN },
+                { connectionPreference: null },
+                ...(requestingUserChapterId ? [{
+                    connectionPreference: ConnectionPreference.CHAPTER_ONLY,
+                    chapterId: requestingUserChapterId,
+                }] : []),
             ],
         });
 
+        // 2. Filters
         if (chapterId) {
             andConditions.push({ chapterId });
         }
 
         if (industry) {
-            andConditions.push({ industry });
+            // Note: If this fails, it might be the association name or column naming.
+            andConditions.push({ '$industry.name$': industry });
         }
 
         if (search) {
@@ -344,40 +344,47 @@ export class ConnectionsService {
             });
         }
 
-        const where: any = {
-            isActive: true,
-            ...(requestingUserId ? { id: { [Op.ne]: requestingUserId } } : {}),
-        };
-
         if (andConditions.length > 0) {
             where[Op.and] = andConditions;
         }
 
-        const { rows: members, count: total } = await this.userRepo.findAndCountAll({
-            where,
-            attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier', 'industry', 'chapterId'],
-            include: [
-                {
-                    model: Chapter,
-                    as: 'chapter',
-                    attributes: ['id', 'name', 'code'],
-                    required: false,
-                }
-            ],
-            limit,
-            offset,
-            order: [['createdAt', 'DESC']],
-        });
+        try {
+            const { rows: members, count: total } = await this.userRepo.findAndCountAll({
+                where,
+                attributes: ['id', 'firstName', 'lastName', 'profilePicture', 'professionTitle', 'companyName', 'location', 'tattMemberId', 'communityTier', 'industryId', 'chapterId'],
+                include: [
+                    {
+                        model: Chapter,
+                        as: 'chapter',
+                        attributes: ['id', 'name', 'code'],
+                        required: false,
+                    },
+                    {
+                        model: CommunityIndustry,
+                        as: 'industry',
+                        attributes: ['id', 'name'],
+                        required: false,
+                    }
+                ],
+                limit: limitNum,
+                offset,
+                order: [['createdAt', 'DESC']],
+                subQuery: false,
+                distinct: true,
+            });
 
-        return {
-            members,
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+            return {
+                members,
+                meta: {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum),
+                },
+            };
+        } catch (error) {
+            throw error;
+        }
     }
 
     // ─── GET MEMBER PUBLIC PROFILE ────────────────────────────────────────────────

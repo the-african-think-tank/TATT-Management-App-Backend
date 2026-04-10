@@ -888,7 +888,7 @@ export default function CommunicationsPage() {
                     {/* Shared Info Component */}
                     <div className="bg-surface rounded-2xl p-6 shadow-sm border border-border">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-foreground">Background Record</h3>
+                            <h3 className="text-sm font-bold text-foreground">Member Identity</h3>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {member.industry && <span className="px-3 py-1.5 bg-background text-foreground text-xs font-medium rounded-full border border-border">{member.industry}</span>}

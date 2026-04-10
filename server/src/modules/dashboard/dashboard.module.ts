@@ -6,6 +6,7 @@ import { User } from '../iam/entities/user.entity';
 import { Post } from '../feed/entities/post.entity';
 import { PostReport } from '../feed/entities/post-report.entity';
 import { VolunteerApplication } from '../volunteers/entities/volunteer-application.entity';
+import { RevenueModule } from '../revenue/revenue.module';
 
 @Module({
     imports: [
@@ -14,7 +15,8 @@ import { VolunteerApplication } from '../volunteers/entities/volunteer-applicati
             Post,
             PostReport,
             VolunteerApplication
-        ])
+        ]),
+        RevenueModule
     ],
     controllers: [DashboardController],
     providers: [DashboardService],

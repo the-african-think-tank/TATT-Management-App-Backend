@@ -161,8 +161,10 @@ export default function PlatformManagement() {
             setScheduledAt("");
             setIsScheduling(false);
             fetchData();
-        } catch (error) {
-            toast.error("Failed to send broadcast");
+        } catch (error: any) {
+            const errMsg = error?.response?.data?.message || error?.message || "Internal server error";
+            toast.error(`Broadcast Failed: ${errMsg}`);
+            console.error("Broadcast Error Details:", error);
         } finally {
             setIsSubmitting(false);
         }
@@ -305,7 +307,7 @@ export default function PlatformManagement() {
                                             {Tiers.map(t => (
                                                 <button 
                                                     key={t} type="button"
-                                                    onClick={() => setTargetTier(t)}
+                                                    onClick={() => setTargetTier(prev => prev === t ? "" : t)}
                                                     className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${targetTier === t ? 'bg-tatt-black text-tatt-lime border-tatt-lime' : 'border-border text-tatt-gray'}`}
                                                 >
                                                     {t}

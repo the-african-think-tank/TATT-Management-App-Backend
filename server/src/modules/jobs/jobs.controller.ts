@@ -192,4 +192,27 @@ export class AdminJobsController {
     async deleteListing(@Param('id') id: string) {
         return this.jobsService.adminDeleteListing(id);
     }
+
+    @Get('applications')
+    @ApiOperation({ summary: 'Admin: list all job applications' })
+    @ApiQuery({ name: 'jobId', required: false })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    async getApplications(
+        @Query('jobId') jobId?: string,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+    ) {
+        return this.jobsService.getAdminApplications({
+            jobId,
+            page: page ? parseInt(page, 10) : 1,
+            limit: limit ? parseInt(limit, 10) : 20,
+        });
+    }
+
+    @Get('applications/:id')
+    @ApiOperation({ summary: 'Admin: get single application detail' })
+    async getApplicationDetail(@Param('id') id: string) {
+        return this.jobsService.getApplicationById(id);
+    }
 }

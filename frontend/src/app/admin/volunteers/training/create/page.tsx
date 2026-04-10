@@ -135,17 +135,25 @@ export default function CreateTrainingResourcePage() {
                             </h4>
 
                             <div className="space-y-4">
-                                {formData.mediaUrls.map((url, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border group/item animate-in slide-in-from-right duration-300">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <LinkIcon size={14} className="text-tatt-lime shrink-0" />
-                                            <span className="text-[10px] font-bold text-foreground truncate max-w-[140px] uppercase tracking-tighter">{new URL(url).hostname} Asset</span>
+                                {formData.mediaUrls.map((url, idx) => {
+                                    let displayUrl = url;
+                                    try {
+                                        displayUrl = new URL(url).hostname;
+                                    } catch (e) {
+                                        displayUrl = url;
+                                    }
+                                    return (
+                                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border group/item animate-in slide-in-from-right duration-300">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <LinkIcon size={14} className="text-tatt-lime shrink-0" />
+                                                <span className="text-[10px] font-bold text-foreground truncate max-w-[140px] uppercase tracking-tighter">{displayUrl} Asset</span>
+                                            </div>
+                                            <button onClick={() => handleRemoveMedia(url)} className="text-tatt-gray hover:text-red-500 transition-colors">
+                                                <X size={14} />
+                                            </button>
                                         </div>
-                                        <button onClick={() => handleRemoveMedia(url)} className="text-tatt-gray hover:text-red-500 transition-colors">
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {formData.mediaUrls.length === 0 && (
                                     <p className="text-[10px] font-bold text-tatt-gray italic uppercase tracking-widest text-center py-4 border-2 border-dashed border-border rounded-xl">No assets linked.</p>
                                 )}

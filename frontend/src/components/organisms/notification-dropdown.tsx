@@ -7,7 +7,10 @@ import { Notification, NotificationType } from "@/types/notifications";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
+import { useAuth } from "@/context/auth-context";
+
 export function NotificationDropdown() {
+    const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -103,25 +106,31 @@ export function NotificationDropdown() {
         }
     };
 
-    const getLink = (notification: Notification) => {
+    const getLink = (notification: Notification, systemRole?: string) => {
         const { type, data } = notification;
+        const isAdmin = systemRole === "ADMIN" || systemRole === "SUPERADMIN";
+        const base = isAdmin ? "/admin" : "/dashboard";
+
         switch (type) {
             case NotificationType.NEW_MESSAGE:
-                return `/dashboard/messages/${data?.connectionId || ""}`;
+                return `${base}/messages/${data?.connectionId || ""}`;
             case NotificationType.CONNECTION_REQUEST:
-                return `/dashboard/network?tab=pending`;
+                return isAdmin ? "/admin/membership-center" : "/dashboard/network?tab=pending";
             case NotificationType.CONNECTION_ACCEPTED:
-                return `/dashboard/network/profile/${data?.partnerId || ""}`;
+                return isAdmin ? "/admin/membership-center" : `/dashboard/network/profile/${data?.partnerId || ""}`;
             case NotificationType.SUBSCRIPTION_RENEWAL:
             case NotificationType.SUBSCRIPTION_EXPIRING:
             case NotificationType.SUBSCRIPTION_DOWNGRADE:
-                return `/dashboard/settings/subscription`;
+                return isAdmin ? "/admin/revenue" : `/dashboard/settings/subscription`;
+            case NotificationType.EVENT_REMINDER:
+                return isAdmin ? `/admin/events/${data?.eventId || ""}` : `/dashboard/events/${data?.eventId || ""}`;
+            case NotificationType.SYSTEM_ALERT:
             case NotificationType.SYSTEM_ANNOUNCEMENT:
-                return `/dashboard`;
+                return isAdmin ? "/admin" : "/dashboard";
             case NotificationType.VOLUNTEER_ROLE:
-                return `/member/volunteering`;
+                return isAdmin ? "/admin/volunteers" : "/member/volunteering";
             default:
-                return "#";
+                return isAdmin ? "/admin" : "/dashboard";
         }
     };
 
@@ -179,22 +188,31 @@ export function NotificationDropdown() {
                                         {getIcon(notification.type)}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                                            <p className={`text-sm font-bold truncate ${!notification.readAt ? 'text-foreground' : 'text-tatt-gray'}`}>
-                                                {notification.title}
+                                        <Link
+                                            href={getLink(notification, user?.systemRole)}
+                                            onClick={() => {
+                                                markAsRead(notification.id);
+                                                setIsOpen(false);
+                                            }}
+                                            className="block cursor-pointer"
+                                        >
+                                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                                                <p className={`text-sm font-bold truncate ${!notification.readAt ? 'text-foreground' : 'text-tatt-gray'}`}>
+                                                    {notification.title}
+                                                </p>
+                                                <span className="text-[10px] text-tatt-gray whitespace-nowrap shrink-0 italic">
+                                                    {formatDistanceToNow(safeDate(notification.createdAt), { addSuffix: true })}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-tatt-gray line-clamp-2 leading-relaxed">
+                                                {notification.message}
                                             </p>
-                                            <span className="text-[10px] text-tatt-gray whitespace-nowrap shrink-0 italic">
-                                                {formatDistanceToNow(safeDate(notification.createdAt), { addSuffix: true })}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-tatt-gray line-clamp-2 leading-relaxed">
-                                            {notification.message}
-                                        </p>
+                                        </Link>
 
                                         <div className="mt-3 flex items-center gap-3">
-                                            {getLink(notification) !== "#" && (
+                                            {getLink(notification, user?.systemRole) !== "#" && (
                                                 <Link
-                                                    href={getLink(notification)}
+                                                    href={getLink(notification, user?.systemRole)}
                                                     onClick={() => {
                                                         markAsRead(notification.id);
                                                         setIsOpen(false);

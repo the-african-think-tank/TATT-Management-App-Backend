@@ -52,10 +52,15 @@ export default function SalesInventoryPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [filterTier, setFilterTier] = useState("all");
 
     useEffect(() => {
         fetchData();
     }, []);
+
+    const handleCardClick = (tier: string) => {
+        setFilterTier(prev => prev === tier ? "all" : tier);
+    };
 
     const fetchData = async () => {
         setLoading(true);

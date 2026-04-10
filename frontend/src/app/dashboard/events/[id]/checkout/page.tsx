@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import api from "@/services/api";
 import { toast, Toaster } from "react-hot-toast";
+import { useAuth } from "@/context/auth-context";
 
 const fmt = (n: number) => {
     const rounded = Math.round(n * 100) / 100;
@@ -27,21 +28,17 @@ function EventCheckoutContent() {
     const params = useParams();
     const router = useRouter();
     const id = params?.id as string;
+    const { user } = useAuth();
 
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [eventResp, userResp] = await Promise.all([
-                    api.get(`/events/${id}`),
-                    api.get('/auth/me')
-                ]);
+                const eventResp = await api.get(`/events/${id}`);
                 setEvent(eventResp.data);
-                setUser(userResp.data);
             } catch (err) {
                 console.error("Failed to fetch checkout data", err);
                 toast.error("Failed to load event details.");

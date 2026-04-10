@@ -4,6 +4,7 @@ import { BusinessPartner } from './entities/business-partner.entity';
 import { CreateBusinessApplicationDto, UpdateBusinessStatusDto } from './dto/business-directory.dto';
 import { MailService } from '../../common/mail/mail.service';
 import { User } from '../iam/entities/user.entity';
+import { Partnership } from '../partnerships/entities/partnership.entity';
 
 @Injectable()
 export class BusinessDirectoryService {
@@ -12,6 +13,8 @@ export class BusinessDirectoryService {
     constructor(
         @InjectModel(BusinessPartner)
         private readonly businessPartnerModel: typeof BusinessPartner,
+        @InjectModel(Partnership)
+        private readonly partnershipModel: typeof Partnership,
         private readonly mailService: MailService,
     ) { }
 
@@ -40,11 +43,43 @@ export class BusinessDirectoryService {
         if (category && category !== 'All Categories') where.category = category;
         if (chapterId) where.chapterId = chapterId;
 
-        return await this.businessPartnerModel.findAll({
+        const businessPartners = await this.businessPartnerModel.findAll({
             where,
             include: ['chapter'],
             order: [['createdAt', 'DESC']],
         });
+
+        // Only include active strategic partnerships if view is all or approved
+        let partnerships: any[] = [];
+        if (!chapterId && (!status || status === 'APPROVED') && this.partnershipModel) {
+            const pWhere: any = { status: 'ACTIVE' };
+            if (category && category !== 'All Categories') pWhere.category = category;
+            
+            partnerships = await (this.partnershipModel as any).findAll({
+                where: pWhere,
+                order: [['createdAt', 'DESC']]
+            });
+        }
+
+        // Map partnerships to business partner format for frontend
+        const mappedPartnerships = partnerships.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            website: p.website,
+            logoUrl: p.logoUrl,
+            perkOffer: p.description || 'Exclusive TATT Partner',
+            locationText: 'Global / Strategic Partner',
+            status: 'APPROVED',
+            contactEmail: p.email,
+            isStrategic: true, // flag for frontend
+            perkButtonLabel: p.buttonLabel,
+            perkLink: p.redemptionLink,
+            clickCount: 0, // Strategic partners don't track clicks yet in this model
+            createdAt: p.createdAt // Must include for frontend sorting/display
+        }));
+
+        return [...mappedPartnerships, ...businessPartners];
     }
 
     async findOne(id: string) {
@@ -112,8 +147,14 @@ export class BusinessDirectoryService {
     }
 
     async getStats() {
-        const activePartners = await this.businessPartnerModel.count({ where: { status: 'APPROVED' } });
+        // Count both approved business partners and active strategic partnerships
+        const activeBusinesses = await this.businessPartnerModel.count({ where: { status: 'APPROVED' } });
         const pendingApplications = await this.businessPartnerModel.count({ where: { status: 'PENDING' } });
+        
+        let activeStrategic = 0;
+        if (this.partnershipModel) {
+            activeStrategic = await (this.partnershipModel as any).count({ where: { status: 'ACTIVE' } });
+        }
         
         const stats = await this.businessPartnerModel.findAll({
             attributes: [
@@ -125,7 +166,7 @@ export class BusinessDirectoryService {
         const totalClicks = stats[0]?.totalClicks ? parseInt(stats[0].totalClicks) : 0;
         
         return {
-            activePartners,
+            activePartners: activeBusinesses + activeStrategic,
             pendingApplications,
             memberRedemptions: totalClicks,
         };

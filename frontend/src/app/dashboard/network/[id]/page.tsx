@@ -343,7 +343,7 @@ export default function MemberProfilePage() {
                         {/* Key Information Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {member.tattMemberId && member.communityTier !== "FREE" && (
-                                <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                                <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4 h-full">
                                     <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
                                         <Award className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
@@ -356,7 +356,7 @@ export default function MemberProfilePage() {
                                 </div>
                             )}
                             
-                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4 h-full">
                                 <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
                                     <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
@@ -368,7 +368,7 @@ export default function MemberProfilePage() {
                                 </div>
                             </div>
                             
-                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4">
+                            <div className="bg-background p-5 rounded-xl border border-border flex items-start gap-3 sm:gap-4 h-full">
                                 <div className="size-10 sm:size-12 rounded-lg bg-tatt-lime/10 flex items-center justify-center text-tatt-lime-dark shrink-0 mt-0.5">
                                     <Briefcase className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
@@ -397,7 +397,7 @@ export default function MemberProfilePage() {
                         <div className="bg-background rounded-xl border border-border overflow-hidden">
                             <div className="p-6 border-b border-border flex justify-between items-center">
                                 <h3 className="text-lg font-bold text-foreground">Recent Activities</h3>
-                                <button className="text-tatt-lime-dark font-bold text-sm hover:underline">View All</button>
+                                <button onClick={() => router.push('/dashboard/feed')} className="text-tatt-lime-dark font-bold text-sm hover:underline">View All</button>
                             </div>
                             <div className="divide-y divide-border">
                                 {member.posts && member.posts.length > 0 ? (
@@ -460,7 +460,7 @@ export default function MemberProfilePage() {
                                     <p className="text-xs text-tatt-gray mb-6 leading-relaxed">
                                         {member.firstName} is connected with policy makers and NGO leaders from across the diaspora network.
                                     </p>
-                                    <button className="w-full py-2.5 border border-border rounded-lg text-sm font-bold hover:bg-surface transition-colors text-foreground">
+                                    <button onClick={() => router.push('/dashboard/network')} className="w-full py-2.5 border border-border rounded-lg text-sm font-bold hover:bg-surface transition-colors text-foreground">
                                         View All Connections
                                     </button>
                                 </>

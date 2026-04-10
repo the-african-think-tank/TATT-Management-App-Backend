@@ -103,7 +103,7 @@ export default function PartnershipsPage() {
     const [formError, setFormError] = useState<string | null>(null);
 
     const categories = ["Technology", "Healthcare", "Travel & Logistics", "Education", "Legal", "Other"];
-    const allTiers = ["UBUNTU", "IMANI", "KIONGOZI"];
+    const allTiers = ["FREE", "UBUNTU", "IMANI", "KIONGOZI"];
 
     useEffect(() => {
         fetchData();
@@ -124,6 +124,33 @@ export default function PartnershipsPage() {
             localStorage.setItem("tatt_partnership_draft", JSON.stringify(formData));
         }
     }, [formData, editingPartner, isModalOpen]);
+
+    const [filteredPartners, setFilteredPartners] = useState<Partnership[]>([]);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    useEffect(() => {
+        if (!partners) return;
+        let result = [...partners];
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(p => 
+                p.name.toLowerCase().includes(q) || 
+                p.email.toLowerCase().includes(q) ||
+                p.category.toLowerCase().includes(q)
+            );
+        }
+        setFilteredPartners(result);
+    }, [searchQuery, partners]);
+
+    const handleExportJSON = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(partners, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "tatt_partnerships_export.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -193,8 +220,15 @@ export default function PartnershipsPage() {
         setFormError(null);
 
         try {
+            const totalQuota = Object.values(formData.tierQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
             const payload = {
                 ...formData,
+                quotaAmount: totalQuota,
+                fullPrice: formData.fullPrice ? Number(formData.fullPrice) : null,
+                discountedPrice: formData.discountedPrice ? Number(formData.discountedPrice) : null,
+                tierQuotas: Object.fromEntries(
+                    Object.entries(formData.tierQuotas).map(([k, v]) => [k, (v === 0 || v === null) ? null : Number(v)])
+                )
             };
             console.log("[Partnerships] Outgoing Payload:", JSON.stringify(payload, null, 2));
 
@@ -252,23 +286,32 @@ export default function PartnershipsPage() {
                 newQuotas[tier] = 0; // Default to 0 (Unlimited in UI logic)
             }
 
+            const nextQuotaAmount = Object.values(newQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
+
             return {
                 ...prev,
                 tierAccess: newTiers,
-                tierQuotas: newQuotas
+                tierQuotas: newQuotas,
+                quotaAmount: nextQuotaAmount
             };
         });
     };
 
     const handleQuotaChange = (tier: string, value: string) => {
         const numValue = value === "" ? 0 : parseInt(value);
-        setFormData(prev => ({
-            ...prev,
-            tierQuotas: {
+        setFormData(prev => {
+            const nextTierQuotas = {
                 ...prev.tierQuotas,
                 [tier]: numValue
-            }
-        }));
+            };
+            // Calculate total quota as sum of all tier quotas
+            const nextQuotaAmount = Object.values(nextTierQuotas).reduce((acc, curr) => acc + (Number(curr) || 0), 0);
+            return {
+                ...prev,
+                tierQuotas: nextTierQuotas,
+                quotaAmount: nextQuotaAmount
+            };
+        });
     };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,11 +336,12 @@ export default function PartnershipsPage() {
         }
     };
 
-    const filteredPartners = partners.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const getTierDistribution = (tier: string) => {
+        if (!partners || partners.length === 0) return 0;
+        const count = partners.filter(p => p.tierAccess?.includes(tier)).length;
+        return Math.round((count / partners.length) * 100);
+    };
+
 
     if (isLoading && !partners.length) {
         return (
@@ -309,7 +353,7 @@ export default function PartnershipsPage() {
     }
 
     return (
-        <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="max-w-[1600px] mx-auto space-y-8">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
@@ -317,14 +361,14 @@ export default function PartnershipsPage() {
                     <p className="text-tatt-gray font-medium">Manage corporate alliances and membership tier exclusivity for the community.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl text-sm font-bold text-tatt-gray hover:bg-background transition-all shadow-sm">
+                    <button 
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className={`flex items-center gap-2 px-4 py-2 bg-surface border rounded-xl text-sm font-bold transition-all shadow-sm ${isFilterOpen ? 'border-tatt-lime text-tatt-lime' : 'border-border text-tatt-gray hover:bg-background'}`}
+                    >
                         <Filter size={18} />
                         Filter
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl text-sm font-bold text-tatt-gray hover:bg-background transition-all shadow-sm">
-                        <Download size={18} />
-                        Export
-                    </button>
+
                     <button 
                         onClick={() => handleOpenModal()}
                         className="flex items-center gap-2 px-6 py-2 bg-tatt-lime text-tatt-black font-black uppercase tracking-widest text-xs rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md"
@@ -336,7 +380,19 @@ export default function PartnershipsPage() {
             </div>
 
             {/* Bento Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {(() => {
+                const totalQ = stats?.quotaStats?.totalQuota || 0;
+                const usedQ = stats?.quotaStats?.totalUsed || 0;
+                let quotaPercent = 0;
+                if (totalQ > 0) {
+                    quotaPercent = Math.round((usedQ / totalQ) * 100);
+                }
+                const displayQuota = (totalQ > 0 && !Number.isNaN(quotaPercent)) ? `${quotaPercent}%` : "N/A";
+                const safeProgress = (totalQ > 0 && !Number.isNaN(quotaPercent)) ? quotaPercent : 0;
+
+                return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
                 <StatCard 
                     icon={<Handshake className="text-tatt-lime" />} 
                     label="Total Partners" 
@@ -358,14 +414,16 @@ export default function PartnershipsPage() {
                     trend="Across 3 regions" 
                     color="yellow"
                 />
-                <StatCard 
-                    icon={<TrendingUp className="text-tatt-gray" />} 
-                    label="Quota Usage" 
-                    value={stats?.quotaStats?.totalQuota ? `${Math.round((stats.quotaStats.totalUsed / stats.quotaStats.totalQuota) * 100)}%` : "N/A"} 
-                    progress={stats?.quotaStats?.totalQuota ? (stats.quotaStats.totalUsed / stats.quotaStats.totalQuota) * 100 : 0}
-                    color="gray"
-                />
-            </div>
+                        <StatCard 
+                            icon={<TrendingUp className="text-tatt-gray" />} 
+                            label="Quota Usage" 
+                            value={displayQuota} 
+                            progress={safeProgress}
+                            color="gray"
+                        />
+                    </div>
+                );
+            })()}
 
             {/* Main Table Content */}
             <div className="bg-surface rounded-2xl border border-border shadow-sm">
@@ -449,7 +507,7 @@ export default function PartnershipsPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1.5">
-                                                <div className={`size-2 rounded-full ${partner.status === 'ACTIVE' ? 'bg-tatt-lime animate-pulse' : 'bg-red-500'}`}></div>
+                                                <div className={`size-2 rounded-full ${partner.status === 'ACTIVE' ? 'bg-tatt-lime' : 'bg-red-500'}`}></div>
                                                 <span className={`text-[10px] font-black uppercase tracking-widest ${partner.status === 'ACTIVE' ? 'text-tatt-lime-dark' : 'text-red-600'}`}>
                                                     {partner.status}
                                                 </span>
@@ -460,7 +518,7 @@ export default function PartnershipsPage() {
                                                 <button className="p-2 text-tatt-gray hover:text-tatt-black hover:bg-background rounded-lg transition-all">
                                                     <MoreVertical size={18} />
                                                 </button>
-                                                <div className="absolute right-0 mt-0 w-48 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden hidden group-hover/menu:block animate-in fade-in slide-in-from-top-1 duration-200 text-left">
+                                                <div className="absolute right-0 mt-0 w-48 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden hidden group-hover/menu:block text-left">
                                                     <button 
                                                         onClick={() => handleOpenModal(partner)}
                                                         className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-tatt-gray hover:bg-border/30 hover:text-tatt-black transition-colors"
@@ -504,39 +562,22 @@ export default function PartnershipsPage() {
             </div>
 
             {/* Bottom Row / Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-tatt-black rounded-3xl p-8 text-white relative overflow-hidden shadow-xl border border-white/5">
-                    <div className="relative z-10 max-w-sm">
+            <div className="grid grid-cols-1 gap-8">
+                <div className="bg-tatt-black rounded-3xl p-8 md:p-12 text-white relative overflow-hidden shadow-xl border border-white/5">
+                    <div className="relative z-10 max-w-2xl">
                         <h4 className="text-2xl font-black uppercase tracking-tight mb-4">Tier Policy Breakdown</h4>
-                        <p className="text-white/60 text-sm mb-8 leading-relaxed">
-                            Ensure partners are properly assigned to maintain the exclusivity of the Imani and Kiongozi memberships.
+                        <p className="text-white/60 text-sm mb-10 leading-relaxed max-w-lg">
+                            Ensure partners are properly assigned to maintain the exclusivity of membership levels. This reflects the percentage of active partners accessible by each tier.
                         </p>
-                        <div className="space-y-6">
-                            <UsageRow label="Ubuntu Tier (Inclusive)" current={82} color="bg-blue-500" />
-                            <UsageRow label="Imani Tier (Enhanced)" current={45} color="bg-tatt-bronze" />
-                            <UsageRow label="Kiongozi Tier (Elite)" current={18} color="bg-tatt-lime" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                            <UsageRow label="Free Tier (Public)" current={getTierDistribution("FREE")} color="bg-tatt-gray" />
+                            <UsageRow label="Ubuntu Tier (Inclusive)" current={getTierDistribution("UBUNTU")} color="bg-blue-500" />
+                            <UsageRow label="Imani Tier (Enhanced)" current={getTierDistribution("IMANI")} color="bg-tatt-bronze" />
+                            <UsageRow label="Kiongozi Tier (Elite)" current={getTierDistribution("KIONGOZI")} color="bg-tatt-lime" />
                         </div>
                     </div>
-                    <div className="absolute -right-20 -bottom-20 opacity-10 rotate-12">
+                    <div className="absolute -right-20 -bottom-20 opacity-10 rotate-12 pointer-events-none">
                         <Handshake size={320} strokeWidth={1} />
-                    </div>
-                </div>
-
-                <div className="bg-tatt-white rounded-3xl p-8 border-2 border-tatt-lime/10 relative overflow-hidden shadow-sm flex flex-col justify-center">
-                    <div className="size-16 bg-tatt-lime/10 border border-tatt-lime/30 rounded-2xl flex items-center justify-center mb-6">
-                        <LayoutGrid className="text-tatt-lime" size={32} />
-                    </div>
-                    <h4 className="text-2xl font-black text-tatt-black uppercase tracking-tight mb-3">Upgrade Potential</h4>
-                    <p className="text-tatt-gray text-sm mb-8 max-w-sm font-medium leading-relaxed">
-                        Data from last month identifies 3 key partners eligible for Kiongozi tier promotions based on engagement volume.
-                    </p>
-                    <div className="flex gap-4">
-                        <button className="bg-tatt-black text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg">
-                            Analyze All
-                        </button>
-                        <button className="text-tatt-gray px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:text-tatt-black transition-all">
-                            Dismiss
-                        </button>
                     </div>
                 </div>
             </div>
@@ -545,9 +586,9 @@ export default function PartnershipsPage() {
             {isModalOpen && (
                 <div 
                     onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-tatt-black/80 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto cursor-pointer"
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-tatt-black/80 backdrop-blur-md overflow-y-auto cursor-pointer"
                 >
-                    <div className="bg-surface w-full max-w-6xl rounded-[2rem] shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-300 my-auto cursor-default">
+                    <div className="bg-surface w-full max-w-6xl rounded-[2rem] shadow-2xl border border-border overflow-hidden my-auto cursor-default">
                         <div className="p-8 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/50">
                             <div>
                                 <nav className="flex gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray mb-1">
@@ -624,7 +665,7 @@ export default function PartnershipsPage() {
                                                     <ChevronDown className={`text-tatt-gray transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} size={16} />
                                                 </button>
                                                 {isCategoryOpen && (
-                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
                                                         {categories.map(c => (
                                                             <button 
                                                                 key={c}
@@ -737,9 +778,8 @@ export default function PartnershipsPage() {
                                                                 </div>
                                                                 <div className="relative">
                                                                     <input 
-                                                                        required
                                                                         type="number"
-                                                                        value={formData.tierQuotas[tier] || ""}
+                                                                        value={formData.tierQuotas[tier] === 0 ? "" : (formData.tierQuotas[tier] || "")}
                                                                         onChange={(e) => handleQuotaChange(tier, e.target.value)}
                                                                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-black focus:ring-2 focus:ring-tatt-lime outline-none" 
                                                                         placeholder="Unlimited"
@@ -782,7 +822,7 @@ export default function PartnershipsPage() {
 
                                     {/* Action Config */}
                                     <div className="bg-tatt-black p-10 rounded-[2rem] border border-white/5 relative overflow-hidden group shadow-2xl">
-                                        <div className="absolute -right-20 -bottom-20 opacity-[0.05] group-hover:rotate-12 transition-transform duration-1000">
+                                        <div className="absolute -right-20 -bottom-20 opacity-[0.05] group-hover:rotate-12 transition-transform">
                                             <Handshake size={320} />
                                         </div>
                                         <div className="relative z-10">
@@ -837,7 +877,7 @@ export default function PartnershipsPage() {
                                                 disabled={isUploading}
                                             />
                                             {formData.logoUrl ? (
-                                                <img src={formData.logoUrl} alt="Logo Preview" className="absolute inset-0 w-full h-full object-contain p-8 animate-in zoom-in-90" />
+                                                <img src={formData.logoUrl} alt="Logo Preview" className="absolute inset-0 w-full h-full object-contain p-8" />
                                             ) : (
                                                 <>
                                                     <div className="size-20 bg-white border border-border rounded-full flex items-center justify-center shadow-sm text-tatt-gray group-hover:text-tatt-lime transition-colors mb-4">
@@ -863,7 +903,7 @@ export default function PartnershipsPage() {
                                     {/* Error Feedback */}
                                     {formError && (
                                         <div className="bg-white p-8 rounded-2xl border border-border">
-                                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 animate-in slide-in-from-top-2">
+                                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600">
                                                 <XCircle size={18} className="shrink-0 mt-0.5" />
                                                 <div className="space-y-1">
                                                     <p className="text-xs font-black uppercase tracking-widest">Saving Failed</p>
@@ -969,7 +1009,7 @@ function StatCard({ icon, label, value, trend, progress, color }: any) {
                 <div className="mt-4 space-y-2">
                     <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
                         <div 
-                            className={`h-full transition-all duration-1000 ${progress > 80 ? 'bg-red-500' : 'bg-tatt-lime'}`} 
+                            className={`h-full transition-all duration-300 ${progress > 80 ? 'bg-red-500' : 'bg-tatt-lime'}`} 
                             style={{ width: `${progress}%` }}
                         ></div>
                     </div>

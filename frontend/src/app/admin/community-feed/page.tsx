@@ -9,7 +9,7 @@ import {
     Plus, Heart
 } from "lucide-react";
 import api from "@/services/api";
-import { toast, Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/context/auth-context";
 
@@ -39,8 +39,16 @@ export default function CommunityFeedPage() {
 
     // Post Creation State
     const [adminPostContent, setAdminPostContent] = useState("");
-    const [adminPostType, setAdminPostType] = useState<"GENERAL" | "ANNOUNCEMENT">("ANNOUNCEMENT");
+    const [adminPostType, setAdminPostType] = useState<"GENERAL" | "ANNOUNCEMENT" | "EVENT" | "RESOURCE" | "JOB">("ANNOUNCEMENT");
     const [isPosting, setIsPosting] = useState(false);
+
+    const ADMIN_POST_TYPES: { id: "GENERAL" | "ANNOUNCEMENT" | "EVENT" | "RESOURCE" | "JOB"; label: string; icon: any }[] = [
+        { id: "ANNOUNCEMENT", label: "Announcement", icon: AlertCircle },
+        { id: "GENERAL", label: "News", icon: Megaphone },
+        { id: "EVENT", label: "Event", icon: Calendar },
+        { id: "RESOURCE", label: "Resource", icon: TrendingUp },
+        { id: "JOB", label: "Job Post", icon: Rocket },
+    ];
 
     const fetchData = async () => {
         setLoading(true);
@@ -84,7 +92,7 @@ export default function CommunityFeedPage() {
 
     const handlePostAsAdmin = async () => {
         if (!adminPostContent.trim()) {
-            toast.error("Announcement content cannot be empty.");
+            toast.error("Post content cannot be empty.");
             return;
         }
         setIsPosting(true);
@@ -221,8 +229,6 @@ export default function CommunityFeedPage() {
 
     return (
         <div className="bg-background text-foreground min-h-screen">
-            <Toaster position="top-right" />
-            
             {/* Main Content Map to Canvas */}
             <div className="p-4 sm:p-8 xl:p-10 grid grid-cols-12 gap-8 max-w-[1920px] mx-auto">
                 <div className="col-span-12 lg:col-span-8 flex flex-col space-y-8">
@@ -234,36 +240,38 @@ export default function CommunityFeedPage() {
                                 <ShieldCheck className="text-tatt-black size-5" />
                             </div>
                             <div className="flex-1 w-full">
-                                <div className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-lime mb-2">Create Official Announcement</div>
+                                <div className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-lime mb-2">Create Community Post</div>
                                 <textarea 
                                     className="w-full bg-background border border-border rounded-xl p-4 text-sm focus:ring-2 focus:ring-tatt-lime/20 focus:outline-none min-h-[100px] text-foreground" 
-                                    placeholder="Write an official TATT update to the community..."
+                                    placeholder={
+                                        adminPostType === "ANNOUNCEMENT" ? "Write an official TATT announcement to the community..." :
+                                        adminPostType === "EVENT" ? "Describe the event, date, location and how members can participate..." :
+                                        adminPostType === "RESOURCE" ? "Share a strategic resource, whitepaper or guide with the community..." :
+                                        adminPostType === "JOB" ? "Describe the job opportunity, company, role and how to apply..." :
+                                        "Write a community update, news or general insight..."
+                                    }
                                     value={adminPostContent}
                                     onChange={e => setAdminPostContent(e.target.value)}
                                 ></textarea>
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 pt-4 border-t border-border gap-4">
                                     <div className="flex flex-wrap gap-2">
-                                        <button 
-                                            onClick={() => setAdminPostType("GENERAL")}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${adminPostType === "GENERAL" ? "border-tatt-lime text-tatt-lime bg-tatt-lime/10" : "border-border hover:bg-black/5"}`}
-                                        >
-                                            <Megaphone className="size-4" />
-                                            <span className="text-[10px] tracking-[0.15em] uppercase font-bold">News</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => setAdminPostType("ANNOUNCEMENT")}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${adminPostType === "ANNOUNCEMENT" ? "border-tatt-lime text-tatt-lime bg-tatt-lime/10" : "border-border hover:bg-black/5"}`}
-                                        >
-                                            <AlertCircle className="size-4" />
-                                            <span className="text-[10px] tracking-[0.15em] uppercase font-bold">Announcement</span>
-                                        </button>
+                                        {ADMIN_POST_TYPES.map(({ id, label, icon: Icon }) => (
+                                            <button
+                                                key={id}
+                                                onClick={() => setAdminPostType(id)}
+                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${adminPostType === id ? "border-tatt-lime text-tatt-lime bg-tatt-lime/10" : "border-border hover:bg-black/5"}`}
+                                            >
+                                                <Icon className="size-4" />
+                                                <span className="text-[10px] tracking-[0.15em] uppercase font-bold">{label}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                     <button 
                                         onClick={handlePostAsAdmin}
                                         disabled={isPosting}
                                         className="bg-tatt-lime text-tatt-black px-6 py-2 rounded-lg font-bold text-sm shadow-md active:scale-95 transition-all disabled:opacity-50 w-full sm:w-auto"
                                     >
-                                        {isPosting ? "POSTING..." : "POST AS ADMIN"}
+                                        {isPosting ? "Posting..." : "Post"}
                                     </button>
                                 </div>
                             </div>
@@ -279,7 +287,7 @@ export default function CommunityFeedPage() {
                                 disabled={refreshing}
                                 className={`text-[10px] tracking-[0.15em] uppercase font-bold flex items-center gap-2 px-3 py-1 bg-surface border border-border rounded-lg hover:text-tatt-lime hover:border-tatt-lime transition-all ${refreshing ? "opacity-50" : ""}`}
                             >
-                                <span className={`w-2 h-2 rounded-full ${refreshing ? "bg-orange-500 animate-pulse" : "bg-green-500"}`}></span> 
+                                <span className={`w-2 h-2 rounded-full ${refreshing ? "bg-orange-500" : "bg-green-500"}`}></span> 
                                 {refreshing ? "Syncing..." : "Live Feed"}
                             </button>
                             <span className="text-[10px] tracking-[0.15em] uppercase font-bold text-tatt-gray flex items-center gap-2 bg-surface border border-border px-3 py-1 rounded-lg">
@@ -414,6 +422,14 @@ export default function CommunityFeedPage() {
                                     placeholder="Insight Title"
                                     value={insightForm.title} onChange={e => setInsightForm({...insightForm, title: e.target.value})}
                                 />
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-tatt-gray uppercase tracking-widest pl-1">Display Start Time</label>
+                                    <input 
+                                        type="datetime-local"
+                                        className="w-full text-sm rounded-lg bg-background border border-border px-3 py-2 outline-none focus:ring-1 focus:ring-tatt-lime" 
+                                        value={insightForm.startDate} onChange={e => setInsightForm({...insightForm, startDate: e.target.value})}
+                                    />
+                                </div>
                                 <textarea 
                                     className="w-full text-sm rounded-lg bg-background border border-border px-3 py-2 outline-none focus:ring-1 focus:ring-tatt-lime min-h-[80px] placeholder:text-tatt-gray" 
                                     placeholder="Insight content..."
@@ -465,11 +481,11 @@ export default function CommunityFeedPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-surface p-4 rounded-xl border border-border text-center">
                             <div className="text-[9px] tracking-widest uppercase font-bold mb-1 text-tatt-gray">Daily Posts</div>
-                            <div className="text-xl font-black text-tatt-lime">{stats.activeDiscussions || "482"}</div>
+                            <div className="text-xl font-black text-tatt-lime">{stats?.activeDiscussions || 0}</div>
                         </div>
                         <div className="bg-surface p-4 rounded-xl border border-border text-center">
                             <div className="text-[9px] tracking-widest uppercase font-bold mb-1 text-tatt-gray">Banned Today</div>
-                            <div className="text-xl font-black text-foreground">{stats.flaggedUsers || "03"}</div>
+                            <div className="text-xl font-black text-foreground">{stats.flaggedUsers}</div>
                         </div>
                     </div>
                 </aside>
@@ -477,8 +493,8 @@ export default function CommunityFeedPage() {
 
             {/* Topic Modal */}
             {isTopicModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-surface border border-border rounded-2xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative">
                         <button 
                             onClick={() => { setIsTopicModalOpen(false); setNewTopicName(""); }}
                             className="absolute top-4 right-4 text-tatt-gray hover:text-foreground transition-colors p-1"

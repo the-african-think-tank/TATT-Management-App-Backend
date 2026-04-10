@@ -171,6 +171,7 @@ export default function AddProductPage() {
             await api.post("/store/products", payload);
             toast.success(publish ? "Product published successfully!" : "Draft saved!");
             router.push("/admin/sales-inventory");
+            setTimeout(() => router.refresh(), 100);
         } catch (error) {
             console.error(error);
             toast.error("Failed to create product listing");

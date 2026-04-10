@@ -68,4 +68,8 @@ export class Discount extends Model<Discount> {
     @Default(true)
     @Column(DataType.BOOLEAN)
     isActive: boolean;
+
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    applyToAnnualOnly: boolean;
 }

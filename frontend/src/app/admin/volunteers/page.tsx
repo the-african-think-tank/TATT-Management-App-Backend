@@ -263,7 +263,7 @@ export default function VolunteerCenterPage() {
                         </span>
                     </div>
                     <div>
-                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest text-nowrap">Total Active Volunteers</p>
+                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest">Total Active Volunteers</p>
                         <h4 className="text-4xl font-black italic tracking-tighter text-foreground">{stats?.totalVolunteers.toLocaleString() || "0"}</h4>
                     </div>
                     <div className="w-full h-1 bg-background rounded-full overflow-hidden">
@@ -281,7 +281,7 @@ export default function VolunteerCenterPage() {
                         </span>
                     </div>
                     <div>
-                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest text-nowrap">Pending Applications</p>
+                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest">Pending Applications</p>
                         <h4 className="text-4xl font-black italic tracking-tighter text-foreground">{stats?.pendingApplications.toLocaleString() || "0"}</h4>
                     </div>
                 </Link>
@@ -293,7 +293,7 @@ export default function VolunteerCenterPage() {
                         </div>
                     </div>
                     <div>
-                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest text-nowrap">In-Training Hub</p>
+                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest">In-Training Hub</p>
                         <h4 className="text-4xl font-black italic tracking-tighter text-foreground">{stats?.onboardingVolunteers.toLocaleString() || "0"}</h4>
                     </div>
                 </Link>
@@ -305,7 +305,7 @@ export default function VolunteerCenterPage() {
                         </div>
                     </div>
                     <div>
-                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest text-nowrap">Global Training Completion</p>
+                        <p className="text-tatt-gray text-[10px] font-black uppercase tracking-widest">Global Training Completion</p>
                         <h4 className="text-4xl font-black italic tracking-tighter text-foreground">{stats?.trainingCompletionRate || 0}%</h4>
                     </div>
                     <div className="w-full h-1 bg-background rounded-full overflow-hidden">

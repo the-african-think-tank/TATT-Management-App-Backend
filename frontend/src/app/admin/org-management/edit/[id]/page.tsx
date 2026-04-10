@@ -33,6 +33,7 @@ const roles = [
     { id: 'MODERATOR', name: 'Moderator', desc: 'Focused on community interactions and forum management.', icon: MessageSquare },
     { id: 'CONTENT_ADMIN', name: 'Content-Admin', desc: 'Full control over knowledge base and public resources.', icon: BookOpen },
     { id: 'SALES', name: 'Sales', desc: 'Access to subscription data and billing records.', icon: BarChart3 },
+    { id: 'COMMUNITY_MEMBER', name: 'Standard Member', desc: 'Standard member role without administrative access.', icon: User },
 ];
 
 const moduleFlags = [
@@ -124,7 +125,9 @@ export default function EditMemberPage() {
             toast.success("Team member updated successfully!");
             router.push("/admin/org-management");
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to update team member");
+            let errMsg = error.response?.data?.message || "Failed to update team member";
+            if (Array.isArray(errMsg)) errMsg = errMsg.join(', ');
+            toast.error(errMsg);
         } finally {
             setLoading(false);
         }

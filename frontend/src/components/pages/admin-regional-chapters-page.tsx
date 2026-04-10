@@ -107,16 +107,6 @@ export function AdminRegionalChaptersPage() {
         targetVolunteers: 0
     });
 
-    const fetchActivities = async () => {
-        try {
-            const response = await api.get("/chapters/all-activities");
-            setActivities(response.data.data);
-        } catch (error) {
-            console.error("Failed to fetch activities:", error);
-        }
-    };
-
-
     const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         name: "",
@@ -126,15 +116,16 @@ export function AdminRegionalChaptersPage() {
         regionalManagerId: "",
         associateRegionalDirectorId: ""
     });
-
     const [volunteerCount, setVolunteerCount] = useState<number>(0);
 
-    useEffect(() => {
-        fetchChapters();
-        fetchOrgMembers();
-        fetchActivities();
-        fetchVolunteerStats();
-    }, []);
+    const fetchActivities = async () => {
+        try {
+            const response = await api.get("/chapters/all-activities");
+            setActivities(response.data.data);
+        } catch (error) {
+            console.error("Failed to fetch activities:", error);
+        }
+    };
 
     const fetchChapters = async () => {
         try {
@@ -150,10 +141,8 @@ export function AdminRegionalChaptersPage() {
 
     const fetchOrgMembers = async () => {
         try {
-            // Fetch potential leaders (admins/staff)
-            const response = await api.get("/users/org-members", {
-                params: { role: 'ADMIN' } // Or fetch all and filter
-            });
+            // Fetch potential leaders (admins/staff/regional admins)
+            const response = await api.get("/users/org-members");
             setOrgMembers(response.data);
         } catch (error) {
             console.error("Failed to fetch org members:", error);
@@ -168,6 +157,13 @@ export function AdminRegionalChaptersPage() {
             console.error("Failed to fetch volunteer stats:", error);
         }
     };
+
+    useEffect(() => {
+        fetchChapters();
+        fetchOrgMembers();
+        fetchActivities();
+        fetchVolunteerStats();
+    }, []);
 
     const generateChapterCode = () => {
         // Find highest existing code if they are numeric
@@ -202,8 +198,8 @@ export function AdminRegionalChaptersPage() {
             const payload = {
                 ...formData,
                 cities: formData.cities.split(",").map(c => c.trim()).filter(c => c !== ""),
-                regionalManagerId: formData.regionalManagerId || undefined,
-                associateRegionalDirectorId: formData.associateRegionalDirectorId || undefined
+                regionalManagerId: formData.regionalManagerId || null,
+                associateRegionalDirectorId: formData.associateRegionalDirectorId || null
             };
 
             if (selectedChapterId) {
@@ -274,6 +270,8 @@ export function AdminRegionalChaptersPage() {
             const payload = {
                 ...activityForm,
                 targetVolunteers: Number(activityForm.targetVolunteers) || undefined,
+                eventDate: activityForm.eventDate ? new Date(activityForm.eventDate).toISOString() : undefined,
+                endDate: activityForm.endDate ? new Date(activityForm.endDate).toISOString() : undefined,
             };
             const chapId = payload.chapterId;
             delete (payload as any).chapterId;
@@ -333,7 +331,12 @@ export function AdminRegionalChaptersPage() {
                 ) : (
                     <button
                         onClick={() => {
-                            setActivityForm(prev => ({ ...prev, type: activeTab === 'announcements' ? 'ANNOUNCEMENT' : 'EVENT' }));
+                            setActivityForm(prev => ({ 
+                                ...prev, 
+                                type: activeTab === 'announcements' ? 'ANNOUNCEMENT' : 'EVENT',
+                                eventDate: "",
+                                endDate: ""
+                            }));
                             setIsCreateActivityModalOpen(true);
                         }}
                         className="bg-tatt-lime hover:brightness-105 text-tatt-black font-bold px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm transition-all text-sm shrink-0"
@@ -667,7 +670,7 @@ export function AdminRegionalChaptersPage() {
                                             {activity.eventDate && (
                                                 <div className="flex items-center gap-2 text-[11px] font-bold text-tatt-gray uppercase tracking-widest">
                                                     <Calendar className="h-3.5 w-3.5 text-tatt-lime" />
-                                                    {format(new Date(activity.eventDate), 'MMM d, h:mm a')}
+                                                    {format(new Date(activity.eventDate), 'MMM d, yyyy · h:mm a')}
                                                     {activity.endDate && ` - ${format(new Date(activity.endDate), 'h:mm a')}`}
                                                 </div>
                                             )}

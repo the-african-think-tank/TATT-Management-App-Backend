@@ -59,10 +59,10 @@ export default function PartnershipsDirectory() {
   });
 
   return (
-    <div className="p-4 lg:p-8 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="p-4 lg:p-8 space-y-8 max-w-[1600px] mx-auto">
       {/* Header Section */}
       <div className="bg-surface border border-border rounded-[40px] p-8 lg:p-12 overflow-hidden relative group shadow-sm">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-150 rotate-12 pointer-events-none transition-transform duration-1000 group-hover:rotate-0">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] scale-150 rotate-12 pointer-events-none group-hover:rotate-0">
           <Handshake size={320} className="text-tatt-lime" />
         </div>
         
@@ -190,7 +190,7 @@ export default function PartnershipsDirectory() {
             </p>
             <div className="pt-4">
               <Link 
-                href="/contact" 
+                href="/dashboard/support"
                 className="inline-flex items-center gap-2 text-tatt-lime font-black uppercase tracking-[0.2em] text-xs hover:gap-4 transition-all"
               >
                 Inquire about Partnership <ArrowRight size={16} />

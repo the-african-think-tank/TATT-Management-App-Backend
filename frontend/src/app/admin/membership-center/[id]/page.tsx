@@ -172,56 +172,84 @@ export default function EditMembershipPlanPage() {
 
                         {/* Pricing & Billing */}
                         <section className="bg-surface p-8 rounded-2xl border border-border shadow-sm group hover:border-border/80 transition-all">
-                            <div className="flex justify-between items-center mb-6">
-                                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-tatt-gray">Pricing & Billing</label>
-                                <div className="flex items-center bg-background rounded-full p-1 border border-border">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                                <div>
+                                    <label className="text-[10px] uppercase tracking-[0.2em] font-black text-tatt-gray">Pricing & Billing</label>
+                                    <p className="text-[9px] text-tatt-gray font-bold uppercase tracking-widest mt-1">Configure subscription cost structure</p>
+                                </div>
+                                <div className="flex items-center bg-background rounded-xl p-1 border border-border">
                                     <button 
                                         onClick={() => setPricingTab('monthly')}
-                                        className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all ${pricingTab === 'monthly' ? 'bg-surface text-foreground shadow-sm' : 'text-tatt-gray hover:text-foreground'}`} 
+                                        className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${pricingTab === 'monthly' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-foreground'}`} 
                                         type="button"
                                     >
-                                        Monthly
+                                        Monthly View
                                     </button>
                                     <button 
                                         onClick={() => setPricingTab('annual')}
-                                        className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all ${pricingTab === 'annual' ? 'bg-surface text-foreground shadow-sm' : 'text-tatt-gray hover:text-foreground'}`} 
+                                        className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${pricingTab === 'annual' ? 'bg-tatt-lime text-tatt-black shadow-md' : 'text-tatt-gray hover:text-foreground'}`} 
                                         type="button"
                                     >
-                                        Annual
+                                        Annual View
                                     </button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                 <div>
-                                    <label className="block text-[10px] uppercase tracking-widest font-black mb-2 text-foreground">Base Price (USD)</label>
+                                    <label className="block text-[10px] uppercase tracking-widest font-black mb-3 text-foreground">
+                                        {pricingTab === 'monthly' ? 'Base Monthly Price (USD)' : 'Base Annual Total (USD)'}
+                                    </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-lime font-black">$</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-tatt-lime font-black text-xl">$</span>
                                         <input 
                                             required
-                                            value={planData.monthlyPrice}
-                                            onChange={(e) => setPlanData({ ...planData, monthlyPrice: e.target.value })}
-                                            className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-4 text-xl font-black text-foreground focus:ring-2 focus:ring-tatt-lime outline-none transition-all placeholder:text-tatt-gray/40" 
+                                            value={pricingTab === 'monthly' ? planData.monthlyPrice : (parseFloat(planData.monthlyPrice) * 12).toFixed(2)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (pricingTab === 'monthly') {
+                                                    setPlanData({ ...planData, monthlyPrice: val });
+                                                } else {
+                                                    setPlanData({ ...planData, monthlyPrice: (parseFloat(val) / 12).toFixed(2) });
+                                                }
+                                            }}
+                                            className="w-full bg-background border border-border rounded-2xl pl-12 pr-4 py-5 text-2xl font-black text-foreground focus:ring-2 focus:ring-tatt-lime outline-none transition-all placeholder:text-tatt-gray/40 shadow-inner" 
                                             placeholder="0.00" 
                                             type="number" 
                                             min="0"
                                             step="0.01"
                                         />
                                     </div>
+                                    <p className="text-[9px] text-tatt-gray mt-3 font-bold uppercase tracking-widest italic">
+                                        {pricingTab === 'monthly' ? 'Members pay this amount every 30 days' : 'Reflects 12 months of monthly payments'}
+                                    </p>
                                 </div>
-                                <div className={pricingTab === 'monthly' ? 'opacity-50' : ''}>
-                                    <label className="block text-[10px] uppercase tracking-widest font-black mb-2 text-foreground">Annual Discount (%)</label>
-                                    <div className="relative">
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-tatt-gray font-black">%</span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-[10px] uppercase tracking-widest font-black text-foreground">Annual Incentive (%)</label>
+                                        <div 
+                                            onClick={() => setPlanData({...planData, hasYearlyDiscount: !planData.hasYearlyDiscount})}
+                                            className={`w-10 h-5 rounded-full p-0.5 cursor-pointer transition-all ${planData.hasYearlyDiscount ?'bg-tatt-lime' : 'bg-background border border-border'}`}
+                                        >
+                                            <div className={`size-4 rounded-full bg-white shadow-sm transition-all ${planData.hasYearlyDiscount ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                        </div>
+                                    </div>
+                                    <div className={`relative ${!planData.hasYearlyDiscount ? 'opacity-30' : ''}`}>
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-tatt-gray font-black text-xl">%</span>
                                         <input 
-                                            disabled={pricingTab === 'monthly'}
+                                            disabled={!planData.hasYearlyDiscount}
                                             value={planData.yearlyDiscountPercent}
                                             onChange={(e) => setPlanData({ ...planData, yearlyDiscountPercent: e.target.value })}
-                                            className="w-full bg-background border border-border rounded-xl pr-10 pl-4 py-4 text-xl font-black text-foreground focus:ring-2 focus:ring-tatt-lime outline-none transition-all disabled:bg-surface" 
+                                            className="w-full bg-background border border-border rounded-2xl pr-12 pl-6 py-5 text-2xl font-black text-foreground focus:ring-2 focus:ring-tatt-lime outline-none transition-all disabled:cursor-not-allowed" 
                                             placeholder="15" 
                                             type="number" 
                                         />
                                     </div>
-                                    <p className="text-[9px] text-tatt-gray mt-2 font-bold uppercase tracking-widest italic">{pricingTab === 'monthly' ? 'Switch to annual to edit context' : 'Calculates yearly price'}</p>
+                                    {planData.hasYearlyDiscount && (
+                                        <div className="p-3 bg-tatt-lime/5 border border-tatt-lime/20 rounded-xl text-[10px] font-black uppercase text-tatt-lime-dark tracking-tighter">
+                                            Yearly Price: ${(parseFloat(planData.monthlyPrice) * 12 * (1 - parseFloat(planData.yearlyDiscountPercent)/100 || 0)).toFixed(2)}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>

@@ -7,6 +7,7 @@ import { PostReport, ReportStatus } from '../feed/entities/post-report.entity';
 import { VolunteerApplication, ApplicationStatus } from '../volunteers/entities/volunteer-application.entity';
 import { SystemRole, CommunityTier } from '../iam/enums/roles.enum';
 import { Sequelize } from 'sequelize-typescript';
+import { RevenueService } from '../revenue/revenue.service';
 
 @Injectable()
 export class DashboardService {
@@ -15,6 +16,7 @@ export class DashboardService {
         @InjectModel(Post) private readonly postModel: typeof Post,
         @InjectModel(PostReport) private readonly reportModel: typeof PostReport,
         @InjectModel(VolunteerApplication) private readonly volunteerModel: typeof VolunteerApplication,
+        private readonly revenueService: RevenueService,
     ) { }
 
     async getDashboardOverview() {
@@ -30,8 +32,11 @@ export class DashboardService {
             }
         });
 
-        // Computed logic: basic metric estimation for the UI. (We can refine with a Payment entity later)
-        const monthlyRevenue = activeSubscriptions * 25; // Assuming average active tier price of $25 per month
+        // 3. Monthly Revenue (Fetch stats for the last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const revenueStats = await this.revenueService.getStats({ startDate: thirtyDaysAgo });
+        const monthlyRevenue = revenueStats.totalRevenue;
 
         const volunteerCount = await this.volunteerModel.count({
             where: { status: ApplicationStatus.APPROVED }
@@ -48,8 +53,9 @@ export class DashboardService {
 
         const subscriberBreakdown = {
             freeTier: `${Math.round((freeCount / totalSubscribers) * 100)}%`,
-            basicTier: `${Math.round((ubuntuCount / totalSubscribers) * 100)}%`,
-            premiumTier: `${Math.round((premiumCount / totalSubscribers) * 100)}%`,
+            ubuntuTier: `${Math.round((ubuntuCount / totalSubscribers) * 100)}%`,
+            imaniTier: `${Math.round((imaniCount / totalSubscribers) * 100)}%`,
+            kiongoziTier: `${Math.round((kiongoziCount / totalSubscribers) * 100)}%`,
         };
 
         /** 3. Pending Moderation Items */

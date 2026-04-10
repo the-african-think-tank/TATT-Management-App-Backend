@@ -347,11 +347,11 @@ export class MembershipService implements OnApplicationBootstrap {
             growthLabels.push(months[(now.getMonth() - i + 12) % 12]);
         }
 
-        const activeTiers = [CommunityTier.UBUNTU, CommunityTier.IMANI, CommunityTier.KIONGOZI];
+        const monitoredTiers = [CommunityTier.FREE, CommunityTier.UBUNTU, CommunityTier.IMANI, CommunityTier.KIONGOZI];
         const tierGrowth: any = {};
 
         // Calculate Tier Growth for the last 6 months
-        for (const tier of activeTiers) {
+        for (const tier of monitoredTiers) {
             const monthlyCounts = await this.userRepo.findAll({
                 attributes: [
                     [Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt')), 'month'],
@@ -383,7 +383,6 @@ export class MembershipService implements OnApplicationBootstrap {
         const ubuntuCount = await this.userRepo.count({ where: { communityTier: CommunityTier.UBUNTU } });
         const imaniCount = await this.userRepo.count({ where: { communityTier: CommunityTier.IMANI } });
         const kiongoziCount = await this.userRepo.count({ where: { communityTier: CommunityTier.KIONGOZI } });
-        const totalMembers = await this.userRepo.count({ where: { communityTier: { [Op.ne]: CommunityTier.FREE } } });
         const freeMembers = await this.userRepo.count({ where: { communityTier: CommunityTier.FREE } });
 
         // Calculate Total Growth Rate (Current Month vs Last Month)
@@ -414,26 +413,43 @@ export class MembershipService implements OnApplicationBootstrap {
             return `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
         };
 
-        const parsedGrowth = {
-            ubuntuRate: calculateRate(tierGrowth[CommunityTier.UBUNTU]?.[5] || 0, tierGrowth[CommunityTier.UBUNTU]?.[4] || 0),
-            imaniRate: calculateRate(tierGrowth[CommunityTier.IMANI]?.[5] || 0, tierGrowth[CommunityTier.IMANI]?.[4] || 0),
-            kiongoziRate: calculateRate(tierGrowth[CommunityTier.KIONGOZI]?.[5] || 0, tierGrowth[CommunityTier.KIONGOZI]?.[4] || 0),
-        };
-
         return {
             labels: growthLabels,
             tierGrowth,
             totalGrowthRate,
             stats: {
-                total: totalMembers + freeMembers,
+                total: ubuntuCount + imaniCount + kiongoziCount + freeMembers,
+                free: freeMembers,
                 ubuntu: ubuntuCount,
                 imani: imaniCount,
                 kiongozi: kiongoziCount,
                 activeGrowth: totalGrowthRate,
-                ubuntuRate: parsedGrowth.ubuntuRate,
-                imaniRate: parsedGrowth.imaniRate,
-                kiongoziRate: parsedGrowth.kiongoziRate
+                freeRate: calculateRate(tierGrowth[CommunityTier.FREE]?.[5] || 0, tierGrowth[CommunityTier.FREE]?.[4] || 0),
+                ubuntuRate: calculateRate(tierGrowth[CommunityTier.UBUNTU]?.[5] || 0, tierGrowth[CommunityTier.UBUNTU]?.[4] || 0),
+                imaniRate: calculateRate(tierGrowth[CommunityTier.IMANI]?.[5] || 0, tierGrowth[CommunityTier.IMANI]?.[4] || 0),
+                kiongoziRate: calculateRate(tierGrowth[CommunityTier.KIONGOZI]?.[5] || 0, tierGrowth[CommunityTier.KIONGOZI]?.[4] || 0),
             }
         };
+    }
+
+    async bulkArchive(memberIds: string[]) {
+        this.logger.log(`Bulk archiving ${memberIds.length} members`);
+        return this.userRepo.destroy({
+            where: {
+                id: { [Op.in]: memberIds }
+            }
+        });
+    }
+
+    async bulkReassign(memberIds: string[], targetTier?: string) {
+        this.logger.log(`Bulk reassigning ${memberIds.length} members to ${targetTier || 'FREE'}`);
+        return this.userRepo.update(
+            { communityTier: (targetTier as any) || CommunityTier.FREE },
+            {
+                where: {
+                    id: { [Op.in]: memberIds }
+                }
+            }
+        );
     }
 }

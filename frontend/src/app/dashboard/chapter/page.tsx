@@ -274,8 +274,23 @@ export default function MyChapterPage() {
       return;
     }
     setPostingActivity(true);
+    
+    // Create a clean payload to avoid backend validation errors (e.g. ISO 8601 Date String error for empty eventDate)
+    const payload: any = {
+      type: activityForm.type,
+      title: activityForm.title,
+      content: activityForm.content,
+    };
+    
+    if (activityForm.eventDate) {
+      payload.eventDate = new Date(activityForm.eventDate).toISOString();
+    }
+    if (activityForm.eventLocation) {
+      payload.eventLocation = activityForm.eventLocation;
+    }
+    
     try {
-      await api.post(`/chapters/${user?.chapterId}/activities`, activityForm);
+      await api.post(`/chapters/${user?.chapterId}/activities`, payload);
       toast.success("Activity posted!");
       setShowActivityModal(false);
       setActivityForm({ type: "ANNOUNCEMENT", title: "", content: "", eventDate: "", eventLocation: "" });

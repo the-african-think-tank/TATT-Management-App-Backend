@@ -6,10 +6,11 @@ import { BusinessDirectoryController } from './business-directory.controller';
 import { MailModule } from '../../common/mail/mail.module';
 import { IamModule } from '../iam/iam.module';
 import { Chapter } from '../chapters/entities/chapter.entity';
+import { Partnership } from '../partnerships/entities/partnership.entity';
 
 @Module({
     imports: [
-        SequelizeModule.forFeature([BusinessPartner, Chapter]),
+        SequelizeModule.forFeature([BusinessPartner, Chapter, Partnership]),
         MailModule,
         IamModule,
     ],
