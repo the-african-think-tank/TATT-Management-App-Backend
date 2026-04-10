@@ -34,7 +34,8 @@ interface FormState {
     // Job
     title: string;
     type: string;
-    location: string;
+    locationType: string;
+    locationChapter: string;
     salaryMin: string;
     salaryMax: string;
     salaryLabel: string;
