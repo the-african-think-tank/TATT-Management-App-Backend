@@ -1,7 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import { SystemSettingsService } from '../../modules/system-settings/system-settings.service';
+import * as nodemailer from 'nodemailer';
+
+interface MailOptions {
+    to: string | string[];
+    subject: string;
+    html: string;
+    text?: string;
+    from?: string;
+    attachments?: Array<{ filename: string; content: any }>; // nodemailer types are complex, but we can refine if needed
+}
 
 @Injectable()
 export class MailService {
@@ -9,7 +18,6 @@ export class MailService {
     private readonly frontendUrl: string;
 
     constructor(
-        private mailerService: MailerService,
         private configService: ConfigService,
         private systemSettingsService: SystemSettingsService,
     ) {
@@ -19,7 +27,7 @@ export class MailService {
     /**
      * Helper to wrap mailerService.sendMail with dynamic transport settings from DB
      */
-    private async sendTransactionalMail(options: any) {
+    private async sendTransactionalMail(options: MailOptions): Promise<any> {
         const host = await this.systemSettingsService.getRawValue('MAIL_HOST');
         const port = parseInt(await this.systemSettingsService.getRawValue('MAIL_PORT') || '587', 10);
         const user = await this.systemSettingsService.getRawValue('MAIL_USER');
@@ -33,7 +41,8 @@ export class MailService {
         const mailRejectUnauthorized = (await this.systemSettingsService.getRawValue('MAIL_REJECT_UNAUTHORIZED')) === 'true';
         const mailTLSMinVersion = (await this.systemSettingsService.getRawValue('MAIL_TLS_MIN_VERSION')) || 'TLSv1.2';
 
-        const dynamicTransport = {
+        // Use raw nodemailer for parity with the SMTP Test engine
+        const transporter = nodemailer.createTransport({
             host: host || 'localhost',
             port,
             secure: mailSecure,
@@ -41,19 +50,28 @@ export class MailService {
             auth: { user, pass },
             tls: {
                 rejectUnauthorized: mailRejectUnauthorized,
-                minVersion: mailTLSMinVersion,
+                minVersion: mailTLSMinVersion as any,
             },
-        };
+        } as any);
 
-        return this.mailerService.sendMail({
+        const result = await transporter.sendMail({
             ...options,
-            transport: dynamicTransport,
             from: options.from || fromSetting,
             envelope: {
-                from: user, // Mail from authenticated user
+                from: user || fromSetting,
                 to: Array.isArray(options.to) ? options.to : [options.to],
-            },
+            }
         });
+
+        // Atomic increment of total emails sent on success
+        try {
+            const currentCount = parseInt(await this.systemSettingsService.getRawValue('TOTAL_EMAILS_SENT') || '0', 10);
+            await this.systemSettingsService.update('TOTAL_EMAILS_SENT', (currentCount + 1).toString(), 'TELEMETRY', 'Total successful transactional emails sent by the platform.', false);
+        } catch (telemetryError) {
+            this.logger.error('Failed to update email telemetry counter', telemetryError);
+        }
+
+        return result;
     }
 
     async sendAdminInvite(email: string, firstName: string, token: string) {
@@ -62,22 +80,44 @@ export class MailService {
         try {
             await this.sendTransactionalMail({
                 to: email,
-                subject: 'Welcome to The African Think Tank',
-                // For a robust system, we would inject Handlebars compiled templates,
-                // but setting html directly here works for raw SMTP configurations.
-                html: `
-                    <h2>Hello ${firstName},</h2>
-                    <p>You have been invited to join the management portal for The African Think Tank.</p>
-                    <p>Please click the link below to set your password and activate your account:</p>
-                    <p><a href="${inviteLink}" style="padding: 10px 20px; background-color: #0044cc; color: #fff; text-decoration: none; border-radius: 5px;">Activate Account</a></p>
-                    <br/>
-                    <p>If you did not expect this invitation, please ignore this email.</p>
-                `,
+                subject: 'Action Required: Your TATT Leadership Invitation',
+                text: `Hello ${firstName},\n\nYou have been formally invited to join the leadership and management platform for the African Think Tank Community.\n\nTo finalize your appointment and gain access to the administrative dashboard, please activate your account using the following link:\n\n${inviteLink}\n\nThis invitation was dispatched to ${email}. If you were not expecting this, please notify your system administrator immediately.\n\nThe African Think Tank`,
+                html: `<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TATT Invitation</title>
+    </head>
+    <body style="margin: 0; padding: 20px; background-color: #f4f4f4;">
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #000000; color: #ffffff; border-radius: 24px; border: 1px solid #333;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #ADFF2F; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">The African Think Tank</h1>
+                <p style="color: #888; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px;">Secure Invitation Portal</p>
+            </div>
+            
+            <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 20px;">Hello ${firstName},</h2>
+            <p style="color: #ccc; font-size: 16px; line-height: 1.6;">You have been formally invited to join the leadership and management platform for the <strong>African Think Tank Community</strong>.</p>
+            <p style="color: #ccc; font-size: 16px; line-height: 1.6;">To finalize your appointment and gain access to the administrative dashboard, please activate your account using the secure link below:</p>
+            
+            <p style="text-align: center; margin: 40px 0;">
+                <a href="${inviteLink}" style="background-color: #ADFF2F; color: #000; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(173, 255, 47, 0.2);">
+                    Activate Your Account
+                </a>
+            </p>
+            
+            <div style="background-color: #111; padding: 20px; border-radius: 12px; border: 1px solid #333; margin-top: 40px;">
+                <p style="color: #888; font-size: 12px; margin: 0; line-height: 1.5;">This invitation was dispatched to <strong>${email}</strong>. If you were not expecting this, please notify your system administrator immediately.</p>
+            </div>
+        </div>
+    </body>
+</html>`,
             });
             this.logger.log(`Admin Invite email dispatched successfully to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send invite email to ${email}`, error.stack);
-            throw new Error(`Failed to send email: ${error.message}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send invite email to ${email}`, err.stack);
+            throw new Error(`Failed to send email: ${err.message}`);
         }
     }
 
@@ -98,9 +138,10 @@ export class MailService {
                 `,
             });
             this.logger.log(`Password reset email dispatched successfully to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send reset email to ${email}`, error.stack);
-            throw new Error(`Failed to send email: ${error.message}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send reset email to ${email}`, err.stack);
+            throw new Error(`Failed to send email: ${err.message}`);
         }
     }
 
@@ -119,8 +160,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Downgrade notice sent to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send downgrade notice to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send downgrade notice to ${email}`, err.stack);
         }
     }
 
@@ -142,8 +184,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Renewal reminder sent to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send renewal reminder to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send renewal reminder to ${email}`, err.stack);
         }
     }
 
@@ -177,8 +220,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Connection request email sent to ${recipientEmail} from ${senderFullName}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send connection request email to ${recipientEmail}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send connection request email to ${recipientEmail}`, err.stack);
             // Re-throw so the service can swallow it non-blockingly
             throw error;
         }
@@ -204,8 +248,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`2FA OTP email sent to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send 2FA OTP to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send 2FA OTP to ${email}`, err.stack);
             throw error;
         }
     }
@@ -236,8 +281,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Password expiry warning (${timeframe}) sent to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send password expiry warning to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send password expiry warning to ${email}`, err.stack);
         }
     }
 
@@ -266,8 +312,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Event notification email sent to ${email} for event: ${eventTitle}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send event notification email to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send event notification email to ${email}`, err.stack);
         }
     }
 
@@ -294,8 +341,9 @@ export class MailService {
                 `,
             });
             this.logger.log(`Notification email sent to ${email}: ${title}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send notification email to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send notification email to ${email}`, err.stack);
         }
     }
 
@@ -346,8 +394,203 @@ export class MailService {
                 `,
             });
             this.logger.log(`Daily digest email sent to ${email}`);
-        } catch (error: any) {
-            this.logger.error(`Failed to send daily digest to ${email}`, error.stack);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send daily digest to ${email}`, err.stack);
+        }
+    }
+    async sendOrgWelcomeEmail(email: string, firstName: string, role: string) {
+        try {
+            await this.sendTransactionalMail({
+                to: email,
+                subject: `Welcome to the Leadership Team: ${firstName}`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #000000; color: #ffffff; border-radius: 24px; border: 1px solid #333;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #ADFF2F; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">The African Think Tank</h1>
+                            <p style="color: #888; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px;">Organizational Matrix</p>
+                        </div>
+                        
+                        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Welcome to the Inner Circle, ${firstName}.</h2>
+                        <p style="color: #ccc; font-size: 16px; line-height: 1.6;">Your credentials as a <strong>${role.replace('_', ' ')}</strong> have been activated. You are now part of the core team driving the TATT mission forward.</p>
+                        
+                        <div style="background-color: #111; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid rgba(173, 255, 47, 0.1);">
+                            <h3 style="color: #ADFF2F; font-size: 14px; text-transform: uppercase; margin-top: 0;">Next Steps:</h3>
+                            <ul style="color: #ccc; padding-left: 20px; line-height: 1.8;">
+                                <li>Explore your administrative dashboard</li>
+                                <li>Collaborate with regional chapters</li>
+                                <li>Moderate community interactions</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="text-align: center; margin-top: 40px;">
+                            <a href="${this.frontendUrl}/admin" style="background-color: #ADFF2F; color: #000; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; display: inline-block;">
+                                Access Admin Portal
+                            </a>
+                        </p>
+                        
+                        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #333; text-align: center;">
+                            <p style="font-size: 10px; color: #666; text-transform: uppercase; font-weight: 800; letter-spacing: 2px;">Building the future of the African professional ecosystem.</p>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Org Welcome email sent to ${email}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send Org Welcome email to ${email}`, err.stack);
+        }
+    }
+
+    async sendCommunityWelcomeEmail(email: string, firstName: string, tier: string) {
+        try {
+            await this.sendTransactionalMail({
+                to: email,
+                subject: `Welcome to the TATT Ecosystem, ${firstName}`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #ffffff; color: #000000; border-radius: 24px; border: 1px solid #e1e1e1;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #000; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">The African Think Tank</h1>
+                            <div style="height: 4px; width: 40px; background-color: #ADFF2F; margin: 12px auto;"></div>
+                        </div>
+                        
+                        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Karibu, ${firstName}!</h2>
+                        <p style="color: #444; font-size: 16px; line-height: 1.6;">We are thrilled to welcome you to The African Think Tank as a <strong>${tier}</strong> member. You've joined a premier network of thinkers, doers, and leaders committed to impactful professional growth.</p>
+                        
+                        <div style="background-color: #f7f9fc; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid rgba(173, 255, 47, 0.2);">
+                            <h3 style="color: #000; font-size: 14px; text-transform: uppercase; margin-top: 0;">What's waiting for you:</h3>
+                            <ul style="color: #555; padding-left: 20px; line-height: 1.8;">
+                                <li>Global and Regional Networking</li>
+                                <li>Exclusive Industry Resources</li>
+                                <li>Collaborative Forums and Insights</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="text-align: center; margin-top: 40px;">
+                            <a href="${this.frontendUrl}/dashboard" style="background-color: #000; color: #ADFF2F; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; display: inline-block;">
+                                Start Exploring
+                            </a>
+                        </p>
+                        
+                        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
+                            <p style="font-size: 10px; color: #999; text-transform: uppercase;font-weight: 800; letter-spacing: 2px;">THE AFRICAN THINK TANK • EXCELLENCE IN CONNECTIVITY</p>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Community Welcome email sent to ${email}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send Community Welcome email to ${email}`, err.stack);
+        }
+    }
+    async sendBusinessSubmissionEmail(email: string, contactName: string, businessName: string) {
+        try {
+            await this.sendTransactionalMail({
+                to: email,
+                subject: `Application Received: ${businessName}`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #000000; color: #ffffff; border-radius: 24px; border: 1px solid #333;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #ADFF2F; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">The African Think Tank</h1>
+                            <p style="color: #888; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px;">Business Directory Application</p>
+                        </div>
+                        
+                        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 20px;">We've Received Your Application, ${contactName}.</h2>
+                        <p style="color: #ccc; font-size: 16px; line-height: 1.6;">Thank you for your interest in the <strong>TATT Business Directory</strong>. We have successfully received the application for <strong>${businessName}</strong>.</p>
+                        
+                        <div style="background-color: #111; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid rgba(173, 255, 47, 0.1);">
+                            <h3 style="color: #ADFF2F; font-size: 14px; text-transform: uppercase; margin-top: 0;">What Happens Next?</h3>
+                            <p style="color: #ccc; font-size: 14px; line-height: 1.6;">Our team of specialists will review your business profile and special offers. You will receive a formal notification once your listing is approved and visible to the TATT community.</p>
+                        </div>
+                        
+                        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #333; text-align: center;">
+                            <p style="font-size: 10px; color: #666; text-transform: uppercase; font-weight: 800; letter-spacing: 2px;">THE AFRICAN THINK TANK • DIRECTORY MANAGEMENT</p>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Business submission email sent to ${email}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send business submission email to ${email}`, err.stack);
+        }
+    }
+
+    async sendBusinessApprovedEmail(email: string, contactName: string, businessName: string) {
+        try {
+            await this.sendTransactionalMail({
+                to: email,
+                subject: `Congratulations: ${businessName} is Now Global!`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #ffffff; color: #000000; border-radius: 24px; border: 1px solid #e1e1e1;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="color: #000; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1px; margin: 0;">The African Think Tank</h1>
+                            <div style="height: 4px; width: 40px; background-color: #ADFF2F; margin: 12px auto;"></div>
+                        </div>
+                        
+                        <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Your Business is Approved, ${contactName}!</h2>
+                        <p style="color: #444; font-size: 16px; line-height: 1.6;">Congratulations! <strong>${businessName}</strong> has been officially approved for the <strong>TATT Business Directory</strong>. Community members can now find your business and take advantage of your offers.</p>
+                        
+                        <div style="background-color: #f7f9fc; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid rgba(173, 255, 47, 0.2);">
+                            <h3 style="color: #000; font-size: 14px; text-transform: uppercase; margin-top: 0;">Directory Benefits:</h3>
+                            <ul style="color: #555; padding-left: 20px; line-height: 1.8;">
+                                <li>Global Visibility to TATT Members</li>
+                                <li>Direct Channel to Professional Leaders</li>
+                                <li>Branded Marketplace Listing</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="text-align: center; margin-top: 40px;">
+                            <a href="${this.frontendUrl}/directory" style="background-color: #000; color: #ADFF2F; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);">
+                                View Your Listing
+                            </a>
+                        </p>
+                        
+                        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
+                            <p style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 800; letter-spacing: 2px;">EXCELLENCE IN CONNECTIVITY • TATT BUSINESS NETWORK</p>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Business approval email sent to ${email}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send business approval email to ${email}`, err.stack);
+        }
+    }
+
+    async sendBusinessDeclinedEmail(email: string, contactName: string, businessName: string, feedback?: string) {
+        try {
+            await this.sendTransactionalMail({
+                to: email,
+                subject: `Update on your Business Application: ${businessName}`,
+                html: `
+                    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #f9f9f9; color: #333; border-radius: 24px; border: 1px solid #eee;">
+                        <h1 style="color: #000; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 24px;">The African Think Tank</h1>
+                        
+                        <p style="font-size: 16px; line-height: 1.6;">Hello ${contactName},</p>
+                        <p style="font-size: 16px; line-height: 1.6;">Thank you for your interest in the TATT Business Directory. After reviewing the application for <strong>${businessName}</strong>, we have decided not to proceed with the listing at this time.</p>
+                        
+                        ${feedback ? `
+                        <div style="background-color: #fff; padding: 20px; border-radius: 12px; border: 1px solid #ddd; margin: 24px 0;">
+                            <p style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #888; margin-top: 0; margin-bottom: 8px;">Reviewer Feedback:</p>
+                            <p style="font-size: 14px; line-height: 1.6; color: #555; margin: 0;">${feedback}</p>
+                        </div>
+                        ` : ''}
+                        
+                        <p style="font-size: 14px; line-height: 1.6;">If you have any questions or wish to update your application, please reach out to our support team.</p>
+                        
+                        <div style="margin-top: 40px; text-align: center;">
+                            <a href="${this.frontendUrl}/contact" style="color: #666; font-size: 12px; font-weight: 800; text-transform: uppercase; text-decoration: underline;">Contact Support</a>
+                        </div>
+                    </div>
+                `,
+            });
+            this.logger.log(`Business rejection email sent to ${email}`);
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`Failed to send business rejection email to ${email}`, err.stack);
         }
     }
 }

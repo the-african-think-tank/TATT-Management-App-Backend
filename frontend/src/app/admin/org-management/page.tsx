@@ -94,12 +94,18 @@ function OrgManagementContent() {
     };
 
     const handleResendInvite = async (id: string, name: string) => {
+        const promise = api.post(`/auth/org-member/resend-invite/${id}`);
+
+        toast.promise(promise, {
+            loading: `Sending invitation to ${name}...`,
+            success: `Invitation successfully resent to ${name}`,
+            error: (err) => err.response?.data?.message || `Failed to send invitation to ${name}`
+        });
+
         try {
-            await api.post(`/auth/org-member/resend-invite/${id}`);
-            toast.success(`Invitation resent to ${name}`);
-        } catch (error: any) {
+            await promise;
+        } catch (error) {
             console.error("Error resending invite:", error);
-            toast.error(error.response?.data?.message || "Failed to resend invitation");
         }
     };
 

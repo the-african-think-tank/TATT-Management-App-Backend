@@ -4,7 +4,6 @@ import { User } from '../../iam/entities/user.entity';
 @Table({
     tableName: 'chapters',
     timestamps: true,
-    paranoid: true,
 })
 export class Chapter extends Model<Chapter> {
     @Column({

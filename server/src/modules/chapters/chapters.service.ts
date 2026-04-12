@@ -55,6 +55,19 @@ export class ChaptersService implements OnApplicationBootstrap {
         const chapter = await this.chapterRepository.findByPk(id);
         if (!chapter) throw new NotFoundException('Chapter not found.');
 
+        // Verify Unique Name (excluding self)
+        if (dto.name && dto.name !== chapter.name) {
+            const existingName = await this.chapterRepository.findOne({ 
+                where: { 
+                    name: dto.name,
+                    id: { [Op.ne]: id }
+                } 
+            });
+            if (existingName) {
+                throw new ConflictException(`The name "${dto.name}" is already assigned to another chapter. Please choose a unique name.`);
+            }
+        }
+
         if (dto.code && dto.code !== chapter.code) {
             if (!/^\d{4}$/.test(dto.code)) {
                 throw new ConflictException('Chapter code must be a 4-digit number.');

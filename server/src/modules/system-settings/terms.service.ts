@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { PlatformTerms } from './entities/platform-terms.entity';
 import { User } from '../iam/entities/user.entity';
@@ -14,7 +14,9 @@ export class TermsService {
     constructor(
         @InjectModel(PlatformTerms) private termsRepo: typeof PlatformTerms,
         @InjectModel(User) private userRepo: typeof User,
+        @Inject(forwardRef(() => NotificationsService))
         private readonly notificationsService: NotificationsService,
+        @Inject(forwardRef(() => BroadcastsService))
         private readonly broadcastsService: BroadcastsService,
     ) {}
 
@@ -64,7 +66,7 @@ export class TermsService {
             version: nextVersion,
             updatedById: adminId,
             isActive: true,
-        } as any);
+        });
 
         this.logger.log(`Terms of Service v${nextVersion} published by admin ${adminId}`);
 

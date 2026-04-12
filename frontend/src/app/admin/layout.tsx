@@ -203,7 +203,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="p-6 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="size-10 flex items-center justify-center p-1">
-                                <Image src="/assets/tatt-logo.webp" alt="TATT" width={32} height={32} className="object-contain" />
+                                <Image src="/assets/tatt-logo.webp" alt="TATT" width={32} height={32} className="object-contain" style={{ width: 'auto', height: 'auto' }} />
                             </div>
                             <div>
                                 <h1 className="text-lg font-bold leading-tight tracking-tight">TATT</h1>
@@ -360,7 +360,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             </div>
                                             
                                             <div className="p-4 bg-surface/50 border-t border-border text-center">
-                                                <Link href="/admin/settings" className="text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:text-tatt-black transition-colors px-4 py-2">
+                                                <Link href="/admin/platform" className="text-[10px] font-black uppercase tracking-widest text-tatt-gray hover:text-tatt-black transition-colors px-4 py-2">
                                                     Notification Settings
                                                 </Link>
                                             </div>
@@ -389,7 +389,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     </div>
                                     <div className="size-10 rounded-full border-2 border-tatt-lime flex items-center justify-center overflow-hidden shrink-0 bg-background select-none">
                                         {user?.profilePicture ? (
-                                            <Image src={user.profilePicture} alt="Admin" width={40} height={40} className="object-cover" />
+                                            <Image src={user.profilePicture} alt="Admin" width={40} height={40} className="object-cover" style={{ width: 'auto', height: 'auto' }} />
                                         ) : (
                                             <div className="size-full bg-tatt-lime/20 flex items-center justify-center text-tatt-lime font-bold">
                                                 {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}

@@ -7,7 +7,9 @@ import { SystemRole } from '../iam/enums/roles.enum';
 
 @Controller('terms')
 export class TermsController {
-    constructor(private readonly termsService: TermsService) {}
+    constructor(
+        private readonly termsService: TermsService,
+    ) {}
 
     /** Public: get currently active Terms of Service */
     @Get('active')

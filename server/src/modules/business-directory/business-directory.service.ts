@@ -34,6 +34,16 @@ export class BusinessDirectoryService {
             submittedById: userId,
             status: 'PENDING',
         });
+
+        // Send submission confirmation
+        if (business.contactEmail) {
+            this.mailService.sendBusinessSubmissionEmail(
+                business.contactEmail,
+                business.contactName || 'Valued Partner',
+                business.name
+            );
+        }
+
         return business;
     }
 
@@ -105,13 +115,10 @@ export class BusinessDirectoryService {
         if (dto.status === 'APPROVED') {
             try {
                 const recipientName = business.contactName || business.name;
-                await this.mailService.sendNotificationEmail(
+                await this.mailService.sendBusinessApprovedEmail(
                     business.contactEmail,
                     recipientName,
-                    'Business Approved for TATT Directory',
-                    `Congratulations! **${business.name}** has been officially approved. Community members can now view your offers in the TATT Business Directory.`,
-                    'http://localhost:3000/directory',
-                    'View in Directory'
+                    business.name
                 );
             } catch (error) {
                 this.logger.error(`Failed to send approval email for business ${id}`, error);
@@ -119,15 +126,11 @@ export class BusinessDirectoryService {
         } else if (dto.status === 'DECLINED') {
             try {
                 const recipientName = business.contactName || business.name;
-                const rejectionReason = dto.adminNotes ? `\n\n**Reviewer Feedback:**\n${dto.adminNotes}` : '';
-                
-                await this.mailService.sendNotificationEmail(
+                await this.mailService.sendBusinessDeclinedEmail(
                     business.contactEmail,
                     recipientName,
-                    'Update on your Business Application',
-                    `Thank you for your interest in the TATT Business Directory. After reviewing the application for **${business.name}**, we have decided not to proceed at this time.${rejectionReason}`,
-                    'http://localhost:3000/contact',
-                    'Contact Support'
+                    business.name,
+                    dto.adminNotes
                 );
                 this.logger.log(`Rejection email sent to ${business.contactEmail}`);
             } catch (error) {
@@ -194,10 +197,20 @@ export class BusinessDirectoryService {
 
         if (business) {
             this.logger.log(`[BusinessDirectoryService] Updating business ${business.id} for user ${userId}. Auto-approve: ${status === 'APPROVED'}`);
+            const oldStatus = business.status;
             await business.update({
                 ...dto,
                 status,
             });
+
+            // If it was pending and now it's approved (auto-approve case on update)
+            if (oldStatus !== 'APPROVED' && status === 'APPROVED' && business.contactEmail) {
+                this.mailService.sendBusinessApprovedEmail(
+                    business.contactEmail,
+                    business.contactName || 'Valued Partner',
+                    business.name
+                );
+            }
         } else {
             this.logger.log(`[BusinessDirectoryService] Creating new business for user ${userId}. Auto-approve: ${status === 'APPROVED'}`);
             business = await this.businessPartnerModel.create({
@@ -205,6 +218,23 @@ export class BusinessDirectoryService {
                 submittedById: userId,
                 status,
             });
+
+            // Send notification for new creation
+            if (business.contactEmail) {
+                if (status === 'APPROVED') {
+                    this.mailService.sendBusinessApprovedEmail(
+                        business.contactEmail,
+                        business.contactName || 'Valued Partner',
+                        business.name
+                    );
+                } else {
+                    this.mailService.sendBusinessSubmissionEmail(
+                        business.contactEmail,
+                        business.contactName || 'Valued Partner',
+                        business.name
+                    );
+                }
+            }
         }
 
         return business;

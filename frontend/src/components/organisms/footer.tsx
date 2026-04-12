@@ -4,10 +4,14 @@ import React from "react";
 import Link from "next/link";
 
 import { Linkedin, Facebook, Instagram } from "lucide-react";
+import { useTermsModal } from "@/context/terms-context";
+
 
 const LOGO_ICON_SRC = "/assets/tattlogoIcon.svg";
 
 export function Footer() {
+    const { showTerms } = useTermsModal();
+
     return (
         <footer className="bg-tatt-black text-white py-12 md:py-16 px-6 sm:px-10 lg:px-20">
             {/* Top Section: Multi-column Grid */}
@@ -128,7 +132,7 @@ export function Footer() {
                 <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
                     <a href="https://www.theafricanthinktank.com/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Privacy Policy</a>
                     <span className="text-gray-700 hidden sm:inline">|</span>
-                    <a href="https://www.theafricanthinktank.com/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-tatt-lime hover:underline">Terms & Conditions</a>
+                    <button onClick={showTerms} className="text-tatt-lime hover:underline">Terms & Conditions</button>
                     <span className="text-gray-700 hidden sm:inline">|</span>
                     <a href="https://www.dohtechsolutions.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300 transition-colors">
                         Developed and maintained by DOHTECH SOLUTIONS

@@ -3,6 +3,36 @@ import { ApiProperty } from '@nestjs/swagger';
 import { SystemRole, AccountFlags, ConnectionPreference } from '../../enums/roles.enum';
 
 export class UpdateUserDto {
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    firstName?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    lastName?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    email?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    phoneNumber?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    professionTitle?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    location?: string;
+
     @ApiProperty({ description: 'The new system role for the user', enum: SystemRole, required: false })
     @IsEnum(SystemRole)
     @IsOptional()

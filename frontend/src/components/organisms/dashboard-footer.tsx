@@ -1,8 +1,13 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { useTermsModal } from "@/context/terms-context";
+
+
 
 export function DashboardFooter() {
+  const { showTerms } = useTermsModal();
   const currentYear = 2026; // Fixed per user request
 
   return (
@@ -24,14 +29,12 @@ export function DashboardFooter() {
           >
             Privacy Policy
           </a>
-          <a 
-            href="https://www.theafricanthinktank.com/terms-and-conditions" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="text-tatt-gray hover:text-tatt-black transition-all"
+          <button 
+            onClick={showTerms}
+            className="text-tatt-gray hover:text-tatt-black transition-all uppercase"
           >
             Terms of Service
-          </a>
+          </button>
           
           <span className="hidden lg:inline text-border">|</span>
           

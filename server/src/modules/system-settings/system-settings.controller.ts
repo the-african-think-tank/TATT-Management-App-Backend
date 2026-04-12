@@ -10,6 +10,26 @@ import { SystemRole } from '../iam/enums/roles.enum';
 export class SystemSettingsController {
     constructor(private readonly settingsService: SystemSettingsService) { }
 
+    @Get('telemetry')
+    @Roles(SystemRole.SUPERADMIN, SystemRole.ADMIN)
+    async getTelemetry(): Promise<{ totalEmailsSent: number; serverTime: string; status: string; error?: string }> {
+        try {
+            const totalEmails = await this.settingsService.getRawValue('TOTAL_EMAILS_SENT');
+            return {
+                totalEmailsSent: parseInt(totalEmails || '0', 10),
+                serverTime: new Date().toISOString(),
+                status: 'OPERATIONAL'
+            };
+        } catch (error) {
+            return {
+                totalEmailsSent: 0,
+                serverTime: new Date().toISOString(),
+                status: 'DEGRADED',
+                error: (error as Error).message
+            };
+        }
+    }
+
     @Get()
     @Roles(SystemRole.SUPERADMIN, SystemRole.ADMIN)
     async findAll() {
@@ -31,6 +51,7 @@ export class SystemSettingsController {
         return this.settingsService.remove(key);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
     @Post('test-smtp')
     @Roles(SystemRole.SUPERADMIN)
     async testSmtp(@Body('email') email: string) {

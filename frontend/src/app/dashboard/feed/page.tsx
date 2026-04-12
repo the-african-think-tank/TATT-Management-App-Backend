@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { useTermsModal } from "@/context/terms-context";
+
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
 import toast, { Toaster } from "react-hot-toast";
@@ -161,7 +163,9 @@ const POST_TYPES = [
 ];
 
 export default function FeedPage() {
+    const { showTerms } = useTermsModal();
     const { user } = useAuth();
+
     const [posts, setPosts] = useState<Post[]>([]);
     const [filter, setFilter] = useState<"ALL" | "CHAPTER" | "PREMIUM" | "BOOKMARKS">("ALL");
     const [page, setPage] = useState(1);
@@ -780,7 +784,7 @@ export default function FeedPage() {
                     {/* Footer Links */}
                     <div className="px-6 py-4 flex flex-wrap gap-x-4 gap-y-2 opacity-30 text-foreground">
                         <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Privacy</a>
-                        <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Terms</a>
+                        <button className="text-[10px] font-bold uppercase tracking-wider hover:underline" onClick={showTerms}>Terms</button>
                         <a className="text-[10px] font-bold uppercase tracking-wider hover:underline" href="#">Guidelines</a>
                         <p className="text-[10px] font-bold uppercase tracking-wider mt-2 w-full">© 2026 The African Think Tank</p>
                     </div>

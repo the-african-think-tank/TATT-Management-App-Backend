@@ -34,6 +34,8 @@ export const metadata: Metadata = {
 
 import { ToastProvider } from "@/components/organisms/ToastProvider";
 import QueryProvider from "@/context/query-provider";
+import { TermsProvider } from "@/context/terms-context";
+
 
 export default function RootLayout({
   children,
@@ -48,7 +50,9 @@ export default function RootLayout({
         <ToastProvider />
         <QueryProvider>
             <AuthProvider>
-              {children}
+              <TermsProvider>
+                {children}
+              </TermsProvider>
             </AuthProvider>
         </QueryProvider>
       </body>

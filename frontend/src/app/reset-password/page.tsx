@@ -4,9 +4,14 @@ import { ResetPasswordForm } from "@/components/organisms/reset-password-form";
 import { LoginPromoPanel } from "@/components/organisms/login-promo-panel";
 import { Navbar, Footer } from "@/components/organisms";
 import { Suspense } from "react";
+import Link from "next/link";
+import { useTermsModal } from "@/context/terms-context";
+
 
 export default function ResetPasswordPage() {
+    const { showTerms } = useTermsModal();
     return (
+
         <div className="flex flex-col min-h-screen">
             <Navbar />
             <div className="flex-1 shrink-0">
@@ -27,9 +32,9 @@ export default function ResetPasswordPage() {
                                 Privacy Policy
                             </a>
                             <span>•</span>
-                            <a href="#" className="hover:underline">
+                            <button onClick={showTerms} className="hover:underline">
                                 Terms of Service
-                            </a>
+                            </button>
                             <span>•</span>
                             <a href="#" className="hover:underline">
                                 Contact Support

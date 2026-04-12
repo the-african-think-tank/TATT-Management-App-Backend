@@ -23,6 +23,27 @@ import { TwoFactorService } from '../../security/two-factor.service';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { ProfessionalInterest } from '../../interests/entities/interest.entity';
 
+export interface AuthResponse {
+    access_token: string;
+    user: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        systemRole: SystemRole;
+        communityTier: CommunityTier;
+        isActive: boolean;
+        flags: any; // Flags are dynamic JSON
+        isTwoFactorEnabled: boolean;
+        twoFactorMethod: string | null;
+        deletionRequestedAt: Date | null;
+        hasAutoPayEnabled: boolean;
+    };
+    isScheduledForDeletion?: boolean;
+    deletionDate?: Date;
+    message?: string;
+}
+
 @Injectable()
 export class AuthService {
     private readonly logger = new Logger(AuthService.name);
@@ -107,7 +128,7 @@ export class AuthService {
             };
         }
 
-        const authResponse = this.generateAuthResponse(user) as any;
+        const authResponse = this.generateAuthResponse(user) as AuthResponse;
         if (user.deletionRequestedAt) {
             authResponse.isScheduledForDeletion = true;
             authResponse.deletionDate = new Date(user.deletionRequestedAt.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -142,10 +163,10 @@ export class AuthService {
 
     // ─── FORCED PASSWORD ROTATION (after rotationToken) ──────────────────────
     async rotateExpiredPassword(rotationToken: string, newPassword: string) {
-        let payload: any;
+        let payload: { sub: string; scope: string };
         try {
             payload = this.jwtService.verify(rotationToken);
-        } catch {
+        } catch (error) {
             throw new UnauthorizedException('Rotation token is invalid or has expired.');
         }
         if (payload.scope !== 'password_rotation_required') {
@@ -212,8 +233,9 @@ export class AuthService {
         if (policy) {
             try {
                 await this.securityPolicyService.validatePasswordStrength(dto.password, policy);
-            } catch (err: any) {
-                throw new BadRequestException(err?.message || 'Password does not meet policy requirements.');
+            } catch (err) {
+                const error = err as Error;
+                throw new BadRequestException(error?.message || 'Password does not meet policy requirements.');
             }
         } else {
             if (dto.password.length < 8) {
@@ -241,6 +263,9 @@ export class AuthService {
                 // Non-fatal
             }
         }
+
+        // Send branded welcome email to the first system admin
+        this.mailService.sendOrgWelcomeEmail(user.email, user.firstName, user.systemRole);
 
         return {
             message: 'First admin created successfully. Sign in at POST /auth/signin with your email and password.',
@@ -277,7 +302,8 @@ export class AuthService {
         // Email dispatch is non-fatal for member creation
         try {
             await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
-        } catch (mailError: any) {
+        } catch (error) {
+            const mailError = error as Error;
             this.logger.error(`Failed to send initial invite to ${user.email} (non-fatal): ${mailError.message}`, mailError.stack);
             return { 
                 message: 'Org member added successfully, but invitation email failed to send. You can resend it from the management dashboard once email settings are verified.',
@@ -313,17 +339,15 @@ export class AuthService {
         user.inviteToken = tokenHash;
         await user.save();
 
-        // Email dispatch is non-fatal for invitation resending
+        // Email dispatch is now treated as a fatal error for explicit "Resend" requests
         try {
             await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
             this.logger.log(`Invitation email successfully resent to ${user.email}`);
             return { message: 'Invitation email resent successfully.' };
-        } catch (mailError: any) {
-            this.logger.error(`Failed to resend invite to ${user.email} (non-fatal): ${mailError.message}`, mailError.stack);
-            return { 
-                message: 'Member updated with new token, but invitation email failed to send again. Please check your SMTP configuration.',
-                warning: 'EMAIL_DISPATCH_FAILED'
-            };
+        } catch (error) {
+            const mailError = error as Error;
+            this.logger.error(`Failed to resend invite to ${user.email}: ${mailError.message}`, mailError.stack);
+            throw new BadRequestException(`Email failed to send. Please check your SMTP configuration. Error: ${mailError.message}`);
         }
     }
 
@@ -363,7 +387,7 @@ export class AuthService {
             const isMatch = await bcrypt.compare(dto.password, existingUser.password);
             if (isMatch) {
                 this.logger.log(`User ${dto.email} restarted signup. Logging them in and returning to onboarding.`);
-                const authResp = this.generateAuthResponse(existingUser) as any;
+                const authResp = this.generateAuthResponse(existingUser) as AuthResponse;
                 authResp.message = 'Registration resumed. Redirecting to plan selection.';
                 return authResp;
             }
@@ -418,8 +442,9 @@ export class AuthService {
                 const durationMonths = dto.billingCycle === 'YEARLY' ? 13 : 1;
                 subscriptionExpiresAt = new Date();
                 subscriptionExpiresAt.setMonth(subscriptionExpiresAt.getMonth() + durationMonths);
-            } catch (err: any) {
-                this.logger.error('Stripe Integration Error', err.message);
+            } catch (err) {
+                const error = err as Error;
+                this.logger.error('Stripe Integration Error', error.message);
                 throw new BadRequestException('Payment processing failed: Transaction Declined or Config Error');
             }
         }
@@ -450,6 +475,10 @@ export class AuthService {
         }
 
         await this.securityPolicyService.recordPasswordChange(user.id, hashedPassword, policy);
+
+        // Send branded welcome email to new community member
+        this.mailService.sendCommunityWelcomeEmail(user.email, user.firstName, user.communityTier);
+
         return this.generateAuthResponse(user);
     }
 
@@ -539,10 +568,10 @@ export class AuthService {
             ],
         });
         if (!user) throw new UnauthorizedException('User not found');
-        const plain = user.get({ plain: true }) as any;
+        const plain = user.get({ plain: true }) as Record<string, any>;
         if (plain.chapter) {
-            plain.chapterName = plain.chapter.name;
-            plain.chapterCode = plain.chapter.code;
+            plain.chapterName = (plain.chapter as any).name;
+            plain.chapterCode = (plain.chapter as any).code;
         }
         delete plain.chapter;
         return plain;

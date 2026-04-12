@@ -220,9 +220,11 @@ export function AdminRegionalChaptersPage() {
                 associateRegionalDirectorId: ""
             });
             fetchChapters();
-        } catch (error) {
+            toast.success(selectedChapterId ? "Chapter updated successfully" : "Chapter created successfully");
+        } catch (error: any) {
             console.error("Failed to save chapter:", error);
-            alert("Error saving chapter. Please check if the name is unique.");
+            const msg = error.response?.data?.message || "Error saving chapter. Please check if the name is unique.";
+            toast.error(msg);
         } finally {
             setIsSubmitting(false);
         }
@@ -449,12 +451,19 @@ export function AdminRegionalChaptersPage() {
                                         filteredChapters.map((chapter) => (
                                             <tr key={chapter.id} className="hover:bg-background/50 transition-colors">
                                                 <td className="px-6 py-5">
-                                                    <div 
-                                                        className="font-bold text-foreground flex items-center gap-2 cursor-pointer hover:text-tatt-lime transition-colors group/name"
-                                                        onClick={() => router.push(`/admin/regional-chapters/${chapter.id}`)}
-                                                    >
-                                                        {chapter.name}
-                                                        <ArrowUpRight className="h-3 w-3 opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                                                    <div className="flex items-center gap-2">
+                                                        <div 
+                                                            className="font-bold text-foreground flex items-center gap-2 cursor-pointer hover:text-tatt-lime transition-colors group/name"
+                                                            onClick={() => router.push(`/admin/regional-chapters/${chapter.id}`)}
+                                                        >
+                                                            {chapter.name}
+                                                            <ArrowUpRight className="h-3 w-3 opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                                                        </div>
+                                                        {(chapter as any).deletedAt && (
+                                                            <span className="bg-red-500/10 text-red-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-red-500/20">
+                                                                Soft-Deleted
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div className="text-sm text-tatt-gray flex items-center gap-1 mt-1">
                                                         <MapPin className="h-3 w-3" />

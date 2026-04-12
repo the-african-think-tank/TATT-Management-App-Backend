@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { SystemSetting } from './entities/system-setting.entity';
 import { PlatformTerms } from './entities/platform-terms.entity';
@@ -16,7 +16,7 @@ import { User } from '../iam/entities/user.entity';
     imports: [
         SequelizeModule.forFeature([SystemSetting, PlatformTerms, User]),
         IamModule,
-        NotificationsModule,
+        forwardRef(() => NotificationsModule),
     ],
     providers: [SystemSettingsService, SystemSettingsSeeder, TermsService],
     controllers: [SystemSettingsController, TermsController],

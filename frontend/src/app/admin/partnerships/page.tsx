@@ -261,14 +261,14 @@ export default function PartnershipsPage() {
 
     const handleDeletePartner = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!confirm("Are you sure you want to delete this partnership? This action cannot be undone.")) return;
+        if (!window.confirm("Are you sure you want to delete this partnership? This action cannot be undone.")) return;
 
         try {
             await api.delete(`/partnerships/${id}`);
-            alert("Partnership deleted successfully");
+            toast.success("Partnership deleted successfully");
             fetchData();
         } catch (error: any) {
-            alert(error.response?.data?.message || "Failed to delete partnership");
+            toast.error(error.response?.data?.message || "Failed to delete partnership");
         }
     };
 

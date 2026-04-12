@@ -81,6 +81,7 @@ export default function PlatformManagement() {
     const [taxoSearch, setTaxoSearch] = useState("");
     const [newValue, setNewValue] = useState("");
     const [editingItem, setEditingItem] = useState<{id: string, name: string} | null>(null);
+    const [telemetry, setTelemetry] = useState<any>(null);
 
     useEffect(() => {
         fetchData();
@@ -93,14 +94,16 @@ export default function PlatformManagement() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [bRes, iRes, indRes] = await Promise.all([
+            const [bRes, iRes, indRes, telRes] = await Promise.all([
                 api.get("/admin/broadcasts"),
                 api.get("/interests"),
-                api.get("/industries")
+                api.get("/industries"),
+                api.get("/admin/settings/telemetry")
             ]);
             setBroadcasts(bRes.data);
             setInterests(iRes.data);
             setIndustries(indRes.data);
+            setTelemetry(telRes.data);
         } catch (error) {
             toast.error("Failed to load platform data");
         } finally {
@@ -223,6 +226,42 @@ export default function PlatformManagement() {
                 </div>
                 <div className="flex gap-4">
                     {/* Header actions can go here in the future */}
+                </div>
+            </div>
+
+            {/* System Vitality Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="md:col-span-1 bg-tatt-black border border-tatt-lime/20 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden group hover:border-tatt-lime transition-all">
+                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Send size={80} className="text-tatt-lime" />
+                    </div>
+                    <div className="relative z-10 space-y-4">
+                        <div className="size-12 rounded-2xl bg-tatt-lime/10 flex items-center justify-center text-tatt-lime ring-1 ring-tatt-lime/20">
+                            <Send size={22} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray italic">Transactional Email Tracker</p>
+                            <h4 className="text-4xl font-black text-white tracking-tighter mt-1 tabular-nums">
+                                {telemetry?.totalEmailsSent?.toLocaleString() || "0"}
+                            </h4>
+                            <p className="text-[9px] font-bold text-tatt-lime mt-1 uppercase tracking-tighter">Verified Emails Dispatched</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="md:col-span-3 bg-surface border border-border rounded-[2rem] p-8 flex items-center justify-between gap-8">
+                   <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className={`size-3 rounded-full ${telemetry?.status === 'OPERATIONAL' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                            <span className="text-xs font-black uppercase tracking-widest text-foreground">Infrastructure Status: {telemetry?.status || 'INIT'}</span>
+                        </div>
+                        <p className="text-xs text-tatt-gray font-medium max-w-md">The mail transport engine is operating at peak capacity. All successful handshakes with the SMTP gateway are recorded in real-time.</p>
+                   </div>
+                   <div className="hidden lg:block">
+                        <div className="px-6 py-3 bg-background border border-border rounded-xl text-[10px] font-black uppercase tracking-widest text-tatt-gray">
+                            Last Sync: {telemetry?.serverTime ? new Date(telemetry.serverTime).toLocaleTimeString() : 'N/A'}
+                        </div>
+                   </div>
                 </div>
             </div>
 

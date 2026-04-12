@@ -102,7 +102,7 @@ export class SystemSettingsService {
             this.logger.warn('STRIPE_SECRET_KEY not found in settings or env. Billing may fail.');
         }
         return new Stripe(secretKey || 'sk_test_placeholder', {
-            apiVersion: '2025-01-27.acacia' as any,
+            apiVersion: '2025-01-27.acacia' as Stripe.LatestApiVersion,
         });
     }
 
@@ -131,9 +131,9 @@ export class SystemSettingsService {
                 auth: { user, pass },
                 tls: {
                     rejectUnauthorized: mailRejectUnauthorized,
-                    minVersion: mailTLSMinVersion,
+                    minVersion: mailTLSMinVersion as any, // This one is specialized type in nodemailer
                 },
-            } as any);
+            });
 
             await transporter.verify();
 
@@ -150,9 +150,10 @@ export class SystemSettingsService {
             });
 
             return { success: true, message: 'SMTP connection verified and test email sent.' };
-        } catch (error: any) {
-            this.logger.error(`SMTP Test Failed: ${error.message}`);
-            return { success: false, message: error.message };
+        } catch (error) {
+            const err = error as Error;
+            this.logger.error(`SMTP Test Failed: ${err.message}`);
+            return { success: false, message: err.message };
         }
     }
 }
