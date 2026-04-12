@@ -20,7 +20,7 @@ export function TermsProvider({ children }: { children: React.ReactNode }) {
     return (
         <TermsContext.Provider value={{ showTerms, hideTerms }}>
             {children}
-            <TermsModal isOpen={isOpen} onClose={hideTerms} />
+            <TermsModal open={isOpen} onClose={hideTerms} />
         </TermsContext.Provider>
     );
 }
