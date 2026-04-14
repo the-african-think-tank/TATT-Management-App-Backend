@@ -16,7 +16,7 @@ import Stripe from 'stripe';
 import { SystemSettingsService } from '../../system-settings/system-settings.service';
 import { User } from '../entities/user.entity';
 import { AddOrgMemberDto, BootstrapAdminDto, CompleteOrgMemberDto, CommunitySignupDto, SignInDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
-import { SystemRole, CommunityTier } from '../enums/roles.enum';
+import { SystemRole, CommunityTier, AccountFlags } from '../enums/roles.enum';
 import { MailService } from '../../../common/mail/mail.service';
 import { SecurityPolicyService } from '../../security/security-policy.service';
 import { TwoFactorService } from '../../security/two-factor.service';
@@ -257,6 +257,11 @@ export class AuthService {
         const existingUser = await this.userRepository.findOne({ where: { email: dto.email } });
         if (existingUser) throw new ConflictException('A user with this email already exists.');
 
+        // Soft duplicate-name check — warn but do not block
+        const duplicateName = await this.userRepository.findOne({
+            where: { firstName: dto.firstName, lastName: dto.lastName },
+        });
+
         const inviteToken = crypto.randomBytes(32).toString('hex');
         const tokenHash = await bcrypt.hash(inviteToken, 10);
 
@@ -264,28 +269,43 @@ export class AuthService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             email: dto.email,
-            phoneNumber: dto.phoneNumber,
-            professionTitle: dto.professionTitle,
-            location: dto.location,
+            phoneNumber: dto.phoneNumber ?? null,
+            professionTitle: dto.professionTitle ?? null,
+            location: dto.location ?? null,
             systemRole: dto.systemRole,
             communityTier: CommunityTier.FREE,
             isActive: false,
             inviteToken: tokenHash,
             isApproved: true,
+            chapterId: dto.chapterId ?? null,
+            flags: (dto.flags ?? []) as AccountFlags[],
         });
+
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+        const inviteUrl = `${frontendUrl}/complete-registration?token=${inviteToken}`;
 
         // Email dispatch is non-fatal for member creation
         try {
             await this.mailService.sendAdminInvite(user.email, user.firstName, inviteToken);
         } catch (mailError: any) {
             this.logger.error(`Failed to send initial invite to ${user.email} (non-fatal): ${mailError.message}`, mailError.stack);
-            return { 
-                message: 'Org member added successfully, but invitation email failed to send. You can resend it from the management dashboard once email settings are verified.',
-                warning: 'EMAIL_DISPATCH_FAILED'
+            return {
+                message: 'Member added successfully, but the invitation email could not be sent. Share the invite link below directly.',
+                warning: 'EMAIL_DISPATCH_FAILED',
+                inviteUrl,
+                duplicateNameWarning: duplicateName
+                    ? `Another member named "${dto.firstName} ${dto.lastName}" already exists. Verify this is intentional.`
+                    : null,
             };
         }
 
-        return { message: 'Org member added successfully. Invitation email dispatched.' };
+        return {
+            message: 'Member added successfully. Invitation email dispatched.',
+            inviteUrl,
+            duplicateNameWarning: duplicateName
+                ? `Another member named "${dto.firstName} ${dto.lastName}" already exists. Verify this is intentional.`
+                : null,
+        };
     }
 
     async resendOrgInvite(userId: string, currentAdmin: User) {
@@ -351,6 +371,15 @@ export class AuthService {
         matchedUser.isActive = true;
         matchedUser.inviteToken = null;
         matchedUser.passwordChangedAt = new Date();
+
+        // Community members added via org management must have ONBOARDING_COMPLETED
+        // so the dashboard layout doesn't redirect them back to /onboarding/plans.
+        if (matchedUser.systemRole === SystemRole.COMMUNITY_MEMBER) {
+            if (!matchedUser.flags.includes(AccountFlags.ONBOARDING_COMPLETED)) {
+                matchedUser.flags = [...matchedUser.flags, AccountFlags.ONBOARDING_COMPLETED];
+            }
+        }
+
         await matchedUser.save();
 
         return this.generateAuthResponse(matchedUser);
@@ -476,7 +505,7 @@ export class AuthService {
         try {
             await this.mailService.sendPasswordReset(user.email, resetTokenRaw);
         } catch (mailError) {
-            this.logger.error(`Failed to send password reset email: ${mailError.message}`);
+            this.logger.error(`Failed to send password reset email: ${(mailError as Error).message}`);
             if (process.env.NODE_ENV !== 'development') {
                 throw mailError;
             }

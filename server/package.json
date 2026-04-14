@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/the-african-think-tank/TATT-Management-App-Backend#readme",
   "dependencies": {
-    "@nestjs-modules/mailer": "^1.8.1",
+    "@nestjs-modules/mailer": "^2.3.4",
     "@nestjs/common": "^11.1.14",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.14",
@@ -70,8 +70,8 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "@nestjs/cli": "^7.6.0",
-    "@nestjs/schematics": "^7.3.1",
+    "@nestjs/cli": "^11.0.19",
+    "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.14",
     "@types/bcryptjs": "^2.4.6",
     "@types/cron": "^2.0.1",

@@ -32,10 +32,11 @@ export class DashboardService {
             }
         });
 
-        // 3. Monthly Revenue (Fetch stats for the last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const revenueStats = await this.revenueService.getStats({ startDate: thirtyDaysAgo });
+        // 3. Monthly Revenue — current calendar month (aligns with Revenue Center default view)
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const revenueStats = await this.revenueService.getStats({ startDate: startOfMonth });
         const monthlyRevenue = revenueStats.totalRevenue;
 
         const volunteerCount = await this.volunteerModel.count({
@@ -56,6 +57,11 @@ export class DashboardService {
             ubuntuTier: `${Math.round((ubuntuCount / totalSubscribers) * 100)}%`,
             imaniTier: `${Math.round((imaniCount / totalSubscribers) * 100)}%`,
             kiongoziTier: `${Math.round((kiongoziCount / totalSubscribers) * 100)}%`,
+            // Actual counts so the frontend can display member numbers alongside percentages
+            freeTierCount: freeCount,
+            ubuntuTierCount: ubuntuCount,
+            imaniTierCount: imaniCount,
+            kiongoziTierCount: kiongoziCount,
         };
 
         /** 3. Pending Moderation Items */

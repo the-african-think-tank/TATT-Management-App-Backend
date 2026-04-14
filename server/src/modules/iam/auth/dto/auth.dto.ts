@@ -60,15 +60,24 @@ export class AddOrgMemberDto {
     phoneNumber?: string;
 
     @IsString()
-    @IsNotEmpty()
-    professionTitle: string;
+    @IsOptional()
+    professionTitle?: string;
 
     @IsString()
-    @IsNotEmpty()
-    location: string;
+    @IsOptional()
+    location?: string;
 
     @IsEnum(SystemRole)
     systemRole: SystemRole;
+
+    @IsString()
+    @IsOptional()
+    chapterId?: string;
+
+    @IsArray()
+    @IsString({ each: true })
+    @IsOptional()
+    flags?: string[];
 }
 
 export class CompleteOrgMemberDto {
