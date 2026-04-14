@@ -267,14 +267,24 @@ export function AdminRegionalChaptersPage() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const payload = {
-                ...activityForm,
-                targetVolunteers: Number(activityForm.targetVolunteers) || undefined,
-                eventDate: activityForm.eventDate ? new Date(activityForm.eventDate).toISOString() : undefined,
-                endDate: activityForm.endDate ? new Date(activityForm.endDate).toISOString() : undefined,
+            const isAnnouncement = activityForm.type === 'ANNOUNCEMENT';
+            const payload: Record<string, any> = {
+                type: activityForm.type,
+                title: activityForm.title,
+                content: activityForm.content,
+                visibility: activityForm.visibility,
             };
-            const chapId = payload.chapterId;
-            delete (payload as any).chapterId;
+
+            // Date/location fields only apply to non-announcement activity types
+            if (!isAnnouncement) {
+                if (activityForm.eventDate) payload.eventDate = new Date(activityForm.eventDate).toISOString();
+                if (activityForm.endDate) payload.endDate = new Date(activityForm.endDate).toISOString();
+                payload.locationType = activityForm.locationType;
+                if (activityForm.eventLocation) payload.eventLocation = activityForm.eventLocation;
+                if (activityForm.targetVolunteers) payload.targetVolunteers = Number(activityForm.targetVolunteers);
+            }
+
+            const chapId = activityForm.chapterId;
             await api.post(`/chapters/${chapId}/activities`, payload);
             setIsCreateActivityModalOpen(false);
             setActivityForm({
@@ -1065,15 +1075,28 @@ export function AdminRegionalChaptersPage() {
                                         </div>
                                         <h3 className="text-xl font-bold text-foreground">Leadership Assignment</h3>
                                     </div>
+                                    {orgMembers.length === 0 && (
+                                        <div className="mb-4 flex items-start gap-3 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+                                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                                            <p className="text-xs text-amber-600 leading-relaxed">
+                                                No team members available to assign.{" "}
+                                                <a href="/admin/org-management/add" className="font-bold underline hover:text-amber-700">
+                                                    Add a team member first
+                                                </a>{" "}
+                                                before assigning leadership roles.
+                                            </p>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-4">
                                             <label className="text-sm font-semibold text-tatt-gray">Regional Director</label>
                                             <select
-                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                                                 value={formData.regionalManagerId}
                                                 onChange={(e) => setFormData({ ...formData, regionalManagerId: e.target.value })}
+                                                disabled={orgMembers.length === 0}
                                             >
-                                                <option value="">Search & Assign Director...</option>
+                                                <option value="">{orgMembers.length === 0 ? "No team members yet" : "Select Director..."}</option>
                                                 {orgMembers.map(member => (
                                                     <option key={member.id} value={member.id}>{member.firstName} {member.lastName} ({member.email})</option>
                                                 ))}
@@ -1082,11 +1105,12 @@ export function AdminRegionalChaptersPage() {
                                         <div className="space-y-4">
                                             <label className="text-sm font-semibold text-tatt-gray">Associate Regional Director</label>
                                             <select
-                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground"
+                                                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-tatt-lime outline-none text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                                                 value={formData.associateRegionalDirectorId}
                                                 onChange={(e) => setFormData({ ...formData, associateRegionalDirectorId: e.target.value })}
+                                                disabled={orgMembers.length === 0}
                                             >
-                                                <option value="">Search & Assign Associate...</option>
+                                                <option value="">{orgMembers.length === 0 ? "No team members yet" : "Select Associate..."}</option>
                                                 {orgMembers.map(member => (
                                                     <option key={member.id} value={member.id}>{member.firstName} {member.lastName}</option>
                                                 ))}

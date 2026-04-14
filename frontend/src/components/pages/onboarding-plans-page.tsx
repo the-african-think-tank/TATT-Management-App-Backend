@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import api from "@/services/api";
 import { useAuth } from "@/context/auth-context";
+import { toast } from "react-hot-toast";
 
 
 import { PricingPlanCard, Plan } from "@/components/molecules/pricing-plan-card";
@@ -47,10 +48,10 @@ export function OnboardingPlansPage() {
                 router.push("/onboarding/success?plan=FREE");
             } catch (err: any) {
                 console.error("Failed to join free tier", err);
-                // If it's a 404, we might be in a dev env where the route isn't updated, 
-                // but let's try to proceed to success anyway if the user is already partially logged in
-                // The dashboard layout will handle re-kicking them if really needed
-                router.push("/onboarding/success?plan=FREE");
+                // Show the user what went wrong instead of silently redirecting
+                // without the ONBOARDING_COMPLETED flag (which would cause an infinite loop)
+                const msg = err?.response?.data?.message || "Failed to activate free membership. Please try again.";
+                toast.error(Array.isArray(msg) ? msg[0] : msg, { duration: 5000 });
             }
         } else {
             router.push(`/onboarding/payment?plan=${planId}&yearly=${isYearly}`);

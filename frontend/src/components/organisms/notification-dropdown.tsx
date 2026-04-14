@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, X, Check, Trash2, Info, MessageSquare, UserPlus, CreditCard, Calendar, AlertTriangle, Megaphone, Heart } from "lucide-react";
+import { Bell, X, Trash2, Info, MessageSquare, UserPlus, CreditCard, Calendar, AlertTriangle, Megaphone, Heart } from "lucide-react";
 import api from "@/services/api";
 import { Notification, NotificationType } from "@/types/notifications";
 import { formatDistanceToNow } from "date-fns";
@@ -13,7 +13,7 @@ export function NotificationDropdown() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const safeDate = (dateStr: any) => {
@@ -113,22 +113,30 @@ export function NotificationDropdown() {
 
         switch (type) {
             case NotificationType.NEW_MESSAGE:
-                return `${base}/messages/${data?.connectionId || ""}`;
+                // Go to specific conversation if connectionId present, else messages list
+                return data?.connectionId
+                    ? `${base}/messages/${data.connectionId}`
+                    : `${base}/messages`;
             case NotificationType.CONNECTION_REQUEST:
                 return isAdmin ? "/admin/membership-center" : "/dashboard/network?tab=pending";
             case NotificationType.CONNECTION_ACCEPTED:
-                return isAdmin ? "/admin/membership-center" : `/dashboard/network/profile/${data?.partnerId || ""}`;
+                return data?.partnerId
+                    ? `${base}/network/profile/${data.partnerId}`
+                    : `${base}/network`;
             case NotificationType.SUBSCRIPTION_RENEWAL:
             case NotificationType.SUBSCRIPTION_EXPIRING:
             case NotificationType.SUBSCRIPTION_DOWNGRADE:
-                return isAdmin ? "/admin/revenue" : `/dashboard/settings/subscription`;
+                return isAdmin ? "/admin/revenue" : "/dashboard/settings/subscription";
             case NotificationType.EVENT_REMINDER:
-                return isAdmin ? `/admin/events/${data?.eventId || ""}` : `/dashboard/events/${data?.eventId || ""}`;
+                // Go to specific event if eventId present, else events list
+                return data?.eventId
+                    ? `${base}/events/${data.eventId}`
+                    : `${base}/events`;
             case NotificationType.SYSTEM_ALERT:
             case NotificationType.SYSTEM_ANNOUNCEMENT:
                 return isAdmin ? "/admin" : "/dashboard";
             case NotificationType.VOLUNTEER_ROLE:
-                return isAdmin ? "/admin/volunteers" : "/member/volunteering";
+                return isAdmin ? "/admin/volunteers" : "/dashboard/volunteers";
             default:
                 return isAdmin ? "/admin" : "/dashboard";
         }
@@ -179,23 +187,23 @@ export function NotificationDropdown() {
                                 <p className="text-xs text-tatt-gray/60 mt-1">No new notifications at the moment.</p>
                             </div>
                         ) : (
-                            activeNotifications.map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    className={`p-4 border-b border-border/50 flex gap-4 transition-colors hover:bg-black/5 group relative ${!notification.readAt ? 'bg-tatt-lime/[0.03]' : ''}`}
-                                >
-                                    <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${!notification.readAt ? 'bg-white shadow-sm ring-1 ring-tatt-lime/20' : 'bg-black/5'}`}>
-                                        {getIcon(notification.type)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <Link
-                                            href={getLink(notification, user?.systemRole)}
-                                            onClick={() => {
-                                                markAsRead(notification.id);
-                                                setIsOpen(false);
-                                            }}
-                                            className="block cursor-pointer"
-                                        >
+                            activeNotifications.map((notification) => {
+                                const dest = getLink(notification, user?.systemRole);
+                                const handleRowClick = () => {
+                                    markAsRead(notification.id);
+                                    setIsOpen(false);
+                                };
+                                return (
+                                    <Link
+                                        key={notification.id}
+                                        href={dest}
+                                        onClick={handleRowClick}
+                                        className={`p-4 border-b border-border/50 flex gap-4 transition-colors hover:bg-black/5 group relative cursor-pointer block ${!notification.readAt ? 'bg-tatt-lime/[0.03]' : ''}`}
+                                    >
+                                        <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${!notification.readAt ? 'bg-white shadow-sm ring-1 ring-tatt-lime/20' : 'bg-black/5'}`}>
+                                            {getIcon(notification.type)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2 mb-0.5">
                                                 <p className={`text-sm font-bold truncate ${!notification.readAt ? 'text-foreground' : 'text-tatt-gray'}`}>
                                                     {notification.title}
@@ -207,43 +215,22 @@ export function NotificationDropdown() {
                                             <p className="text-xs text-tatt-gray line-clamp-2 leading-relaxed">
                                                 {notification.message}
                                             </p>
-                                        </Link>
-
-                                        <div className="mt-3 flex items-center gap-3">
-                                            {getLink(notification, user?.systemRole) !== "#" && (
-                                                <Link
-                                                    href={getLink(notification, user?.systemRole)}
-                                                    onClick={() => {
-                                                        markAsRead(notification.id);
-                                                        setIsOpen(false);
-                                                    }}
-                                                    className="text-[10px] font-bold text-tatt-lime hover:underline uppercase tracking-widest"
-                                                >
-                                                    View Details
-                                                </Link>
-                                            )}
-                                            {!notification.readAt && (
-                                                <button
-                                                    onClick={() => markAsRead(notification.id)}
-                                                    className="flex items-center gap-1 text-[10px] font-bold text-tatt-gray hover:text-foreground uppercase tracking-widest"
-                                                >
-                                                    <Check className="size-3" />
-                                                    Mark as Read
-                                                </button>
-                                            )}
+                                            <p className="mt-2 text-[10px] font-bold text-tatt-lime uppercase tracking-widest">
+                                                View Details →
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="absolute top-4 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => dismiss(notification.id)}
-                                            className="p-1.5 text-tatt-gray hover:text-red-500 rounded-lg hover:bg-red-50"
-                                            title="Clear"
-                                        >
-                                            <Trash2 className="size-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
+                                        <div className="absolute top-4 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); dismiss(notification.id); }}
+                                                className="p-1.5 text-tatt-gray hover:text-red-500 rounded-lg hover:bg-red-50"
+                                                title="Clear"
+                                            >
+                                                <Trash2 className="size-3.5" />
+                                            </button>
+                                        </div>
+                                    </Link>
+                                );
+                            })
                         )}
                     </div>
 

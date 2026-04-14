@@ -132,13 +132,14 @@ export default function RevenueCenterPage() {
       let startDate: string | undefined;
       const now = new Date();
       if (filters.timeRange === "week") {
-        const d = new Date(); d.setDate(now.getDate() - 7);
+        const d = new Date(); d.setDate(now.getDate() - 7); d.setHours(0, 0, 0, 0);
         startDate = d.toISOString();
       } else if (filters.timeRange === "month") {
-        const d = new Date(); d.setDate(now.getDate() - 30);
+        // Use calendar-month start (same as Dashboard) so the numbers always match
+        const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0);
         startDate = d.toISOString();
       } else if (filters.timeRange === "year") {
-        const d = new Date(); d.setFullYear(now.getFullYear() - 1);
+        const d = new Date(); d.setFullYear(now.getFullYear() - 1); d.setHours(0, 0, 0, 0);
         startDate = d.toISOString();
       }
 

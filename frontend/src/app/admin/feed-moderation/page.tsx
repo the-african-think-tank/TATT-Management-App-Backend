@@ -14,7 +14,6 @@ import {
     Zap,
     TrendingUp,
     Calendar,
-    Clock,
     Megaphone,
     Rocket,
     X,
@@ -447,20 +446,16 @@ export default function FeedModerationPage() {
                                         value={insightForm.content}
                                         onChange={(e) => setInsightForm({ ...insightForm, content: e.target.value })}
                                     />
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Start Date &amp; Time</label>
                                         <div className="relative">
-                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5" />
-                                            <input 
-                                                className="w-full h-10 pl-10 rounded-xl bg-slate-50/50 border-slate-200 text-[10px] font-black uppercase tracking-tighter focus:ring-2 focus:ring-tatt-lime" 
-                                                placeholder="Start Date" 
-                                                type="text" 
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5 pointer-events-none z-10" />
+                                            <input
+                                                className="w-full h-10 pl-10 rounded-xl bg-slate-50/50 border border-slate-200 text-[10px] font-black focus:ring-2 focus:ring-tatt-lime"
+                                                type="datetime-local"
                                                 value={insightForm.startDate}
                                                 onChange={(e) => setInsightForm({ ...insightForm, startDate: e.target.value })}
                                             />
-                                        </div>
-                                        <div className="relative opacity-50 cursor-not-allowed">
-                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5" />
-                                            <input className="w-full h-10 pl-10 rounded-xl bg-slate-50/50 border-slate-200 text-[10px] font-black uppercase tracking-tighter focus:ring-2 focus:ring-tatt-lime" placeholder="Time" type="text" disabled />
                                         </div>
                                     </div>
                                     <button 

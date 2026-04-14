@@ -22,7 +22,15 @@ import { useAdminDashboardOverview } from "@/hooks/use-queries";
 
 export default function AdminDashboardOverview() {
     const router = useRouter();
-    const { data, isLoading, isError, error, refetch } = useAdminDashboardOverview();
+    const { data, isLoading, isError, error } = useAdminDashboardOverview();
+    const [localModeration, setLocalModeration] = React.useState<any[] | null>(null);
+
+    const handleResolveModeration = async (itemId: string) => {
+        try {
+            await import("@/services/api").then(m => m.default.patch(`/feed/reports/${itemId}/resolve`));
+        } catch { /* best-effort */ }
+        setLocalModeration(prev => (prev ?? data?.moderationItems ?? []).filter((i: any) => i.id !== itemId));
+    };
 
     if (isLoading) {
         return (
@@ -53,7 +61,8 @@ export default function AdminDashboardOverview() {
 
     if (!data) return null;
 
-    const { kpis: backendKpis, communityGrowth, subscriberBreakdown, activities, moderationItems } = data;
+    const { kpis: backendKpis, communityGrowth, subscriberBreakdown, activities, moderationItems: moderationItemsFallback } = data;
+    const moderationItems = localModeration ?? moderationItemsFallback;
 
     const kpis = [
         {
@@ -144,7 +153,7 @@ export default function AdminDashboardOverview() {
                             <div className="absolute top-4 right-4 group/info">
                                 <AlertCircle size={14} className="text-tatt-gray/30 hover:text-tatt-lime transition-colors cursor-help" />
                                 <div className="absolute right-0 top-full mt-2 w-48 p-3 bg-tatt-black text-white text-[10px] rounded-xl opacity-0 group-hover/info:opacity-100 pointer-events-none transition-all z-50 shadow-2xl font-medium leading-relaxed border border-white/10">
-                                    Historical Comparison: This metric reflects a rolling 30-day window. Figures in Revenue Center represent calendar months.
+                                    Revenue for the current calendar month. Matches the default monthly view in Revenue Center.
                                 </div>
                             </div>
                         )}
@@ -188,34 +197,79 @@ export default function AdminDashboardOverview() {
                 {/* Subscriber Breakdown */}
                 <div className="bg-surface p-6 rounded-2xl border border-border shadow-sm">
                     <h3 className="text-lg font-bold text-foreground">Subscriber Tiers</h3>
-                    <p className="text-sm text-tatt-gray font-medium mb-8">Distribution across levels</p>
+                    <p className="text-sm text-tatt-gray font-medium mb-6">Distribution across levels</p>
 
-                    <div className="flex justify-center mb-8">
-                        <div className="relative size-44 rounded-full border-[18px] border-background flex items-center justify-center">
-                            <div className="absolute inset-[-18px] rounded-full border-[18px] border-tatt-lime" style={{ clipPath: "polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 60%)" }}></div>
-                            <div className="text-center">
-                                <p className="text-3xl font-black text-foreground">100%</p>
-                                <p className="text-[10px] text-tatt-gray font-bold uppercase tracking-widest">Growth</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {[
-                            { label: "Free", value: subscriberBreakdown.freeTier, color: "bg-tatt-gray/20 border border-border/10" },
-                            { label: "Ubuntu", value: subscriberBreakdown.ubuntuTier, color: "bg-tatt-lime/10" },
-                            { label: "Imani", value: subscriberBreakdown.imaniTier, color: "bg-tatt-lime/40" },
-                            { label: "Kiongozi", value: subscriberBreakdown.kiongoziTier, color: "bg-tatt-lime shadow-sm shadow-tatt-lime/20" }
-                        ].map((tier, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className={`size-3 rounded-full ${tier.color}`}></div>
-                                    <span className="text-sm font-medium text-tatt-gray">{tier.label}</span>
+                    {(() => {
+                        const tiers = [
+                            { label: "Free",      value: subscriberBreakdown.freeTier,     count: subscriberBreakdown.freeTierCount ?? 0,     stroke: "#9ca3af" },
+                            { label: "Ubuntu",    value: subscriberBreakdown.ubuntuTier,   count: subscriberBreakdown.ubuntuTierCount ?? 0,   stroke: "#60a5fa" },
+                            { label: "Imani",     value: subscriberBreakdown.imaniTier,    count: subscriberBreakdown.imaniTierCount ?? 0,    stroke: "#a78bfa" },
+                            { label: "Kiongozi",  value: subscriberBreakdown.kiongoziTier, count: subscriberBreakdown.kiongoziTierCount ?? 0, stroke: "#f59e0b" },
+                        ];
+                        const pcts = tiers.map(t => parseFloat(t.value) || 0);
+                        const total = pcts.reduce((a, b) => a + b, 0) || 100;
+                        const r = 54, cx = 70, cy = 70, stroke = 14;
+                        const circumference = 2 * Math.PI * r;
+                        let offset = 0;
+                        const segments = tiers.map((tier, i) => {
+                            const rawPct = pcts[i] ?? 0;
+                            const dashLen = (rawPct / total) * circumference;
+                            const seg = { ...tier, dashLen, dashOffset: -offset, pct: rawPct };
+                            offset += dashLen;
+                            return seg;
+                        });
+                        const topTier = segments.reduce(
+                            (a, b) => ((b?.pct ?? 0) > (a?.pct ?? 0) ? b : a),
+                            segments[0] ?? segments[0]
+                        )!;
+                        return (
+                            <>
+                                <div className="flex justify-center mb-6">
+                                    <div className="relative" style={{ width: 140, height: 140 }}>
+                                        <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
+                                            <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} />
+                                            {segments.map((seg, i) => (
+                                                seg.dashLen > 0 && (
+                                                    <circle
+                                                        key={i}
+                                                        cx={cx} cy={cy} r={r}
+                                                        fill="none"
+                                                        stroke={seg.stroke}
+                                                        strokeWidth={stroke}
+                                                        strokeDasharray={`${seg.dashLen} ${circumference - seg.dashLen}`}
+                                                        strokeDashoffset={seg.dashOffset}
+                                                        strokeLinecap="butt"
+                                                    />
+                                                )
+                                            ))}
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <p className="text-xl font-black text-foreground leading-none">{topTier.pct}%</p>
+                                            <p className="text-[9px] text-tatt-gray font-bold uppercase tracking-widest mt-0.5">{topTier.label}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span className="text-sm font-black text-foreground">{tier.value}</span>
-                            </div>
-                        ))}
-                    </div>
+                                <div className="space-y-3">
+                                    {tiers.map((tier, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: tier.stroke }} />
+                                                <span className="text-sm font-medium text-foreground">{tier.label}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full" style={{ width: tier.value, backgroundColor: tier.stroke }} />
+                                                </div>
+                                                <span className="text-xs font-black text-foreground w-16 text-right">
+                                                    {tier.count} <span className="text-tatt-gray font-medium">({tier.value})</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        );
+                    })()}
                 </div>
             </div>
 
@@ -227,23 +281,24 @@ export default function AdminDashboardOverview() {
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                             <Activity className="size-5 text-tatt-lime" /> Platform Activity
                         </h3>
-                        <button 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                router.push('/admin/membership-center');
-                            }}
+                        <button
+                            onClick={() => router.push('/admin/membership-center')}
                             className="bg-tatt-lime/10 text-tatt-lime px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-tatt-lime hover:text-tatt-black transition-all active:scale-95"
                         >
-                            View All
+                            View Members
                         </button>
                     </div>
                     <div className="divide-y divide-border">
                         {activities.length === 0 ? (
                             <div className="p-8 text-center text-sm font-medium text-tatt-gray">No new activity detected.</div>
                         ) : activities.map((act: any, idx: number) => (
-                            <div 
-                                key={idx} 
-                                onClick={() => router.push(act.type === 'MODERATION_FLAG' ? '/admin/feed-moderation' : '/admin/membership-center')}
+                            <div
+                                key={idx}
+                                onClick={() => {
+                                    if (act.type === 'MODERATION_FLAG') router.push('/admin/feed-moderation');
+                                    else if (act.type === 'NEW_POST') router.push('/admin/community-feed');
+                                    else router.push('/admin/membership-center');
+                                }}
                                 className="p-4 border-b border-border flex items-center gap-4 hover:bg-background/80 transition-all cursor-pointer group"
                             >
                                 <div className={`size-10 rounded-xl ${getBgForActivity(act.type)} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
@@ -312,10 +367,18 @@ export default function AdminDashboardOverview() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button className="size-8 rounded-lg border border-border flex items-center justify-center text-tatt-gray hover:bg-tatt-black hover:text-white   transition-all shadow-sm">
+                                                    <button
+                                                        onClick={() => router.push('/admin/feed-moderation')}
+                                                        title="View in Feed Moderation"
+                                                        className="size-8 rounded-lg border border-border flex items-center justify-center text-tatt-gray hover:bg-tatt-black hover:text-white transition-all shadow-sm"
+                                                    >
                                                         <Eye size={14} />
                                                     </button>
-                                                    <button className="size-8 rounded-lg bg-tatt-lime text-tatt-black flex items-center justify-center hover:brightness-110 transition-all shadow-sm shadow-tatt-lime/20">
+                                                    <button
+                                                        onClick={() => handleResolveModeration(item.id)}
+                                                        title="Resolve"
+                                                        className="size-8 rounded-lg bg-tatt-lime text-tatt-black flex items-center justify-center hover:brightness-110 transition-all shadow-sm shadow-tatt-lime/20"
+                                                    >
                                                         <Check size={14} className="stroke-[3px]" />
                                                     </button>
                                                 </div>

@@ -41,6 +41,7 @@ export default function CommunityFeedPage() {
     const [adminPostContent, setAdminPostContent] = useState("");
     const [adminPostType, setAdminPostType] = useState<"GENERAL" | "ANNOUNCEMENT" | "EVENT" | "RESOURCE" | "JOB">("ANNOUNCEMENT");
     const [isPosting, setIsPosting] = useState(false);
+    const [newPostId, setNewPostId] = useState<string | null>(null);
 
     const ADMIN_POST_TYPES: { id: "GENERAL" | "ANNOUNCEMENT" | "EVENT" | "RESOURCE" | "JOB"; label: string; icon: any }[] = [
         { id: "ANNOUNCEMENT", label: "Announcement", icon: AlertCircle },
@@ -118,6 +119,8 @@ export default function CommunityFeedPage() {
                 }
             };
             setLiveFeed(prev => [finalPost, ...prev]);
+            setNewPostId(finalPost.id);
+            setTimeout(() => setNewPostId(null), 4000);
         } catch (error) {
             toast.error("Failed to publish post.");
         } finally {
@@ -296,6 +299,25 @@ export default function CommunityFeedPage() {
                         </div>
                     </div>
 
+                    {/* Trending Insight Banner */}
+                    {activeInsight && (
+                        <div className="flex items-start gap-4 bg-tatt-lime/10 border border-tatt-lime/30 rounded-xl p-4">
+                            <div className="size-9 bg-tatt-lime rounded-xl flex items-center justify-center shrink-0">
+                                <TrendingUp className="size-4 text-tatt-black" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[9px] font-black text-tatt-lime uppercase tracking-[0.2em] mb-0.5">Trending Now</div>
+                                <p className="text-sm font-bold text-foreground truncate">{activeInsight.title}</p>
+                                {activeInsight.content && (
+                                    <p className="text-xs text-tatt-gray mt-0.5 line-clamp-2 leading-relaxed">{activeInsight.content}</p>
+                                )}
+                            </div>
+                            <button onClick={() => handleDeleteInsight(activeInsight.id)} className="text-tatt-gray hover:text-red-500 transition-colors shrink-0 mt-0.5">
+                                <X className="size-4" />
+                            </button>
+                        </div>
+                    )}
+
                     {/* Feed Render */}
                     <div className="space-y-6">
                         {loading && <Loader2 className="animate-spin text-tatt-lime mx-auto mt-10 size-8" />}
@@ -305,13 +327,28 @@ export default function CommunityFeedPage() {
                             </div>
                         )}
                         {liveFeed.map(post => (
-                            <article key={post.id} className="bg-surface rounded-xl shadow-sm border border-border relative overflow-hidden">
+                            <article key={post.id} className={`bg-surface rounded-xl shadow-sm border relative overflow-hidden transition-all duration-500 ${post.id === newPostId ? 'border-tatt-lime ring-2 ring-tatt-lime/30' : 'border-border'}`}>
                                 {post.type === "ANNOUNCEMENT" && (
                                     <div className="bg-tatt-lime/10 px-6 py-2 flex items-center justify-between border-b border-tatt-lime/20">
                                         <div className="flex items-center gap-2 text-tatt-lime-dark font-bold">
                                             <Pin className="size-4" />
                                             <span className="text-[10px] tracking-[0.15em] uppercase">Pinned by Admin</span>
                                         </div>
+                                    </div>
+                                )}
+                                {post.type && post.type !== "ANNOUNCEMENT" && post.type !== "GENERAL" && (
+                                    <div className={`px-6 py-1.5 border-b flex items-center gap-2 ${
+                                        post.type === 'EVENT' ? 'bg-orange-50 border-orange-100' :
+                                        post.type === 'RESOURCE' ? 'bg-blue-50 border-blue-100' :
+                                        post.type === 'JOB' ? 'bg-purple-50 border-purple-100' : 'bg-slate-50 border-slate-100'
+                                    }`}>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${
+                                            post.type === 'EVENT' ? 'text-orange-600' :
+                                            post.type === 'RESOURCE' ? 'text-blue-600' :
+                                            post.type === 'JOB' ? 'text-purple-600' : 'text-slate-600'
+                                        }`}>
+                                            {post.type === 'EVENT' ? 'Event' : post.type === 'RESOURCE' ? 'Resource' : post.type === 'JOB' ? 'Job Post' : post.type}
+                                        </span>
                                     </div>
                                 )}
                                 <div className="p-6">
@@ -480,7 +517,7 @@ export default function CommunityFeedPage() {
                     {/* Admin Insight Stats */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-surface p-4 rounded-xl border border-border text-center">
-                            <div className="text-[9px] tracking-widest uppercase font-bold mb-1 text-tatt-gray">Daily Posts</div>
+                            <div className="text-[9px] tracking-widest uppercase font-bold mb-1 text-tatt-gray">Active Posts</div>
                             <div className="text-xl font-black text-tatt-lime">{stats?.activeDiscussions || 0}</div>
                         </div>
                         <div className="bg-surface p-4 rounded-xl border border-border text-center">
