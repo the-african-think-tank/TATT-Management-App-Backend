@@ -28,6 +28,16 @@ interface BusinessPartner {
   contactEmail: string;
   contactPhone: string;
   contactName: string;
+  isVolunteer: boolean;
+  description: string;
+  ownershipType: string;
+  partnershipReason: string;
+  benefitType: string;
+  offerDuration: string;
+  typicalEngagement: string;
+  additionalInfo: string;
+  valuesAlignmentAgreed: boolean;
+  contactAgreed: boolean;
   createdAt: string;
   clickCount: number;
 }
@@ -139,24 +149,52 @@ export default function BusinessDetailsPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Location</p>
                 <p className="text-sm font-bold text-tatt-black">{business.locationText}</p>
               </div>
-              <div className="md:col-span-2 lg:col-span-4 mt-2 pt-4 border-t border-border/50">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Ownership</p>
+                <p className="text-sm font-bold text-tatt-black">{business.ownershipType || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Volunteer Partner</p>
+                <p className={`text-sm font-bold ${business.isVolunteer ? 'text-tatt-lime' : 'text-tatt-gray'}`}>
+                  {business.isVolunteer ? 'Yes' : 'No'}
+                </p>
+              </div>
+              <div className="md:col-span-2 lg:col-span-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Direct Contact Phone</p>
                 <p className="text-sm font-black text-tatt-lime tracking-widest">{business.contactPhone || 'No Phone Provided'}</p>
               </div>
             </div>
           </section>
 
-          {/* Mission Alignment Card */}
+          {/* Business Description */}
+          <section className="bg-surface rounded-xl p-8 shadow-sm border border-border">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Business Description & Audience</span>
+            <div className="mt-6">
+              <p className="text-tatt-gray leading-relaxed text-sm font-medium">
+                {business.description || "No description provided."}
+              </p>
+            </div>
+          </section>
+
           <section className="bg-surface rounded-xl p-8 shadow-sm border border-border relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5 text-tatt-black">
               <Globe size={100} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Mission Alignment</span>
-            <div className="mt-6">
-              <h3 className="text-lg font-black mb-4 text-tatt-black">Core Philosophy Statement</h3>
-              <p className="text-tatt-gray leading-relaxed text-sm font-medium">
-                "{business.missionAlignment}"
-              </p>
+            <div className="space-y-8">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Partnership Interest</span>
+                <h3 className="text-lg font-black mt-2 mb-2 text-tatt-black">Why Partner with TATT?</h3>
+                <p className="text-tatt-gray leading-relaxed text-sm font-medium italic">
+                  "{business.partnershipReason || "No statement provided."}"
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Mission Alignment</span>
+                <h3 className="text-lg font-black mt-2 mb-2 text-tatt-black">Core Philosophy Statement</h3>
+                <p className="text-tatt-gray leading-relaxed text-sm font-medium">
+                  "{business.missionAlignment}"
+                </p>
+              </div>
             </div>
           </section>
 
@@ -164,14 +202,51 @@ export default function BusinessDetailsPage() {
           <section className="bg-tatt-lime/5 rounded-xl p-8 border-l-4 border-tatt-lime">
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-secondary">Proposed Member Perk</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-tatt-secondary">Proposed Member Perk</span>
                 <h3 className="text-xl font-black mt-2 text-tatt-black italic">Exclusive Partner Incentive</h3>
               </div>
               <Star size={36} className="text-tatt-lime fill-current" />
             </div>
-            <div className="mt-6 bg-surface p-6 rounded-lg border border-border">
-              <p className="text-lg font-black text-tatt-black">{business.perkOffer}</p>
-              <p className="text-xs text-tatt-gray mt-2 font-medium">Applies to archival prints, limited edition curations, and bespoke artist collaborations for all verified TATT members.</p>
+            <div className="mt-6 bg-surface p-6 rounded-lg border border-border space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Benefit Type</p>
+                  <p className="text-sm font-bold text-tatt-black">{business.benefitType || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Duration</p>
+                  <p className="text-sm font-bold text-tatt-black">{business.offerDuration || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Offer Description</p>
+                <p className="text-lg font-black text-tatt-black">{business.perkOffer}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Community Engagement */}
+          <section className="bg-surface rounded-xl p-8 shadow-sm border border-border">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-tatt-gray">Engagement & Agreements</span>
+            <div className="mt-6 space-y-6">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Typical Engagement</p>
+                <p className="text-sm font-bold text-tatt-black">{business.typicalEngagement || '—'}</p>
+              </div>
+              {business.additionalInfo && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-1">Additional Info</p>
+                  <p className="text-sm font-medium text-tatt-gray italic">{business.additionalInfo}</p>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${business.valuesAlignmentAgreed ? 'bg-tatt-lime/10 text-tatt-lime' : 'bg-red-50 text-red-500'}`}>
+                   {business.valuesAlignmentAgreed ? 'Values Aligned' : 'Values Not Signed'}
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${business.contactAgreed ? 'bg-tatt-lime/10 text-tatt-lime' : 'bg-red-50 text-red-500'}`}>
+                   {business.contactAgreed ? 'Contact Agreed' : 'Contact Not Signed'}
+                </div>
+              </div>
             </div>
           </section>
         </div>

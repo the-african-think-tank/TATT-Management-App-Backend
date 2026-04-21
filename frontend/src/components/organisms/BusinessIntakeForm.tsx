@@ -60,7 +60,7 @@ function CustomSelect({
 
   return (
     <div className="space-y-2 relative" ref={containerRef}>
-      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">{label}</label>
+      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">{label}{required && ' *'}</label>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -121,7 +121,17 @@ export default function BusinessIntakeForm({
     contactPhone: '',
     contactName: '',
     tierRequested: 'Standard Partner',
-    agreedToTerms: false
+    agreedToTerms: false,
+    isVolunteer: false,
+    description: '',
+    ownershipType: '',
+    partnershipReason: '',
+    benefitType: '',
+    offerDuration: '',
+    typicalEngagement: '',
+    additionalInfo: '',
+    valuesAlignmentAgreed: false,
+    contactAgreed: false
   });
 
   const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
@@ -199,13 +209,30 @@ export default function BusinessIntakeForm({
 
   const validateStep = (s: number) => {
     if (s === 1) {
-      if (!formData.name) { toast.error("Company name is required"); return false; }
-      if (!formData.category) { toast.error("Industry category is required"); return false; }
+      if (!formData.name.trim()) { toast.error("Company name is required"); return false; }
       if (!formData.foundingYear) { toast.error("Founding year is required"); return false; }
-      if (!formData.website) { toast.error("Official website is required"); return false; }
+      if (!formData.website.trim()) { toast.error("Website or social link is required"); return false; }
     } else if (s === 2) {
-      if (!formData.locationText) { toast.error("Location is required"); return false; }
-      if (!formData.missionAlignment) { toast.error("Mission alignment statement is required"); return false; }
+      if (!formData.locationText.trim()) { toast.error("Location is required"); return false; }
+      if (!formData.category) { toast.error("Category is required"); return false; }
+      if (!formData.description.trim()) { toast.error("Business description is required"); return false; }
+      if (!formData.ownershipType) { toast.error("Ownership status is required"); return false; }
+      if (!formData.partnershipReason.trim()) { toast.error("Partnership reason is required"); return false; }
+      if (!formData.missionAlignment.trim()) { toast.error("Mission alignment statement is required"); return false; }
+    } else if (s === 3) {
+      if (!formData.logoUrl) { toast.error("Please upload your brand logo."); return false; }
+      if (!formData.benefitType) { toast.error("Benefit type is required"); return false; }
+      if (!formData.perkOffer.trim()) { toast.error("Offer description is required"); return false; }
+      if (!formData.offerDuration) { toast.error("Offer duration is required"); return false; }
+      if (!formData.typicalEngagement) { toast.error("Engagement type is required"); return false; }
+      if (!formData.contactName.trim()) { toast.error("Point of contact name is required"); return false; }
+      if (!formData.contactEmail.trim()) { toast.error("Contact email is required"); return false; }
+      if (!formData.contactPhone.trim()) { toast.error("Contact phone number is required"); return false; }
+      
+      // Final checkboxes
+      if (!formData.valuesAlignmentAgreed) { toast.error("Please confirm values alignment."); return false; }
+      if (!formData.contactAgreed) { toast.error("Please agree to be contacted."); return false; }
+      if (!formData.agreedToTerms) { toast.error("Please agree to the TATT partnership terms."); return false; }
     }
     return true;
   };
@@ -219,25 +246,8 @@ export default function BusinessIntakeForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.agreedToTerms) {
-      toast.error("Please agree to the TATT partnership terms.");
-      return;
-    }
-
-    if (!formData.logoUrl) {
-      toast.error("Please upload your brand logo.");
-      return;
-    }
     
-    if (!formData.perkOffer) {
-      toast.error("Please define a member perk.");
-      return;
-    }
-
-    if (!formData.contactName || !formData.contactEmail) {
-      toast.error("Contact details are required.");
-      return;
-    }
+    if (!validateStep(3)) return;
 
     setLoading(true);
     try {
@@ -268,15 +278,43 @@ export default function BusinessIntakeForm({
   };
 
   const categories = [
-    { label: 'Agriculture & Food', value: 'Agriculture & Food' },
-    { label: 'Technology & Innovation', value: 'Technology & Innovation' },
-    { label: 'Healthcare & Wellness', value: 'Healthcare & Wellness' },
-    { label: 'Creative & Media', value: 'Creative & Media' },
-    { label: 'Finance & FinTech', value: 'Finance & FinTech' },
-    { label: 'Manufacturing & Trade', value: 'Manufacturing & Trade' },
-    { label: 'Education & Research', value: 'Education & Research' },
-    { label: 'Professional Services', value: 'Professional Services' },
-    { label: 'Hospitality & Tourism', value: 'Hospitality & Tourism' }
+    { label: 'Professional Services (finance, legal, real estate, consulting, coaching)', value: 'Professional Services' },
+    { label: 'Health & Wellness', value: 'Health & Wellness' },
+    { label: 'Retail / Consumer Products', value: 'Retail / Consumer Products' },
+    { label: 'Food & Hospitality', value: 'Food & Hospitality' },
+    { label: 'Education / Training', value: 'Education / Training' },
+    { label: 'Technology / Digital Services', value: 'Technology / Digital Services' },
+    { label: 'Travel / Lifestyle', value: 'Travel / Lifestyle' },
+    { label: 'Other', value: 'Other' }
+  ];
+
+  const ownershipOptions = [
+    { label: 'Yes', value: 'Yes' },
+    { label: 'No', value: 'No' },
+    { label: 'Prefer not to say', value: 'Prefer not to say' }
+  ];
+
+  const benefitOptions = [
+    { label: 'Percentage discount', value: 'Percentage discount' },
+    { label: 'Flat dollar discount', value: 'Flat dollar discount' },
+    { label: 'Free consultation or assessment', value: 'Free consultation or assessment' },
+    { label: 'Members-only package or bundle', value: 'Members-only package or bundle' },
+    { label: 'Other', value: 'Other' }
+  ];
+
+  const durationOptions = [
+    { label: '3 months', value: '3 months' },
+    { label: '6 months', value: '6 months' },
+    { label: '12 months', value: '12 months' },
+    { label: 'Open to discussion', value: 'Open to discussion' }
+  ];
+
+  const engagementOptions = [
+    { label: 'Sponsorships or partnerships', value: 'Sponsorships or partnerships' },
+    { label: 'Discounts or in-kind support', value: 'Discounts or in-kind support' },
+    { label: 'Event participation', value: 'Event participation' },
+    { label: 'Informal support/referrals', value: 'Informal support/referrals' },
+    { label: 'This would be my first partnership of this kind', value: 'First partnership' }
   ];
 
   const chapterOptions = [
@@ -332,7 +370,7 @@ export default function BusinessIntakeForm({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Company Name</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Company Name *</label>
                   <input
                     required
                     name="name"
@@ -343,17 +381,11 @@ export default function BusinessIntakeForm({
                   />
                 </div>
 
-                <CustomSelect 
-                  label="Industry / Category"
-                  options={categories}
-                  value={formData.category}
-                  onChange={(val) => handleCustomSelectChange('category', val)}
-                  placeholder="Select Category"
-                />
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Founding Year</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Founding Year *</label>
                   <input
+                    required
                     type="number"
                     name="foundingYear"
                     value={formData.foundingYear}
@@ -363,8 +395,9 @@ export default function BusinessIntakeForm({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Official Website</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Official Website or Social Media Link *</label>
                   <input
+                    required
                     type="url"
                     name="website"
                     value={formData.website}
@@ -372,6 +405,29 @@ export default function BusinessIntakeForm({
                     placeholder="https://..."
                     className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all placeholder:text-tatt-gray/40 shadow-inner"
                   />
+                </div>
+
+                <div className="md:col-span-2 bg-background/50 border border-border/50 rounded-2xl p-6 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-tatt-black">Volunteer Status</p>
+                    <p className="text-xs text-tatt-gray">Is the current Business Owner or Affiliate a volunteer with TATT?</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, isVolunteer: true }))}
+                      className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-tighter transition-all ${formData.isVolunteer ? 'bg-tatt-lime text-tatt-black shadow-lg shadow-tatt-lime/20' : 'bg-white border border-border text-tatt-gray'}`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, isVolunteer: false }))}
+                      className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-tighter transition-all ${!formData.isVolunteer ? 'bg-tatt-lime text-tatt-black shadow-lg shadow-tatt-lime/20' : 'bg-white border border-border text-tatt-gray'}`}
+                    >
+                      No
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -396,7 +452,7 @@ export default function BusinessIntakeForm({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Headquarters / Primary Location</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Headquarters / Primary Location *</label>
                 <div className="relative">
                   <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-tatt-lime size-5" />
                   <input
@@ -410,7 +466,8 @@ export default function BusinessIntakeForm({
                 </div>
               </div>
 
-               <CustomSelect 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <CustomSelect 
                   label="Relevant Chapter (Optional)"
                   options={chapterOptions}
                   value={formData.chapterId}
@@ -418,14 +475,59 @@ export default function BusinessIntakeForm({
                   placeholder="Global Chapter"
                 />
 
+                <CustomSelect 
+                  label="Industry Category"
+                  options={categories}
+                  value={formData.category}
+                  onChange={(val) => handleCustomSelectChange('category', val)}
+                  placeholder="Select Category"
+                  required={true}
+                />
+
+                <CustomSelect 
+                  label="Ownership Status"
+                  options={ownershipOptions}
+                  value={formData.ownershipType}
+                  onChange={(val) => handleCustomSelectChange('ownershipType', val)}
+                  placeholder="Is your business Black-owned, African-owned, or Diaspora-led?"
+                  required={true}
+                />
+              </div>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Mission Alignment Statement</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Business Description & Audience *</label>
+                <textarea
+                  required
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Briefly describe your business and who you serve..."
+                  className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all resize-none shadow-inner"
+                ></textarea>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Partnership Interest *</label>
+                <textarea
+                  required
+                  name="partnershipReason"
+                  value={formData.partnershipReason}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Why are you interested in partnering with The African Think Tank?"
+                  className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all resize-none shadow-inner"
+                ></textarea>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Mission Alignment Statement *</label>
                 <textarea
                   required
                   name="missionAlignment"
                   value={formData.missionAlignment}
                   onChange={handleInputChange}
-                  rows={4}
+                  rows={3}
                   placeholder="Tell us how your business contributes to the TATT mission of pan-African excellence..."
                   className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all resize-none shadow-inner"
                 ></textarea>
@@ -462,7 +564,7 @@ export default function BusinessIntakeForm({
 
               <div className="flex flex-col md:flex-row gap-10">
                 <div className="shrink-0 flex flex-col items-center">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 text-center">Brand Logo</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-tatt-gray mb-3 text-center">Brand Logo *</p>
                    <div className="relative group">
                      <div className="size-36 rounded-[32px] bg-background border-2 border-dashed border-border flex flex-col items-center justify-center overflow-hidden transition-all group-hover:border-tatt-lime/50 shadow-inner">
                        {formData.logoUrl ? (
@@ -487,15 +589,35 @@ export default function BusinessIntakeForm({
                 </div>
 
                 <div className="flex-1 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <CustomSelect 
+                      label="Exclusive Benefit Type"
+                      options={benefitOptions}
+                      value={formData.benefitType}
+                      onChange={(val) => handleCustomSelectChange('benefitType', val)}
+                      placeholder="What type of benefit would you offer?"
+                      required={true}
+                    />
+
+                    <CustomSelect 
+                      label="Offer Duration"
+                      options={durationOptions}
+                      value={formData.offerDuration}
+                      onChange={(val) => handleCustomSelectChange('offerDuration', val)}
+                      placeholder="How long will you honor this?"
+                      required={true}
+                    />
+                  </div>
+
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">The Member Perk / Offer Details</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Proposed Offer Details *</label>
                     <textarea
                       required
                       name="perkOffer"
                       value={formData.perkOffer}
                       onChange={handleInputChange}
-                      rows={4}
-                      placeholder="e.g. 15% discount on all consulting services for TATT ID holders / Access to private investment syndicate..."
+                      rows={3}
+                      placeholder="Briefly describe the proposed offer (e.g. 15% discount on all consulting services)..."
                       className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all resize-none shadow-inner"
                     ></textarea>
                     <div className="flex items-center gap-2 text-tatt-lime text-[10px] font-bold">
@@ -503,9 +625,32 @@ export default function BusinessIntakeForm({
                     </div>
                   </div>
 
+                  <div className="space-y-8">
+                    <CustomSelect 
+                      label="Typical Community Engagement"
+                      options={engagementOptions}
+                      value={formData.typicalEngagement}
+                      onChange={(val) => handleCustomSelectChange('typicalEngagement', val)}
+                      placeholder="How do you typically engage with organizations?"
+                      required={true}
+                    />
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Additional Information (Optional)</label>
+                      <textarea
+                        name="additionalInfo"
+                        value={formData.additionalInfo}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Anything else we should know about your business or interest?"
+                        className="w-full bg-background border border-border rounded-2xl px-6 py-4 text-tatt-black focus:ring-2 focus:ring-tatt-lime/50 outline-none transition-all resize-none shadow-inner"
+                      ></textarea>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Point of Contact Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Point of Contact Name *</label>
                       <input
                         required
                         name="contactName"
@@ -516,7 +661,7 @@ export default function BusinessIntakeForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Contact Email</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Contact Email *</label>
                       <input
                         required
                         type="email"
@@ -528,8 +673,9 @@ export default function BusinessIntakeForm({
                       />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Contact Phone Number</label>
+                       <label className="text-[10px] font-black uppercase tracking-widest text-tatt-gray ml-1">Contact Phone Number *</label>
                        <input
+                         required
                          type="tel"
                          name="contactPhone"
                          value={formData.contactPhone}
@@ -542,20 +688,54 @@ export default function BusinessIntakeForm({
                 </div>
               </div>
 
-              <div className="bg-background border border-border rounded-3xl p-8">
-                  <div className="flex items-start gap-4">
-                    <input 
-                      type="checkbox"
-                      id="agreedToTerms"
-                      name="agreedToTerms"
-                      checked={formData.agreedToTerms}
-                      onChange={handleInputChange}
-                      className="mt-1 size-5 border-border rounded text-tatt-lime focus:ring-tatt-lime"
-                    />
-                    <label htmlFor="agreedToTerms" className="text-sm text-tatt-gray leading-relaxed">
-                      I confirm that the provided information is accurate and that my business aligns with the core values of <span className="text-tatt-black font-black uppercase tracking-tighter text-[11px]">The African Think Tank</span>. I agree to fulfill the listed member perks for all verified TATT members.
-                    </label>
-                  </div>
+              <div className="space-y-6">
+                <div className="bg-background border border-border rounded-3xl p-6">
+                    <div className="flex items-start gap-4">
+                      <input 
+                        type="checkbox"
+                        id="valuesAlignmentAgreed"
+                        name="valuesAlignmentAgreed"
+                        checked={formData.valuesAlignmentAgreed}
+                        onChange={handleInputChange}
+                        className="mt-1 size-5 border-border rounded text-tatt-lime focus:ring-tatt-lime"
+                      />
+                      <label htmlFor="valuesAlignmentAgreed" className="text-sm text-tatt-gray leading-relaxed">
+                        I understand this is a values-aligned partnership and not a guaranteed promotional agreement. *
+                      </label>
+                    </div>
+                </div>
+
+                <div className="bg-background border border-border rounded-3xl p-6">
+                    <div className="flex items-start gap-4">
+                      <input 
+                        type="checkbox"
+                        id="contactAgreed"
+                        name="contactAgreed"
+                        checked={formData.contactAgreed}
+                        onChange={handleInputChange}
+                        className="mt-1 size-5 border-border rounded text-tatt-lime focus:ring-tatt-lime"
+                      />
+                      <label htmlFor="contactAgreed" className="text-sm text-tatt-gray leading-relaxed">
+                        I agree to be contacted by The African Think Tank regarding this partnership opportunity. *
+                      </label>
+                    </div>
+                </div>
+
+                <div className="bg-background border border-border rounded-3xl p-6">
+                    <div className="flex items-start gap-4">
+                      <input 
+                        type="checkbox"
+                        id="agreedToTerms"
+                        name="agreedToTerms"
+                        checked={formData.agreedToTerms}
+                        onChange={handleInputChange}
+                        className="mt-1 size-5 border-border rounded text-tatt-lime focus:ring-tatt-lime"
+                      />
+                      <label htmlFor="agreedToTerms" className="text-sm text-tatt-gray leading-relaxed">
+                        I confirm that the provided information is accurate and that my business aligns with the core values of <span className="text-tatt-black font-black uppercase tracking-tighter text-[11px]">The African Think Tank</span>. I agree to fulfill the listed member perks for all verified TATT members.
+                      </label>
+                    </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-4">
@@ -569,7 +749,7 @@ export default function BusinessIntakeForm({
                 </button>
                 <button 
                   type="submit"
-                  disabled={loading || !formData.agreedToTerms}
+                  disabled={loading}
                   className="bg-tatt-lime text-tatt-black font-black py-4 px-6 md:px-12 rounded-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-tatt-lime/20 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="size-5 animate-spin" /> : (

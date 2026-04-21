@@ -16,18 +16,18 @@ export class CreateBusinessApplicationDto {
     @ApiProperty({ example: 2024 })
     @Type(() => Number)
     @IsNumber()
-    @IsOptional()
-    foundingYear?: number;
+    @IsNotEmpty({ message: 'Founding year is required' })
+    foundingYear: number;
 
     @ApiProperty({ example: 'https://onyx.com' })
     @Transform(({ value }) => value === '' ? null : value)
-    @IsUrl()
-    @IsOptional()
-    website?: string;
+    @IsUrl({}, { message: 'Website must be a valid URL' })
+    @IsNotEmpty({ message: 'Website or social link is required' })
+    website: string;
 
     @ApiProperty({ example: 'Nairobi, Kenya' })
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Location is required' })
     locationText: string;
 
     @ApiProperty({ example: 'UUID of chapter' })
@@ -38,18 +38,18 @@ export class CreateBusinessApplicationDto {
 
     @ApiProperty({ example: 'We align by...' })
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Mission alignment statement is required' })
     missionAlignment: string;
 
     @ApiProperty({ example: '15% discount for members' })
     @IsString()
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Offer description is required' })
     perkOffer: string;
 
     @ApiProperty({ example: 'https://link-to-logo.png' })
     @IsString()
-    @IsOptional()
-    logoUrl?: string;
+    @IsNotEmpty({ message: 'Brand logo is required' })
+    logoUrl: string;
 
     @ApiProperty({ example: 'Premium Partner' })
     @IsString()
@@ -57,19 +57,66 @@ export class CreateBusinessApplicationDto {
     tierRequested?: string;
 
     @ApiProperty({ example: 'contact@business.com' })
-    @IsEmail()
-    @IsNotEmpty()
+    @IsEmail({}, { message: 'Contact email must be a valid email address' })
+    @IsNotEmpty({ message: 'Contact email is required' })
     contactEmail: string;
 
     @ApiProperty({ example: '+254123456789' })
     @IsString()
-    @IsOptional()
-    contactPhone?: string;
+    @IsNotEmpty({ message: 'Contact phone number is required' })
+    contactPhone: string;
 
     @ApiProperty({ example: 'John Doe' })
     @IsString()
+    @IsNotEmpty({ message: 'Contact name is required' })
+    contactName: string;
+
+    @ApiProperty({ example: true })
     @IsOptional()
-    contactName?: string;
+    isVolunteer?: boolean;
+
+    @ApiProperty({ example: 'We serve local entrepreneurs...' })
+    @IsString()
+    @IsNotEmpty({ message: 'Business description is required' })
+    description: string;
+
+    @ApiProperty({ example: 'Black-owned' })
+    @IsString()
+    @IsNotEmpty({ message: 'Ownership type is required' })
+    ownershipType: string;
+
+    @ApiProperty({ example: 'To support the community' })
+    @IsString()
+    @IsNotEmpty({ message: 'Partnership reason is required' })
+    partnershipReason: string;
+
+    @ApiProperty({ example: 'Percentage discount' })
+    @IsString()
+    @IsNotEmpty({ message: 'Benefit type is required' })
+    benefitType: string;
+
+    @ApiProperty({ example: '12 months' })
+    @IsString()
+    @IsNotEmpty({ message: 'Offer duration is required' })
+    offerDuration: string;
+
+    @ApiProperty({ example: 'Sponsorships' })
+    @IsString()
+    @IsNotEmpty({ message: 'Typical community engagement is required' })
+    typicalEngagement: string;
+
+    @ApiProperty({ example: 'Any other info' })
+    @IsString()
+    @IsOptional()
+    additionalInfo?: string;
+
+    @ApiProperty({ example: true })
+    @IsNotEmpty({ message: 'You must agree to values alignment' })
+    valuesAlignmentAgreed: boolean;
+
+    @ApiProperty({ example: true })
+    @IsNotEmpty({ message: 'You must agree to be contacted' })
+    contactAgreed: boolean;
 }
 
 export class UpdateBusinessStatusDto {

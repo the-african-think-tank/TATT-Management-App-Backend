@@ -99,6 +99,49 @@ export class BusinessPartner extends Model {
     @Column(DataType.TEXT)
     adminNotes: string;
 
+    @AllowNull(false)
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    isVolunteer: boolean;
+
+    @AllowNull(true)
+    @Column(DataType.TEXT)
+    description: string;
+
+    @AllowNull(true)
+    @Column(DataType.STRING)
+    ownershipType: string;
+
+    @AllowNull(true)
+    @Column(DataType.TEXT)
+    partnershipReason: string;
+
+    @AllowNull(true)
+    @Column(DataType.STRING)
+    benefitType: string;
+
+    @AllowNull(true)
+    @Column(DataType.STRING)
+    offerDuration: string;
+
+    @AllowNull(true)
+    @Column(DataType.TEXT)
+    typicalEngagement: string;
+
+    @AllowNull(true)
+    @Column(DataType.TEXT)
+    additionalInfo: string;
+
+    @AllowNull(false)
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    valuesAlignmentAgreed: boolean;
+
+    @AllowNull(false)
+    @Default(false)
+    @Column(DataType.BOOLEAN)
+    contactAgreed: boolean;
+
     @CreatedAt
     createdAt: Date;
 

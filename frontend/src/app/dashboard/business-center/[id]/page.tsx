@@ -12,11 +12,6 @@ import {
   PartyPopper,
   ShieldCheck,
   Zap,
-  Phone,
-  Mail,
-  User,
-  Share2,
-  Heart,
   Search,
   LayoutDashboard,
   Handshake,
@@ -42,6 +37,16 @@ interface BusinessPartner {
   contactEmail: string;
   contactName: string;
   contactPhone: string;
+  isVolunteer: boolean;
+  description: string;
+  ownershipType: string;
+  partnershipReason: string;
+  benefitType: string;
+  offerDuration: string;
+  typicalEngagement: string;
+  additionalInfo: string;
+  valuesAlignmentAgreed: boolean;
+  contactAgreed: boolean;
   chapter?: { name: string };
   submittedBy?: { communityTier: string };
   createdAt: string;
@@ -146,7 +151,11 @@ export default function MemberBusinessDetails() {
                     Verified Partner
                   </span>
                 </div>
-                <p className="text-white/70 font-bold text-lg italic">{business.category}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-white/70 font-bold text-lg italic">{business.category}</p>
+                  <span className="text-white/30 font-black">•</span>
+                  <p className="text-white/70 font-black text-sm uppercase tracking-widest">Est. {business.foundingYear}</p>
+                </div>
               </div>
             </div>
             <button 
@@ -180,7 +189,11 @@ export default function MemberBusinessDetails() {
                   "{business.perkOffer}"
                 </h2>
                 <p className="text-tatt-gray font-medium text-sm">
-                  Active for all verified TATT community members on creative retainers and bespoke consultations.
+                  Available for all verified TATT members. 
+                  <span className="mx-2 text-tatt-lime/40">•</span>
+                  Type: <span className="text-tatt-black font-bold">{business.benefitType}</span>
+                  <span className="mx-2 text-tatt-lime/40">•</span>
+                  Honored for <span className="text-tatt-black font-bold">{business.offerDuration || '12 months'}</span>.
                 </p>
               </div>
             </div>
@@ -201,10 +214,22 @@ export default function MemberBusinessDetails() {
                 About the Business
               </h3>
               <p className="text-tatt-gray/80 leading-relaxed text-lg font-medium">
-                {business.name} is a premier {business.category} establishment focused on excellence and pan-African impact. 
-                Founded in {business.foundingYear || 'recent years'}, they have quickly become a staple in the TATT ecosystem, 
-                blending deep cultural insights with world-class technical execution.
+                {business.description || `${business.name} is a premier ${business.category} establishment focused on excellence and pan-African impact.`}
               </p>
+              <div className="mt-6 flex flex-wrap gap-4">
+                {business.ownershipType && (
+                  <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-xl border border-border">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-tatt-gray">Ownership:</span>
+                    <span className="text-xs font-bold text-tatt-black">{business.ownershipType}</span>
+                  </div>
+                )}
+                {business.isVolunteer && (
+                  <div className="flex items-center gap-2 bg-tatt-lime/10 px-4 py-2 rounded-xl border border-tatt-lime/20">
+                    <UserCircle size={14} className="text-tatt-lime" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-tatt-lime">TATT Volunteer Affiliate</span>
+                  </div>
+                )}
+              </div>
             </section>
 
             <section>
@@ -221,14 +246,35 @@ export default function MemberBusinessDetails() {
                   <p className="text-sm text-tatt-gray font-semibold italic">"{business.missionAlignment}"</p>
                 </div>
                 <div className="bg-background/50 p-6 rounded-[24px] border border-border">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Zap size={20} className="text-tatt-lime" />
-                    <h4 className="font-black text-xs uppercase tracking-widest text-tatt-black">Ecosystem Impact</h4>
-                  </div>
                   <p className="text-sm text-tatt-gray font-medium">As a verified TATT partner, {business.name} is committed to the collective prosperity and operational excellence of the African Diaspora.</p>
                 </div>
               </div>
+              {(business.typicalEngagement || business.partnershipReason) && (
+                <div className="mt-8 pt-8 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {business.typicalEngagement && (
+                    <div>
+                      <h4 className="font-black text-xs uppercase tracking-widest text-tatt-gray mb-3">Community Engagement</h4>
+                      <p className="text-sm text-tatt-gray font-medium">{business.typicalEngagement}</p>
+                    </div>
+                  )}
+                  {business.partnershipReason && (
+                    <div>
+                      <h4 className="font-black text-xs uppercase tracking-widest text-tatt-gray mb-3">Partnership Motivation</h4>
+                      <p className="text-sm text-tatt-gray font-medium italic">"{business.partnershipReason}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
+
+            {business.additionalInfo && (
+              <section className="bg-background/30 p-8 rounded-[24px] border border-dashed border-border">
+                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-tatt-gray mb-4">More Business Description</h3>
+                <p className="text-sm text-tatt-gray/80 font-medium leading-relaxed">
+                  {business.additionalInfo}
+                </p>
+              </section>
+            )}
 
             {/* Conditional Kiongozi Perks: Announcements/Updates */}
             {business.submittedBy?.communityTier === 'KIONGOZI' && (
@@ -263,7 +309,7 @@ export default function MemberBusinessDetails() {
           
           {/* Location & Coverage */}
           <div className="bg-surface border border-border rounded-[32px] p-8 shadow-sm">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-tatt-gray mb-8">Ecosystem Presence</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-tatt-gray mb-8">Business Locations</h3>
             <div className="space-y-8">
               <div className="flex items-center gap-5">
                 <div className="size-12 rounded-xl bg-background border border-border flex items-center justify-center text-tatt-lime">
@@ -303,7 +349,7 @@ export default function MemberBusinessDetails() {
                 scrolling="no" 
                 marginHeight={0} 
                 marginWidth={0} 
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(business.locationText)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(`${business.name} ${business.locationText}`)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                 className="grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
                ></iframe>
                <div className="absolute top-4 right-4 z-20 pointer-events-none">
@@ -319,27 +365,24 @@ export default function MemberBusinessDetails() {
             <div className="absolute bottom-0 right-0 p-8 opacity-[0.03] translate-x-10 translate-y-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-all duration-1000">
                <ShieldCheck size={200} />
             </div>
-            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-tatt-lime mb-8 relative z-10">Venture Intelligence</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-tatt-lime mb-8 relative z-10">Business Contacts</h3>
             <div className="space-y-6 relative z-10">
               <div className="group/item">
-                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                  <Mail size={12} className="text-tatt-lime" />
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5">
                   Official Email
                 </p>
                 <p className="text-sm font-bold tracking-tight text-white hover:text-tatt-lime transition-colors truncate">{business.contactEmail}</p>
               </div>
               {business.contactPhone && (
                 <div className="group/item">
-                  <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                    <Phone size={12} className="text-tatt-lime" />
+                  <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5">
                     Direct Phone Handline
                   </p>
                   <p className="text-sm font-bold tracking-tight text-white hover:text-tatt-lime transition-colors">{business.contactPhone}</p>
                 </div>
               )}
               <div className="group/item">
-                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                  <User size={12} className="text-tatt-lime" />
+                <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-1.5">
                   Primary Point of Contact
                 </p>
                 <p className="text-sm font-bold tracking-tight text-white transition-colors">{business.contactName || 'Corporate Relations'}</p>
@@ -347,17 +390,7 @@ export default function MemberBusinessDetails() {
               </div>
             </div>
 
-            <div className="mt-12 pt-10 border-t border-white/10 flex gap-4 relative z-10">
-              <button className="size-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-tatt-lime hover:text-tatt-black transition-all group/icon">
-                <Share2 size={20} className="group-hover:scale-110 transition-transform" />
-              </button>
-              <button className="size-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-tatt-lime hover:text-tatt-black transition-all group/icon">
-                <Globe size={20} className="group-hover:scale-110 transition-transform" />
-              </button>
-              <button className="size-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all group/icon border border-transparent hover:border-red-500/20">
-                <Heart size={20} className="group-hover:scale-110 transition-transform" />
-              </button>
-            </div>
+
           </div>
         </div>
       </div>
