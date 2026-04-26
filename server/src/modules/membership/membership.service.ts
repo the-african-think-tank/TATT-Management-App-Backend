@@ -102,9 +102,19 @@ export class MembershipService implements OnApplicationBootstrap {
                 tier: CommunityTier.IMANI,
                 name: 'Imani',
                 tagline: 'Faith in our collective vision',
-                monthlyPrice: 49.99,
-                yearlyPrice: 499.99,
-                features: ['All Ubuntu features', '1-on-1 Mentorship', 'Job board priority access', 'Annual retreat invite'],
+                monthlyPrice: 50,
+                yearlyPrice: 575,
+                features: [
+                    'All Ubuntu features',
+                    'TATT Thrive Workshops (free access)',
+                    'Archived Workshop & Training Library',
+                    'Premium Members-Only Networking Events',
+                    'Private Investment & Founder Access Sessions',
+                    'Priority Speaking & Panel Opportunities',
+                    'Culture Bridge, Gala & Program Discounts',
+                    'Member Spotlight Eligibility',
+                    'Annual Strategy Intensive (Imani Exclusive)'
+                ],
                 isPopular: false,
                 stripeMonthlyPriceId: process.env.STRIPE_PRICE_IMANI_MONTHLY || null,
                 stripeYearlyPriceId: process.env.STRIPE_PRICE_IMANI_YEARLY || null,
@@ -113,7 +123,7 @@ export class MembershipService implements OnApplicationBootstrap {
                     { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: true },
                     { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: true },
                     { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: true },
-                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: false },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: true },
                     { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
                 ]
             },
