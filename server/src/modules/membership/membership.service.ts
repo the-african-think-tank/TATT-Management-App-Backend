@@ -75,9 +75,17 @@ export class MembershipService implements OnApplicationBootstrap {
                 tier: CommunityTier.UBUNTU,
                 name: 'Ubuntu',
                 tagline: 'I am because we are',
-                monthlyPrice: 19.99,
-                yearlyPrice: 199.99,
-                features: ['All Free features', 'Exclusive workshops', 'Mentorship program beta access', 'Member directory access'],
+                monthlyPrice: 25,
+                yearlyPrice: 275,
+                features: [
+                    'DBU Career Academy License — save $300/yr',
+                    'TATT Growth Mindset Mixers',
+                    'Member Platform & Job Board access',
+                    'Partner Organization Discounts',
+                    'Annual Members-Only Appreciation Event',
+                    'Official TATT T-Shirt',
+                    'Digital Member ID Card'
+                ],
                 isPopular: true,
                 stripeMonthlyPriceId: process.env.STRIPE_PRICE_UBUNTU_MONTHLY || null,
                 stripeYearlyPriceId: process.env.STRIPE_PRICE_UBUNTU_YEARLY || null,
@@ -86,7 +94,7 @@ export class MembershipService implements OnApplicationBootstrap {
                     { title: 'Free Vendor Tables', subtitle: 'Exhibition and sales opportunities', enabled: true },
                     { title: 'Pitch Event Access', subtitle: 'Priority invitation to funding sessions', enabled: false },
                     { title: 'Talent Access', subtitle: 'Recruitment and networking priority', enabled: false },
-                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: false },
+                    { title: 'TATT Job Board', subtitle: 'Exclusive Talent Matchmaking', enabled: true },
                     { title: 'Premium Resource Library', subtitle: 'Research, Reports & Whitepapers', enabled: true }
                 ]
             },
